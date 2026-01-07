@@ -1,5 +1,6 @@
 class Product {
     Product({
+        this.id,
         this.name,
         this.cost,
         this.group,
@@ -10,6 +11,7 @@ class Product {
         this.description,
     });
 
+    String? id;
     String? name;
     double? cost;
     String? group;
@@ -20,24 +22,25 @@ class Product {
     String? description;
 
     factory Product.fromMap(Map<String, dynamic> json) => Product(
+        id: json["id"] as String?,
         name: json["name"] as String?,
-        cost: json["cost"] as double?,
-        group: json["group"] as String?,
+        cost: (json["cost"] as num?)?.toDouble(),
+        group: json["product_group"] as String?,
         location: json["location"] as String?,
         company: json["company"] as String?,
         quantity: json["quantity"] as int?,
-        image: json["image"] as String?,
+        image: json["image_url"] as String?,
         description: json["description"] as String?,
     );
 
     Map<String, dynamic> toMap() => {
         "name": name,
         "cost": cost,
-        "group": group,
+        "product_group": group,
         "location": location,
         "company": company,
         "quantity": quantity,
-        "image": image,
+        "image_url": image,
         "description": description,
     };
 }

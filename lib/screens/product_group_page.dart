@@ -1,8 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:warehouse_management/models/product.dart';
 import 'package:warehouse_management/screens/new_product_page.dart';
 import 'package:warehouse_management/screens/search_product_in_group.dart';
+import 'package:warehouse_management/services/product_service.dart';
 import 'package:warehouse_management/utils/color_palette.dart';
 import 'package:warehouse_management/widgets/product_card.dart';
 
@@ -10,7 +10,7 @@ class ProductGroupPage extends StatelessWidget {
   final String? name;
   ProductGroupPage({Key? key, this.name}) : super(key: key);
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ProductService _productService = ProductService();
 
   @override
   Widget build(BuildContext context) {
@@ -147,17 +147,12 @@ class ProductGroupPage extends StatelessWidget {
                           ),
                           const SizedBox(height: 20),
                           Expanded(
-                            child: StreamBuilder(
-                              stream: _firestore
-                                  .collection("products")
-                                  .where("group", isEqualTo: name)
-                                  .orderBy('name')
-                                  .snapshots(),
+                            child: StreamBuilder<List<Product>>(
+                              stream:
+                                  _productService.getProductsByGroup(name!),
                               builder: (
                                 BuildContext context,
-                                AsyncSnapshot<
-                                        QuerySnapshot<Map<String, dynamic>>>
-                                    snapshot,
+                                AsyncSnapshot<List<Product>> snapshot,
                               ) {
                                 if (!snapshot.hasData) {
                                   return const Center(
@@ -170,15 +165,27 @@ class ProductGroupPage extends StatelessWidget {
                                     ),
                                   );
                                 }
+                                final products = snapshot.data!;
+                                if (products.isEmpty) {
+                                  return const Center(
+                                    child: Text(
+                                      'No products yet.\nTap + to add one!',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontFamily: "Nunito",
+                                        fontSize: 16,
+                                        color: ColorPalette.nileBlue,
+                                      ),
+                                    ),
+                                  );
+                                }
                                 return ListView.builder(
-                                  itemCount: snapshot.data!.docs.length,
+                                  itemCount: products.length,
                                   itemBuilder:
                                       (BuildContext context, int index) {
                                     return ProductCard(
-                                      product: Product.fromMap(
-                                        snapshot.data!.docs[index].data(),
-                                      ),
-                                      docID: snapshot.data!.docs[index].id,
+                                      product: products[index],
+                                      docID: products[index].id!,
                                     );
                                   },
                                 );

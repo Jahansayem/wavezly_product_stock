@@ -1,8 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:warehouse_management/functions/toast.dart';
 import 'package:warehouse_management/models/product.dart';
+import 'package:warehouse_management/services/product_service.dart';
 import 'package:warehouse_management/utils/color_palette.dart';
 import 'package:warehouse_management/widgets/location_drop_down.dart';
 
@@ -11,7 +11,7 @@ class NewProductPage extends StatelessWidget {
   NewProductPage({Key? key, this.group}) : super(key: key);
 
   final Product newProduct = Product();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ProductService _productService = ProductService();
 
   @override
   Widget build(BuildContext context) {
@@ -22,17 +22,15 @@ class NewProductPage extends StatelessWidget {
           right: 10,
         ),
         child: FloatingActionButton(
-          onPressed: () {
+          onPressed: () async {
             newProduct.group = group;
-            _firestore
-                .collection("products")
-                .add(newProduct.toMap())
-                .then((value) {
-              showTextToast('Added Sucessfully!');
-            }).catchError((e) {
+            try {
+              await _productService.addProduct(newProduct);
+              showTextToast('Added Successfully!');
+              Navigator.of(context).pop();
+            } catch (e) {
               showTextToast('Failed!');
-            });
-            Navigator.of(context).pop();
+            }
           },
           splashColor: ColorPalette.bondyBlue,
           backgroundColor: ColorPalette.pacificBlue,

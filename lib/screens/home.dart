@@ -1,16 +1,16 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:double_back_to_close_app/double_back_to_close_app.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:warehouse_management/functions/confirm_dialog.dart';
 import 'package:warehouse_management/functions/toast.dart';
 import 'package:warehouse_management/screens/global_search_page.dart';
+import 'package:warehouse_management/services/auth_service.dart';
+import 'package:warehouse_management/services/product_service.dart';
 import 'package:warehouse_management/utils/color_palette.dart';
 import 'package:warehouse_management/widgets/product_group_card.dart';
 
 class Home extends StatelessWidget {
-  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final AuthService _authService = AuthService();
+  final ProductService _productService = ProductService();
   final TextEditingController _newProductGroup = TextEditingController();
 
   @override
@@ -76,28 +76,17 @@ class Home extends StatelessWidget {
                       ),
                       GestureDetector(
                         onTap: () async {
-                          if (_newProductGroup.text != null &&
-                              _newProductGroup.text != "") {
+                          if (_newProductGroup.text.isNotEmpty) {
                             try {
-                              final DocumentSnapshot<Map<String, dynamic>>
-                                  _doc = await _firestore
-                                      .collection("utils")
-                                      .doc("productGroups")
-                                      .get();
-                              final List<dynamic> _tempList =
-                                  _doc.data()!['list'] as List<dynamic>;
-                              if (_tempList.contains(_newProductGroup.text)) {
-                                showTextToast("Group Name already created");
-                              } else {
-                                _tempList.add(_newProductGroup.text);
-                                _firestore
-                                    .collection('utils')
-                                    .doc("productGroups")
-                                    .update({'list': _tempList});
-                                showTextToast("Added Successfully");
-                              }
+                              await _productService
+                                  .addProductGroup(_newProductGroup.text);
+                              showTextToast("Added Successfully");
                             } catch (e) {
-                              showTextToast("An Error Occured!");
+                              if (e.toString().contains('duplicate')) {
+                                showTextToast("Group Name already exists");
+                              } else {
+                                showTextToast("An Error Occurred!");
+                              }
                             }
                             // ignore: use_build_context_synchronously
                             Navigator.of(context).pop();
@@ -217,7 +206,7 @@ class Home extends StatelessWidget {
                                   Navigator.of(context).pop();
                                 }, () {
                                   Navigator.of(context).pop();
-                                  _firebaseAuth.signOut();
+                                  _authService.signOut();
                                 });
                               },
                             ),
@@ -250,20 +239,28 @@ class Home extends StatelessWidget {
                             ),
                             const SizedBox(height: 20),
                             Expanded(
-                              child: StreamBuilder(
-                                stream:
-                                    _firestore.collection("utils").snapshots(),
+                              child: StreamBuilder<List<String>>(
+                                stream: _productService.getProductGroupsStream(),
                                 builder: (
                                   BuildContext context,
-                                  AsyncSnapshot<
-                                          QuerySnapshot<Map<String, dynamic>>>
-                                      snapshot,
+                                  AsyncSnapshot<List<String>> snapshot,
                                 ) {
                                   if (snapshot.hasData) {
-                                    final List<dynamic> _productGroups =
-                                        snapshot.data!.docs[0].data()['list']
-                                            as List<dynamic>;
-                                    _productGroups.sort();
+                                    final List<String> _productGroups =
+                                        snapshot.data!;
+                                    if (_productGroups.isEmpty) {
+                                      return const Center(
+                                        child: Text(
+                                          'No product groups yet.\nTap + to add one!',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontFamily: "Nunito",
+                                            fontSize: 16,
+                                            color: ColorPalette.nileBlue,
+                                          ),
+                                        ),
+                                      );
+                                    }
                                     return GridView.builder(
                                       gridDelegate:
                                           const SliverGridDelegateWithFixedCrossAxisCount(
@@ -275,7 +272,7 @@ class Home extends StatelessWidget {
                                       itemCount: _productGroups.length,
                                       itemBuilder: (context, index) {
                                         return ProductGroupCard(
-                                          name: _productGroups[index] as String,
+                                          name: _productGroups[index],
                                           key: UniqueKey(),
                                         );
                                       },

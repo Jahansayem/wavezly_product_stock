@@ -1,15 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:warehouse_management/screens/home.dart';
 import 'package:warehouse_management/screens/login.dart';
-import 'package:warehouse_management/screens/splash.dart';
 import 'package:warehouse_management/utils/color_palette.dart';
 
 class MyApp extends StatelessWidget {
-  final Future<FirebaseApp> _initialization = Firebase.initializeApp();
-
   @override
   Widget build(BuildContext context) {
     SystemChrome.setPreferredOrientations([
@@ -19,24 +15,20 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Warehouse Management',
-      theme: ThemeData(colorScheme: ColorScheme.fromSwatch().copyWith(secondary: ColorPalette.white)),
-      home: FutureBuilder(
-        future: _initialization,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSwatch()
+            .copyWith(secondary: ColorPalette.white),
+      ),
+      home: StreamBuilder<AuthState>(
+        stream: Supabase.instance.client.auth.onAuthStateChange,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            final FirebaseAuth firebaseAuth = FirebaseAuth.instance;
-            return StreamBuilder<User?>(
-              stream: firebaseAuth.authStateChanges(),
-              builder: (context, snapshot) {
-                if (snapshot.hasData && !snapshot.data!.isAnonymous) {
-                  return Home();
-                } else {
-                  return Login();
-                }
-              },
-            );
+          if (snapshot.hasData &&
+              snapshot.data!.session != null &&
+              snapshot.data!.session!.user != null) {
+            return Home();
+          } else {
+            return Login();
           }
-          return Splash();
         },
       ),
     );

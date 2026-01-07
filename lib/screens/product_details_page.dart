@@ -1,8 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:warehouse_management/functions/toast.dart';
 import 'package:warehouse_management/models/product.dart';
+import 'package:warehouse_management/services/product_service.dart';
 import 'package:warehouse_management/utils/color_palette.dart';
 import 'package:warehouse_management/widgets/location_drop_down.dart';
 
@@ -11,7 +11,7 @@ class ProductDetailsPage extends StatelessWidget {
   final String? docID;
   ProductDetailsPage({Key? key, this.product, this.docID}) : super(key: key);
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ProductService _productService = ProductService();
 
   @override
   Widget build(BuildContext context) {
@@ -22,17 +22,14 @@ class ProductDetailsPage extends StatelessWidget {
           right: 10,
         ),
         child: FloatingActionButton(
-          onPressed: () {
-            _firestore
-                .collection("products")
-                .doc(docID)
-                .update(product!.toMap())
-                .then((value) {
-              showTextToast('Updated Sucessfully!');
-            }).catchError((e) {
+          onPressed: () async {
+            try {
+              await _productService.updateProduct(docID!, product!);
+              showTextToast('Updated Successfully!');
+              Navigator.of(context).pop();
+            } catch (e) {
               showTextToast('Failed!');
-            });
-            Navigator.of(context).pop();
+            }
           },
           splashColor: ColorPalette.bondyBlue,
           backgroundColor: ColorPalette.pacificBlue,
@@ -96,17 +93,14 @@ class ProductDetailsPage extends StatelessWidget {
                           Icons.delete,
                           color: ColorPalette.timberGreen,
                         ),
-                        onPressed: () {
-                          _firestore
-                              .collection("products")
-                              .doc(docID)
-                              .delete()
-                              .then((value) {
-                            showTextToast('Deleted Sucessfully!');
-                          }).catchError((e) {
+                        onPressed: () async {
+                          try {
+                            await _productService.deleteProduct(docID!);
+                            showTextToast('Deleted Successfully!');
+                            Navigator.of(context).pop();
+                          } catch (e) {
                             showTextToast('Failed!');
-                          });
-                          Navigator.of(context).pop();
+                          }
                         },
                       ),
                     ],

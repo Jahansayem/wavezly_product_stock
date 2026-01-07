@@ -1,6 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:warehouse_management/models/product.dart';
+import 'package:warehouse_management/services/product_service.dart';
 import 'package:warehouse_management/utils/color_palette.dart';
 import 'package:warehouse_management/widgets/product_card.dart';
 
@@ -12,7 +12,7 @@ class GlobalSearchPage extends StatefulWidget {
 }
 
 class _GlobalSearchPageState extends State<GlobalSearchPage> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ProductService _productService = ProductService();
   FocusNode? inputFieldNode;
   String searchQuery = '';
 
@@ -114,33 +114,14 @@ class _GlobalSearchPageState extends State<GlobalSearchPage> {
                           Expanded(
                             child: searchQuery.isEmpty
                                 ? const SizedBox()
-                                : StreamBuilder(
-                                    stream: _firestore
-                                        .collection("products")
-                                        .where(
-                                          'name',
-                                          isGreaterThanOrEqualTo: searchQuery,
-                                          isLessThan: searchQuery.substring(
-                                                0,
-                                                searchQuery.length - 1,
-                                              ) +
-                                              String.fromCharCode(
-                                                searchQuery.codeUnitAt(
-                                                      searchQuery.length - 1,
-                                                    ) +
-                                                    1,
-                                              ),
-                                        )
-                                        .orderBy('name')
-                                        .snapshots(),
+                                : FutureBuilder<List<Product>>(
+                                    future: _productService
+                                        .searchProducts(searchQuery),
                                     builder: (
                                       BuildContext context,
-                                      AsyncSnapshot<
-                                              QuerySnapshot<
-                                                  Map<String, dynamic>>>
-                                          snapshot,
+                                      AsyncSnapshot<List<Product>> snapshot,
                                     ) {
-                                      if (!snapshot.hasData) {
+                                      if (snapshot.connectionState == ConnectionState.waiting) {
                                         return const Center(
                                           child: SizedBox(
                                             height: 40,
@@ -151,15 +132,29 @@ class _GlobalSearchPageState extends State<GlobalSearchPage> {
                                           ),
                                         );
                                       }
+                                      if (!snapshot.hasData) {
+                                        return const SizedBox();
+                                      }
+                                      final products = snapshot.data!;
+                                      if (products.isEmpty) {
+                                        return const Center(
+                                          child: Text(
+                                            'No products found',
+                                            style: TextStyle(
+                                              fontFamily: "Nunito",
+                                              fontSize: 16,
+                                              color: ColorPalette.nileBlue,
+                                            ),
+                                          ),
+                                        );
+                                      }
                                       return ListView.builder(
-                                        itemCount: snapshot.data!.docs.length,
+                                        itemCount: products.length,
                                         itemBuilder:
                                             (BuildContext context, int index) {
                                           return ProductCard(
-                                            product: Product.fromMap(
-                                              snapshot.data!.docs[index].data(),
-                                            ),
-                                            docID: snapshot.data!.docs[index].id,
+                                            product: products[index],
+                                            docID: products[index].id!,
                                           );
                                         },
                                       );

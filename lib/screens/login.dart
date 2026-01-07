@@ -1,7 +1,8 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:warehouse_management/functions/toast.dart';
+import 'package:warehouse_management/services/auth_service.dart';
+import 'package:warehouse_management/screens/register.dart';
 import 'package:warehouse_management/utils/color_palette.dart';
 import 'package:warehouse_management/utils/svg_strings.dart';
 
@@ -13,7 +14,7 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final FirebaseAuth firebaseAuth = FirebaseAuth.instance;
+  final AuthService _authService = AuthService();
   bool _failed = false;
   bool _isVisible = false;
   bool _loading = false;
@@ -21,14 +22,14 @@ class _LoginState extends State<Login> {
   Future signIn() async {
     setState(() {
       _loading = true;
+      _failed = false;
     });
     try {
-      await firebaseAuth
-          .signInWithEmailAndPassword(
-              email: _emailController.text, password: _passwordController.text,)
-          .then((value) {
-        showTextToast('Loged In Sucessfully!');
-      });
+      await _authService.signIn(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+      showTextToast('Logged In Successfully!');
     } catch (e) {
       setState(() {
         _failed = true;
@@ -245,6 +246,37 @@ class _LoginState extends State<Login> {
                                   color: ColorPalette.white,
                                 ),
                               ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    "Don't have an account? ",
+                    style: TextStyle(
+                      fontFamily: "Nunito",
+                      fontSize: 14,
+                      color: ColorPalette.nileBlue,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => Register()),
+                      );
+                    },
+                    child: const Text(
+                      "Sign Up",
+                      style: TextStyle(
+                        fontFamily: "Nunito",
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: ColorPalette.pacificBlue,
                       ),
                     ),
                   ),
