@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.warehouse_management">
+   <uses-permission android:name="android.permission.CAMERA" />
    <application
         android:label="Wavezly"
         android:icon="@mipmap/ic_launcher">

@@ -9,6 +9,7 @@ class Product {
         this.quantity,
         this.image,
         this.description,
+        this.barcode,
     });
 
     String? id;
@@ -20,6 +21,7 @@ class Product {
     int? quantity;
     String? image;
     String? description;
+    String? barcode;
 
     factory Product.fromMap(Map<String, dynamic> json) => Product(
         id: json["id"] as String?,
@@ -31,6 +33,7 @@ class Product {
         quantity: json["quantity"] as int?,
         image: json["image_url"] as String?,
         description: json["description"] as String?,
+        barcode: json["barcode"] as String?,
     );
 
     Map<String, dynamic> toMap() => {
@@ -42,5 +45,6 @@ class Product {
         "quantity": quantity,
         "image_url": image,
         "description": description,
+        "barcode": barcode,
     };
 }
