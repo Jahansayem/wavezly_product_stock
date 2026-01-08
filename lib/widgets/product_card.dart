@@ -1,8 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:warehouse_management/models/product.dart';
-import 'package:warehouse_management/screens/product_details_page.dart';
-import 'package:warehouse_management/utils/color_palette.dart';
+import 'package:wavezly/models/product.dart';
+import 'package:wavezly/screens/product_details_page.dart';
+import 'package:wavezly/utils/color_palette.dart';
 
 class ProductCard extends StatelessWidget {
   final Product? product;
@@ -162,7 +162,7 @@ class ProductCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    "₹${product!.cost ?? '-'}",
+                    "৳${product!.cost ?? '-'}",
                     style: const TextStyle(
                       fontFamily: "Nunito",
                       fontSize: 14,

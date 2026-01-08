@@ -1,10 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:warehouse_management/functions/toast.dart';
-import 'package:warehouse_management/models/product.dart';
-import 'package:warehouse_management/services/product_service.dart';
-import 'package:warehouse_management/utils/color_palette.dart';
-import 'package:warehouse_management/widgets/location_drop_down.dart';
+import 'package:wavezly/functions/toast.dart';
+import 'package:wavezly/models/product.dart';
+import 'package:wavezly/services/product_service.dart';
+import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/widgets/location_drop_down.dart';
 
 class ProductDetailsPage extends StatelessWidget {
   final Product? product;

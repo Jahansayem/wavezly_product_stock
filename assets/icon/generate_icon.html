@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wavezly Icon Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: #e2e8f0;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 1200px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #00b7b7 0%, #0096a5 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            margin-bottom: 3rem;
+        }
+
+        .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .icon-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .icon-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(59, 130, 246, 0.5);
+            box-shadow: 0 20px 40px rgba(59, 130, 246, 0.2);
+        }
+
+        .icon-wrapper {
+            width: 256px;
+            height: 256px;
+            margin: 0 auto 1.5rem;
+            background: white;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        canvas {
+            border-radius: 20px;
+        }
+
+        .icon-label {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 0.5rem;
+        }
+
+        .icon-size {
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+
+        button {
+            background: linear-gradient(135deg, #00b7b7 0%, #0096a5 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0.5rem;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 183, 183, 0.4);
+        }
+
+        .buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .info {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(6, 182, 212, 0.1);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Wavezly Icon Generator</h1>
+        <p class="subtitle">Modern warehouse management meets fluid design</p>
+
+        <div class="icon-grid">
+            <div class="icon-card">
+                <div class="icon-wrapper">
+                    <canvas id="icon1024" width="1024" height="1024"></canvas>
+                </div>
+                <div class="icon-label">High Resolution</div>
+                <div class="icon-size">1024×1024px</div>
+            </div>
+
+            <div class="icon-card">
+                <div class="icon-wrapper">
+                    <canvas id="icon512" width="512" height="512"></canvas>
+                </div>
+                <div class="icon-label">Standard</div>
+                <div class="icon-size">512×512px</div>
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button onclick="downloadIcon('icon1024', 1024, 'wavezly_icon_1024.png')">Download 1024×1024</button>
+            <button onclick="downloadIcon('icon512', 512, 'wavezly_icon_512.png')">Download 512×512</button>
+            <button onclick="downloadAllSizes()">Download All Sizes</button>
+        </div>
+
+        <div class="info">
+            <strong>Design Concept:</strong> The Wavezly icon merges fluid wave dynamics with structured warehouse geometry.
+            The flowing "W" represents movement and efficiency, while geometric elements symbolize organized inventory management.
+            The teal gradient (#00b7b7 → #0096a5 → #1a2e35) matches your app's color scheme perfectly.
+        </div>
+    </div>
+
+    <script>
+        function drawWavezlyIcon(canvas, size) {
+            const ctx = canvas.getContext('2d');
+            const scale = size / 1024;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, size, size);
+
+            // Create gradient background
+            const bgGradient = ctx.createLinearGradient(0, 0, size, size);
+            bgGradient.addColorStop(0, '#00b7b7');
+            bgGradient.addColorStop(0.5, '#0096a5');
+            bgGradient.addColorStop(1, '#1a2e35');
+
+            // Draw rounded rectangle background
+            const cornerRadius = 180 * scale;
+            ctx.fillStyle = bgGradient;
+            roundRect(ctx, 0, 0, size, size, cornerRadius);
+            ctx.fill();
+
+            // Draw warehouse structure (geometric boxes)
+            ctx.save();
+            ctx.globalAlpha = 0.15;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+
+            // Stack of boxes in background
+            const boxSize = 140 * scale;
+            const boxGap = 20 * scale;
+            const startX = size * 0.65;
+            const startY = size * 0.25;
+
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 2; j++) {
+                    const x = startX + j * (boxSize + boxGap);
+                    const y = startY + i * (boxSize + boxGap);
+                    ctx.fillRect(x, y, boxSize, boxSize);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.lineWidth = 3 * scale;
+                    ctx.strokeRect(x, y, boxSize, boxSize);
+                }
+            }
+            ctx.restore();
+
+            // Draw dynamic wave "W" shape
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+            ctx.shadowBlur = 30 * scale;
+            ctx.shadowOffsetY = 10 * scale;
+
+            // Create the flowing "W" using bezier curves
+            ctx.beginPath();
+
+            // Left wave of W
+            ctx.moveTo(150 * scale, 250 * scale);
+            ctx.bezierCurveTo(
+                150 * scale, 400 * scale,
+                200 * scale, 550 * scale,
+                280 * scale, 750 * scale
+            );
+            ctx.bezierCurveTo(
+                300 * scale, 780 * scale,
+                320 * scale, 780 * scale,
+                340 * scale, 750 * scale
+            );
+
+            // Middle peak
+            ctx.bezierCurveTo(
+                400 * scale, 600 * scale,
+                450 * scale, 500 * scale,
+                512 * scale, 400 * scale
+            );
+
+            // Right valley
+            ctx.bezierCurveTo(
+                574 * scale, 500 * scale,
+                624 * scale, 600 * scale,
+                684 * scale, 750 * scale
+            );
+            ctx.bezierCurveTo(
+                704 * scale, 780 * scale,
+                724 * scale, 780 * scale,
+                744 * scale, 750 * scale
+            );
+
+            // Right wave of W
+            ctx.bezierCurveTo(
+                824 * scale, 550 * scale,
+                874 * scale, 400 * scale,
+                874 * scale, 250 * scale
+            );
+
+            // Top connecting curve
+            ctx.bezierCurveTo(
+                874 * scale, 220 * scale,
+                850 * scale, 200 * scale,
+                820 * scale, 220 * scale
+            );
+            ctx.bezierCurveTo(
+                780 * scale, 350 * scale,
+                730 * scale, 480 * scale,
+                680 * scale, 600 * scale
+            );
+
+            // Middle descent
+            ctx.lineTo(512 * scale, 500 * scale);
+
+            // Left side return
+            ctx.lineTo(344 * scale, 600 * scale);
+            ctx.bezierCurveTo(
+                294 * scale, 480 * scale,
+                244 * scale, 350 * scale,
+                204 * scale, 220 * scale
+            );
+            ctx.bezierCurveTo(
+                174 * scale, 200 * scale,
+                150 * scale, 220 * scale,
+                150 * scale, 250 * scale
+            );
+
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+
+            // Add accent lines for movement
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 8 * scale;
+            ctx.lineCap = 'round';
+
+            // Flowing accent lines
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                const yOffset = 300 * scale + i * 80 * scale;
+                ctx.moveTo(80 * scale, yOffset);
+                ctx.bezierCurveTo(
+                    200 * scale, yOffset - 30 * scale,
+                    300 * scale, yOffset + 30 * scale,
+                    450 * scale, yOffset
+                );
+                ctx.globalAlpha = 0.3 - i * 0.08;
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            // Add subtle highlight
+            ctx.save();
+            const highlightGradient = ctx.createRadialGradient(
+                size * 0.3, size * 0.3, 0,
+                size * 0.3, size * 0.3, size * 0.6
+            );
+            highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
+            highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = highlightGradient;
+            ctx.fillRect(0, 0, size, size);
+            ctx.restore();
+        }
+
+        function roundRect(ctx, x, y, width, height, radius) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+        }
+
+        function downloadIcon(canvasId, size, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function downloadAllSizes() {
+            const sizes = [1024, 512, 192, 144, 96, 72, 48];
+
+            sizes.forEach((size, index) => {
+                setTimeout(() => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = size;
+                    canvas.height = size;
+                    drawWavezlyIcon(canvas, size);
+
+                    const link = document.createElement('a');
+                    link.download = `wavezly_icon_${size}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                }, index * 200);
+            });
+        }
+
+        // Initialize icons
+        window.addEventListener('load', () => {
+            drawWavezlyIcon(document.getElementById('icon1024'), 1024);
+            drawWavezlyIcon(document.getElementById('icon512'), 512);
+        });
+    </script>
+</body>
+</html>

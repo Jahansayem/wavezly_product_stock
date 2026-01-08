@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:warehouse_management/functions/toast.dart';
-import 'package:warehouse_management/services/auth_service.dart';
-import 'package:warehouse_management/screens/register.dart';
-import 'package:warehouse_management/utils/color_palette.dart';
-import 'package:warehouse_management/utils/svg_strings.dart';
+import 'package:wavezly/functions/toast.dart';
+import 'package:wavezly/services/auth_service.dart';
+import 'package:wavezly/screens/register.dart';
+import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/utils/svg_strings.dart';
 
 class Login extends StatefulWidget {
   @override
@@ -50,27 +50,28 @@ class _LoginState extends State<Login> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      // onTap: () {
-      //   final FocusScopeNode currentFocus = FocusScope.of(context);
-      //   if (!currentFocus.hasPrimaryFocus) {
-      //     currentFocus.unfocus();
-      //   }
-      // },
+      onTap: () {
+        final FocusScopeNode currentFocus = FocusScope.of(context);
+        if (!currentFocus.hasPrimaryFocus) {
+          currentFocus.unfocus();
+        }
+      },
       child: Scaffold(
         backgroundColor: ColorPalette.aquaHaze,
-        resizeToAvoidBottomInset: false,
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 36),
-          child: Column(
+        resizeToAvoidBottomInset: true,
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 36),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(child: SizedBox()),
+              const SizedBox(height: 60),
               SvgPicture.string(SvgStrings.warehouse),
               const SizedBox(
                 height: 18,
               ),
               const Text(
-                "Warehouse\nManagement",
+                "Inventory Management",
                 style: TextStyle(
                   fontFamily: "Nunito",
                   fontSize: 40,
@@ -85,9 +86,11 @@ class _LoginState extends State<Login> {
                   const SizedBox(
                     width: 10,
                   ),
-                  const Text(
-                    "XYZ's Godown",
-                    style: TextStyle(fontFamily: "Open_Sans", fontSize: 20),
+                  const Expanded(
+                    child: Text(
+                      "Manage your inventory Smartly",
+                      style: TextStyle(fontFamily: "Open_Sans", fontSize: 16),
+                    ),
                   ),
                 ],
               ),
@@ -282,8 +285,9 @@ class _LoginState extends State<Login> {
                   ),
                 ],
               ),
-              const Expanded(child: SizedBox()),
+              const SizedBox(height: 40),
             ],
+            ),
           ),
         ),
       ),

@@ -1,5 +1,5 @@
-name: warehouse_management
-description: A new Flutter project.
+name: wavezly
+description: Wavezly - Modern warehouse management solution.
 
 publish_to: "none"
 
@@ -23,6 +23,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   lint: ^1.8.2
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
@@ -38,3 +39,10 @@ flutter:
       - asset: lib/assets/fonts/Open_Sans/OpenSans-Bold.ttf
       - asset: lib/assets/fonts/Open_Sans/OpenSans-Light.ttf
       - asset: lib/assets/fonts/Open_Sans/OpenSans-Regular.ttf
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/wavezly_icon_1024.png"
+  adaptive_icon_background: "#00b7b7"
+  adaptive_icon_foreground: "assets/icon/wavezly_icon_1024.png"

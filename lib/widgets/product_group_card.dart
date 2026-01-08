@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:warehouse_management/screens/product_group_page.dart';
-import 'package:warehouse_management/utils/color_palette.dart';
+import 'package:wavezly/screens/product_group_page.dart';
+import 'package:wavezly/utils/color_palette.dart';
 
 class ProductGroupCard extends StatelessWidget {
   final String? name;

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:warehouse_management/functions/toast.dart';
-import 'package:warehouse_management/services/auth_service.dart';
-import 'package:warehouse_management/utils/color_palette.dart';
-import 'package:warehouse_management/utils/svg_strings.dart';
+import 'package:wavezly/functions/toast.dart';
+import 'package:wavezly/services/auth_service.dart';
+import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/utils/svg_strings.dart';
 
 class Register extends StatefulWidget {
   @override
@@ -81,9 +81,16 @@ class _RegisterState extends State<Register> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GestureDetector(
+      onTap: () {
+        final FocusScopeNode currentFocus = FocusScope.of(context);
+        if (!currentFocus.hasPrimaryFocus) {
+          currentFocus.unfocus();
+        }
+      },
+      child: Scaffold(
       backgroundColor: ColorPalette.aquaHaze,
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: ColorPalette.aquaHaze,
         elevation: 0,
@@ -92,9 +99,10 @@ class _RegisterState extends State<Register> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 36),
-        child: Column(
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 36),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 20),
@@ -112,9 +120,11 @@ class _RegisterState extends State<Register> {
               children: [
                 SvgPicture.string(SvgStrings.location),
                 const SizedBox(width: 10),
-                const Text(
-                  "XYZ's Godown",
-                  style: TextStyle(fontFamily: "Open_Sans", fontSize: 20),
+                const Expanded(
+                  child: Text(
+                    "Manage your inventory Smartly",
+                    style: TextStyle(fontFamily: "Open_Sans", fontSize: 16),
+                  ),
                 ),
               ],
             ),
@@ -363,9 +373,11 @@ class _RegisterState extends State<Register> {
                 ),
               ],
             ),
-            const Expanded(child: SizedBox()),
+            const SizedBox(height: 40),
           ],
+          ),
         ),
+      ),
       ),
     );
   }

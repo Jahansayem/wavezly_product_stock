@@ -1,12 +1,12 @@
 import 'package:double_back_to_close_app/double_back_to_close_app.dart';
 import 'package:flutter/material.dart';
-import 'package:warehouse_management/functions/confirm_dialog.dart';
-import 'package:warehouse_management/functions/toast.dart';
-import 'package:warehouse_management/screens/global_search_page.dart';
-import 'package:warehouse_management/services/auth_service.dart';
-import 'package:warehouse_management/services/product_service.dart';
-import 'package:warehouse_management/utils/color_palette.dart';
-import 'package:warehouse_management/widgets/product_group_card.dart';
+import 'package:wavezly/functions/confirm_dialog.dart';
+import 'package:wavezly/functions/toast.dart';
+import 'package:wavezly/screens/global_search_page.dart';
+import 'package:wavezly/services/auth_service.dart';
+import 'package:wavezly/services/product_service.dart';
+import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/widgets/product_group_card.dart';
 
 class Home extends StatelessWidget {
   final AuthService _authService = AuthService();

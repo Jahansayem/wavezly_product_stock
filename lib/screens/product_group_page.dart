@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:warehouse_management/models/product.dart';
-import 'package:warehouse_management/screens/new_product_page.dart';
-import 'package:warehouse_management/screens/search_product_in_group.dart';
-import 'package:warehouse_management/services/product_service.dart';
-import 'package:warehouse_management/utils/color_palette.dart';
-import 'package:warehouse_management/widgets/product_card.dart';
+import 'package:wavezly/models/product.dart';
+import 'package:wavezly/screens/new_product_page.dart';
+import 'package:wavezly/screens/search_product_in_group.dart';
+import 'package:wavezly/services/product_service.dart';
+import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/widgets/product_card.dart';
 
 class ProductGroupPage extends StatelessWidget {
   final String? name;

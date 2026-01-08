@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:warehouse_management/models/product.dart';
-import 'package:warehouse_management/services/product_service.dart';
-import 'package:warehouse_management/utils/color_palette.dart';
-import 'package:warehouse_management/widgets/product_card.dart';
+import 'package:wavezly/models/product.dart';
+import 'package:wavezly/services/product_service.dart';
+import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/widgets/product_card.dart';
 
 class GlobalSearchPage extends StatefulWidget {
   const GlobalSearchPage({Key? key}) : super(key: key);

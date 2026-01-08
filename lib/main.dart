@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:warehouse_management/config/supabase_config.dart';
-import 'package:warehouse_management/my_app.dart';
+import 'package:wavezly/config/supabase_config.dart';
+import 'package:wavezly/my_app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
