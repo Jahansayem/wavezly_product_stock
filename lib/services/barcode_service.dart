@@ -1,5 +1,5 @@
-import 'package:warehouse_management/config/supabase_config.dart';
-import 'package:warehouse_management/models/product.dart';
+import 'package:wavezly/config/supabase_config.dart';
+import 'package:wavezly/models/product.dart';
 
 class BarcodeService {
   Future<Product?> findProductByBarcode(String barcode) async {

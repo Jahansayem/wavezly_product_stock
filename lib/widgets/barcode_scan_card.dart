@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:warehouse_management/utils/color_palette.dart';
-import 'package:warehouse_management/screens/barcode_scanner_screen.dart';
+import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/screens/barcode_scanner_screen.dart';
 
 class BarcodeScanCard extends StatelessWidget {
   const BarcodeScanCard({super.key});
@@ -23,29 +23,17 @@ class BarcodeScanCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: ColorPalette.pacificBlue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.qr_code_scanner,
-              color: ColorPalette.pacificBlue,
-              size: 32,
-            ),
-          ),
-          const SizedBox(width: 16),
           Expanded(
+            flex: 3,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   'Scan Barcode',
                   style: TextStyle(
                     fontFamily: 'Nunito',
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: ColorPalette.timberGreen,
                   ),
@@ -55,37 +43,64 @@ class BarcodeScanCard extends StatelessWidget {
                   'Use camera to add items',
                   style: TextStyle(
                     fontFamily: 'Nunito',
-                    fontSize: 14,
-                    color: ColorPalette.nileBlue,
+                    fontSize: 12,
+                    color: ColorPalette.nileBlue.withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const BarcodeScannerScreen(),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: ColorPalette.pacificBlue.withOpacity(0.1),
+                    foregroundColor: ColorPalette.pacificBlue,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(Icons.photo_camera, size: 18),
+                  label: const Text(
+                    'Open Scanner',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const BarcodeScannerScreen(),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: ColorPalette.pacificBlue,
-              foregroundColor: ColorPalette.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 1,
+            child: Container(
+              height: 96,
+              decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFE0F2F1),
+                    Color(0xFFB2DFDB),
+                  ],
+                ),
               ),
-            ),
-            child: const Text(
-              'Open Scanner',
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
+              child: Center(
+                child: Icon(
+                  Icons.qr_code_scanner,
+                  color: ColorPalette.pacificBlue,
+                  size: 48,
+                ),
               ),
             ),
           ),

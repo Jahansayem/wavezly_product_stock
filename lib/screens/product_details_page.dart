@@ -1,16 +1,23 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:wavezly/functions/toast.dart';
 import 'package:wavezly/models/product.dart';
 import 'package:wavezly/services/product_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/widgets/location_drop_down.dart';
 
-class ProductDetailsPage extends StatelessWidget {
+class ProductDetailsPage extends StatefulWidget {
   final Product? product;
   final String? docID;
-  ProductDetailsPage({Key? key, this.product, this.docID}) : super(key: key);
+  const ProductDetailsPage({Key? key, this.product, this.docID})
+      : super(key: key);
 
+  @override
+  _ProductDetailsPageState createState() => _ProductDetailsPageState();
+}
+
+class _ProductDetailsPageState extends State<ProductDetailsPage> {
   final ProductService _productService = ProductService();
 
   @override
@@ -24,7 +31,8 @@ class ProductDetailsPage extends StatelessWidget {
         child: FloatingActionButton(
           onPressed: () async {
             try {
-              await _productService.updateProduct(docID!, product!);
+              await _productService.updateProduct(
+                  widget.docID!, widget.product!);
               showTextToast('Updated Successfully!');
               Navigator.of(context).pop();
             } catch (e) {
@@ -95,7 +103,7 @@ class ProductDetailsPage extends StatelessWidget {
                         ),
                         onPressed: () async {
                           try {
-                            await _productService.deleteProduct(docID!);
+                            await _productService.deleteProduct(widget.docID!);
                             showTextToast('Deleted Successfully!');
                             Navigator.of(context).pop();
                           } catch (e) {
@@ -149,7 +157,7 @@ class ProductDetailsPage extends StatelessWidget {
                                             bottom: 12,
                                           ),
                                           child: Text(
-                                            "Product Group : ${product!.group}",
+                                            "Product Group : ${widget.product!.group}",
                                             style: const TextStyle(
                                               fontFamily: "Nunito",
                                               fontSize: 17,
@@ -173,9 +181,9 @@ class ProductDetailsPage extends StatelessWidget {
                                           ),
                                           height: 50,
                                           child: TextFormField(
-                                            initialValue: product!.name ?? '',
+                                            initialValue: widget.product!.name ?? '',
                                             onChanged: (value) {
-                                              product!.name = value;
+                                              widget.product!.name = value;
                                             },
                                             textInputAction:
                                                 TextInputAction.next,
@@ -226,12 +234,12 @@ class ProductDetailsPage extends StatelessWidget {
                                                 ),
                                                 height: 50,
                                                 child: TextFormField(
-                                                  initialValue: product!.cost ==
+                                                  initialValue: widget.product!.cost ==
                                                           null
                                                       ? ''
-                                                      : product!.cost.toString(),
+                                                      : widget.product!.cost.toString(),
                                                   onChanged: (value) {
-                                                    product!.cost =
+                                                    widget.product!.cost =
                                                         double.parse(value);
                                                   },
                                                   textInputAction:
@@ -287,12 +295,12 @@ class ProductDetailsPage extends StatelessWidget {
                                                 height: 50,
                                                 child: TextFormField(
                                                   initialValue:
-                                                      product!.quantity == null
+                                                      widget.product!.quantity == null
                                                           ? ''
-                                                          : product!.quantity
+                                                          : widget.product!.quantity
                                                               .toString(),
                                                   onChanged: (value) {
-                                                    product!.quantity =
+                                                    widget.product!.quantity =
                                                         int.parse(value);
                                                   },
                                                   textInputAction:
@@ -346,9 +354,9 @@ class ProductDetailsPage extends StatelessWidget {
                                           ),
                                           height: 50,
                                           child: TextFormField(
-                                            initialValue: product!.company ?? '',
+                                            initialValue: widget.product!.company ?? '',
                                             onChanged: (value) {
-                                              product!.company = value;
+                                              widget.product!.company = value;
                                             },
                                             textInputAction:
                                                 TextInputAction.next,
@@ -395,9 +403,9 @@ class ProductDetailsPage extends StatelessWidget {
                                           height: 50,
                                           child: TextFormField(
                                             initialValue:
-                                                product!.description ?? '',
+                                                widget.product!.description ?? '',
                                             onChanged: (value) {
-                                              product!.description = value;
+                                              widget.product!.description = value;
                                             },
                                             textInputAction:
                                                 TextInputAction.next,
@@ -425,6 +433,72 @@ class ProductDetailsPage extends StatelessWidget {
                                           ),
                                         ),
                                         const SizedBox(height: 20),
+                                        GestureDetector(
+                                          onTap: () async {
+                                            final picked = await showDatePicker(
+                                              context: context,
+                                              initialDate: widget
+                                                          .product!.expiryDate !=
+                                                      null
+                                                  ? widget.product!.expiryDate!
+                                                  : DateTime.now()
+                                                      .add(const Duration(days: 30)),
+                                              firstDate: DateTime.now(),
+                                              lastDate: DateTime.now()
+                                                  .add(const Duration(days: 3650)),
+                                            );
+                                            if (picked != null) {
+                                              setState(() {
+                                                widget.product!.expiryDate = picked;
+                                              });
+                                            }
+                                          },
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: ColorPalette.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  offset: const Offset(0, 3),
+                                                  blurRadius: 6,
+                                                  color: ColorPalette.nileBlue
+                                                      .withOpacity(0.1),
+                                                ),
+                                              ],
+                                            ),
+                                            height: 50,
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 16),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Text(
+                                                  widget.product!.expiryDate != null
+                                                      ? DateFormat('MMM dd, yyyy')
+                                                          .format(widget.product!
+                                                              .expiryDate!)
+                                                      : 'Select expiry date (optional)',
+                                                  style: TextStyle(
+                                                    fontFamily: 'Nunito',
+                                                    fontSize: 16,
+                                                    color: widget.product!
+                                                                .expiryDate !=
+                                                            null
+                                                        ? ColorPalette.nileBlue
+                                                        : ColorPalette.nileBlue
+                                                            .withOpacity(0.58),
+                                                  ),
+                                                ),
+                                                const Icon(Icons.calendar_today,
+                                                    color: ColorPalette.nileBlue,
+                                                    size: 20),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 20),
                                         const Padding(
                                           padding: EdgeInsets.only(
                                             left: 8,
@@ -439,7 +513,7 @@ class ProductDetailsPage extends StatelessWidget {
                                             ),
                                           ),
                                         ),
-                                        LocationDD(product: product),
+                                        LocationDD(product: widget.product),
                                       ],
                                     ),
                                   ),
@@ -458,7 +532,7 @@ class ProductDetailsPage extends StatelessWidget {
                                           child: Container(
                                             color: ColorPalette.timberGreen
                                                 .withOpacity(0.1),
-                                            child: (product!.image == null)
+                                            child: (widget.product!.image == null)
                                                 ? Center(
                                                     child: Icon(
                                                       Icons.image,
@@ -469,7 +543,7 @@ class ProductDetailsPage extends StatelessWidget {
                                                   )
                                                 : CachedNetworkImage(
                                                     fit: BoxFit.cover,
-                                                    imageUrl: product!.image!,
+                                                    imageUrl: widget.product!.image!,
                                                     errorWidget:
                                                         (context, s, a) {
                                                       return Icon(

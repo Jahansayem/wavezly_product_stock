@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:warehouse_management/utils/color_palette.dart';
-import 'package:warehouse_management/services/auth_service.dart';
-import 'package:warehouse_management/functions/confirm_dialog.dart';
+import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/services/auth_service.dart';
+import 'package:wavezly/functions/confirm_dialog.dart';
 
 class SettingsPage extends StatelessWidget {
   final AuthService _authService = AuthService();

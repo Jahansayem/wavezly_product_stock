@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:warehouse_management/utils/color_palette.dart';
+import 'package:wavezly/utils/color_palette.dart';
 
 class CustomBottomNav extends StatelessWidget {
   final int currentIndex;
@@ -16,7 +16,7 @@ class CustomBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 65,
+      height: 93,
       decoration: const BoxDecoration(
         color: ColorPalette.white,
         border: Border(

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:warehouse_management/utils/color_palette.dart';
-import 'package:warehouse_management/models/product.dart';
-import 'package:warehouse_management/services/barcode_service.dart';
+import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/models/product.dart';
+import 'package:wavezly/services/barcode_service.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 class BarcodeScannerScreen extends StatefulWidget {

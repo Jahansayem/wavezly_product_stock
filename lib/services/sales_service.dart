@@ -1,7 +1,7 @@
-import 'package:warehouse_management/config/supabase_config.dart';
-import 'package:warehouse_management/models/sale.dart';
-import 'package:warehouse_management/models/sale_item.dart';
-import 'package:warehouse_management/models/cart_item.dart';
+import 'package:wavezly/config/supabase_config.dart';
+import 'package:wavezly/models/sale.dart';
+import 'package:wavezly/models/sale_item.dart';
+import 'package:wavezly/models/cart_item.dart';
 
 class SalesService {
   final _supabase = SupabaseConfig.client;

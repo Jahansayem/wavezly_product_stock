@@ -1,15 +1,21 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:wavezly/functions/toast.dart';
 import 'package:wavezly/models/product.dart';
 import 'package:wavezly/services/product_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/widgets/location_drop_down.dart';
 
-class NewProductPage extends StatelessWidget {
+class NewProductPage extends StatefulWidget {
   final String? group;
-  NewProductPage({Key? key, this.group}) : super(key: key);
+  const NewProductPage({Key? key, this.group}) : super(key: key);
 
+  @override
+  _NewProductPageState createState() => _NewProductPageState();
+}
+
+class _NewProductPageState extends State<NewProductPage> {
   final Product newProduct = Product();
   final ProductService _productService = ProductService();
 
@@ -23,7 +29,7 @@ class NewProductPage extends StatelessWidget {
         ),
         child: FloatingActionButton(
           onPressed: () async {
-            newProduct.group = group;
+            newProduct.group = widget.group;
             try {
               await _productService.addProduct(newProduct);
               showTextToast('Added Successfully!');
@@ -132,7 +138,7 @@ class NewProductPage extends StatelessWidget {
                                           padding: const EdgeInsets.only(
                                               left: 8, bottom: 12,),
                                           child: Text(
-                                            "Product Group : $group",
+                                            "Product Group : ${widget.group}",
                                             style: const TextStyle(
                                               fontFamily: "Nunito",
                                               fontSize: 17,
@@ -408,6 +414,67 @@ class NewProductPage extends StatelessWidget {
                                             ),
                                             cursorColor:
                                                 ColorPalette.timberGreen,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 20),
+                                        GestureDetector(
+                                          onTap: () async {
+                                            final picked = await showDatePicker(
+                                              context: context,
+                                              initialDate: DateTime.now()
+                                                  .add(const Duration(days: 30)),
+                                              firstDate: DateTime.now(),
+                                              lastDate: DateTime.now()
+                                                  .add(const Duration(days: 3650)),
+                                            );
+                                            if (picked != null) {
+                                              setState(() {
+                                                newProduct.expiryDate = picked;
+                                              });
+                                            }
+                                          },
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: ColorPalette.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  offset: const Offset(0, 3),
+                                                  blurRadius: 6,
+                                                  color: ColorPalette.nileBlue
+                                                      .withOpacity(0.1),
+                                                ),
+                                              ],
+                                            ),
+                                            height: 50,
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 16),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Text(
+                                                  newProduct.expiryDate != null
+                                                      ? DateFormat('MMM dd, yyyy')
+                                                          .format(newProduct
+                                                              .expiryDate!)
+                                                      : 'Select expiry date (optional)',
+                                                  style: TextStyle(
+                                                    fontFamily: 'Nunito',
+                                                    fontSize: 16,
+                                                    color: newProduct.expiryDate !=
+                                                            null
+                                                        ? ColorPalette.nileBlue
+                                                        : ColorPalette.nileBlue
+                                                            .withOpacity(0.58),
+                                                  ),
+                                                ),
+                                                const Icon(Icons.calendar_today,
+                                                    color: ColorPalette.nileBlue,
+                                                    size: 20),
+                                              ],
+                                            ),
                                           ),
                                         ),
                                         const SizedBox(height: 20),

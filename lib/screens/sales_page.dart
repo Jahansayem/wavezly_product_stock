@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:warehouse_management/utils/color_palette.dart';
-import 'package:warehouse_management/models/product.dart';
-import 'package:warehouse_management/models/cart_item.dart';
-import 'package:warehouse_management/models/sale.dart';
-import 'package:warehouse_management/services/product_service.dart';
-import 'package:warehouse_management/services/sales_service.dart';
-import 'package:warehouse_management/widgets/barcode_scan_card.dart';
-import 'package:warehouse_management/widgets/cart_item_card.dart';
-import 'package:warehouse_management/widgets/customer_selector.dart';
-import 'package:warehouse_management/screens/barcode_scanner_screen.dart';
-import 'package:warehouse_management/screens/receipt_page.dart';
+import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/models/product.dart';
+import 'package:wavezly/models/cart_item.dart';
+import 'package:wavezly/models/sale.dart';
+import 'package:wavezly/services/product_service.dart';
+import 'package:wavezly/services/sales_service.dart';
+import 'package:wavezly/widgets/barcode_scan_card.dart';
+import 'package:wavezly/widgets/cart_item_card.dart';
+import 'package:wavezly/widgets/customer_selector.dart';
+import 'package:wavezly/screens/barcode_scanner_screen.dart';
+import 'package:wavezly/screens/sale_success_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
@@ -146,7 +146,7 @@ class _SalesPageState extends State<SalesPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => ReceiptPage(
+            builder: (context) => SaleSuccessScreen(
               sale: completedSale,
               saleItems: saleItems,
             ),
@@ -188,6 +188,7 @@ class _SalesPageState extends State<SalesPage> {
 
     return Scaffold(
       backgroundColor: ColorPalette.aquaHaze,
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Column(
           children: [
@@ -248,9 +249,10 @@ class _SalesPageState extends State<SalesPage> {
               ),
             ),
             Expanded(
-              child: Column(
-                children: [
-                  BarcodeScanCard(),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    BarcodeScanCard(),
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                     child: Row(
@@ -320,6 +322,7 @@ class _SalesPageState extends State<SalesPage> {
                       ),
                       child: ListView.builder(
                         shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
                         itemCount: _searchResults.length,
                         itemBuilder: (context, index) {
                           final product = _searchResults[index];
@@ -428,6 +431,8 @@ class _SalesPageState extends State<SalesPage> {
                                   ),
                                 )
                               : ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
                                   itemCount: _cartItems.length,
                                   itemBuilder: (context, index) {
                                     final cartItem = _cartItems[index];
@@ -445,6 +450,7 @@ class _SalesPageState extends State<SalesPage> {
                   ),
                 ],
               ),
+                ),
             ),
             Container(
               padding: const EdgeInsets.all(24),

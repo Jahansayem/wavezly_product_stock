@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:warehouse_management/utils/color_palette.dart';
+import 'package:wavezly/utils/color_palette.dart';
 
 class CustomerSelector extends StatelessWidget {
   final String customerName;

@@ -10,6 +10,7 @@ class Product {
         this.image,
         this.description,
         this.barcode,
+        this.expiryDate,
     });
 
     String? id;
@@ -22,6 +23,7 @@ class Product {
     String? image;
     String? description;
     String? barcode;
+    DateTime? expiryDate;
 
     factory Product.fromMap(Map<String, dynamic> json) => Product(
         id: json["id"] as String?,
@@ -34,6 +36,9 @@ class Product {
         image: json["image_url"] as String?,
         description: json["description"] as String?,
         barcode: json["barcode"] as String?,
+        expiryDate: json["expiry_date"] != null
+            ? DateTime.parse(json["expiry_date"] as String)
+            : null,
     );
 
     Map<String, dynamic> toMap() => {
@@ -46,5 +51,6 @@ class Product {
         "image_url": image,
         "description": description,
         "barcode": barcode,
+        "expiry_date": expiryDate?.toIso8601String().split('T')[0],
     };
 }

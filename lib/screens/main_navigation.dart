@@ -1,11 +1,11 @@
 import 'package:double_back_to_close_app/double_back_to_close_app.dart';
 import 'package:flutter/material.dart';
-import 'package:warehouse_management/screens/dashboard_home.dart';
-import 'package:warehouse_management/screens/stock_page.dart';
-import 'package:warehouse_management/screens/customers_page.dart';
-import 'package:warehouse_management/screens/settings_page.dart';
-import 'package:warehouse_management/screens/qr_scanner_page.dart';
-import 'package:warehouse_management/widgets/custom_bottom_nav.dart';
+import 'package:wavezly/screens/dashboard_home.dart';
+import 'package:wavezly/screens/inventory_screen_wrapper.dart';
+import 'package:wavezly/screens/customers_page.dart';
+import 'package:wavezly/screens/settings_page.dart';
+import 'package:wavezly/screens/qr_scanner_page.dart';
+import 'package:wavezly/widgets/custom_bottom_nav.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({Key? key}) : super(key: key);
@@ -17,9 +17,11 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
+  List<Widget> get _screens => [
     const DashboardHome(),    // Index 0
-    StockPage(),              // Index 1
+    InventoryScreenWrapper(   // Index 1
+      onTabSelected: _onTabTapped,
+    ),
     const CustomersPage(),    // Index 2 (QR is handled separately)
     SettingsPage(),           // Index 3
   ];

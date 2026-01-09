@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:warehouse_management/utils/color_palette.dart';
+import 'package:wavezly/utils/color_palette.dart';
 
 class ReportsPage extends StatelessWidget {
   const ReportsPage({Key? key}) : super(key: key);

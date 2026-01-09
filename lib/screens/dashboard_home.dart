@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:warehouse_management/utils/color_palette.dart';
-import 'package:warehouse_management/widgets/action_card.dart';
-import 'package:warehouse_management/widgets/greeting_header.dart';
-import 'package:warehouse_management/screens/new_product_page.dart';
-import 'package:warehouse_management/screens/sales_page.dart';
-import 'package:warehouse_management/screens/reports_page.dart';
-import 'package:warehouse_management/screens/due_page.dart';
+import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/widgets/action_card.dart';
+import 'package:wavezly/widgets/greeting_header.dart';
+import 'package:wavezly/screens/new_product_page.dart';
+import 'package:wavezly/screens/sales_page.dart';
+import 'package:wavezly/screens/reports_page.dart';
+import 'package:wavezly/screens/customers_page.dart';
 
 class DashboardHome extends StatelessWidget {
   const DashboardHome({Key? key}) : super(key: key);
@@ -28,7 +28,7 @@ class DashboardHome extends StatelessWidget {
                       crossAxisCount: 2,
                       crossAxisSpacing: 20,
                       mainAxisSpacing: 20,
-                      childAspectRatio: 1.1,
+                      childAspectRatio: 0.85,
                       children: [
                         ActionCard(
                           icon: Icons.point_of_sale,
@@ -59,7 +59,7 @@ class DashboardHome extends StatelessWidget {
                           label: 'Due',
                           subtitle: 'Pending payments',
                           onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (context) => const DuePage()),
+                            MaterialPageRoute(builder: (context) => const CustomersPage()),
                           ),
                         ),
                       ],

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:warehouse_management/utils/color_palette.dart';
+import 'package:wavezly/utils/color_palette.dart';
 
 class DuePage extends StatelessWidget {
   const DuePage({Key? key}) : super(key: key);

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:warehouse_management/screens/main_navigation.dart';
-import 'package:warehouse_management/screens/login.dart';
-import 'package:warehouse_management/utils/color_palette.dart';
+import 'package:wavezly/screens/main_navigation.dart';
+import 'package:wavezly/screens/login.dart';
+import 'package:wavezly/utils/color_palette.dart';
 
 class MyApp extends StatelessWidget {
   @override
