@@ -12,17 +12,17 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        color: ColorPalette.pacificBlue,
+        color: ColorPalette.tealAccent,
         child: SafeArea(
           child: Container(
-            color: ColorPalette.aquaHaze,
+            color: Colors.white,
             child: Column(
               children: [
                 Container(
                   height: 90,
                   padding: const EdgeInsets.only(left: 20, right: 20, top: 10),
                   decoration: const BoxDecoration(
-                    color: ColorPalette.pacificBlue,
+                    color: ColorPalette.tealAccent,
                     borderRadius: BorderRadius.only(
                       bottomLeft: Radius.circular(16),
                       bottomRight: Radius.circular(16),

@@ -57,7 +57,7 @@ class _LoginState extends State<Login> {
         }
       },
       child: Scaffold(
-        backgroundColor: ColorPalette.aquaHaze,
+        backgroundColor: Colors.white,
         resizeToAvoidBottomInset: true,
         body: SingleChildScrollView(
           child: Padding(
@@ -222,7 +222,7 @@ class _LoginState extends State<Login> {
                       width: 100,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
-                        color: ColorPalette.pacificBlue,
+                        color: ColorPalette.tealAccent,
                         boxShadow: [
                           BoxShadow(
                             offset: const Offset(0, 3),
@@ -238,7 +238,7 @@ class _LoginState extends State<Login> {
                                 width: 15,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: ColorPalette.aquaHaze,
+                                  color: Colors.white,
                                 ),
                               )
                             : const Text(
@@ -279,7 +279,7 @@ class _LoginState extends State<Login> {
                         fontFamily: "Nunito",
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: ColorPalette.pacificBlue,
+                        color: ColorPalette.tealAccent,
                       ),
                     ),
                   ),

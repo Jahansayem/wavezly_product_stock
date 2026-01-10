@@ -39,8 +39,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
               showTextToast('Failed!');
             }
           },
-          splashColor: ColorPalette.bondyBlue,
-          backgroundColor: ColorPalette.pacificBlue,
+          splashColor: ColorPalette.tealAccent,
+          backgroundColor: ColorPalette.tealAccent,
           child: const Icon(
             Icons.done,
             color: ColorPalette.white,
@@ -48,10 +48,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         ),
       ),
       body: Container(
-        color: ColorPalette.pacificBlue,
+        color: ColorPalette.tealAccent,
         child: SafeArea(
           child: Container(
-            color: ColorPalette.aquaHaze,
+            color: Colors.white,
             height: double.infinity,
             width: double.infinity,
             child: Column(
@@ -65,7 +65,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   width: double.infinity,
                   height: 90,
                   decoration: const BoxDecoration(
-                    color: ColorPalette.pacificBlue,
+                    color: ColorPalette.tealAccent,
                     borderRadius: BorderRadius.only(
                       bottomLeft: Radius.circular(16),
                       bottomRight: Radius.circular(16),

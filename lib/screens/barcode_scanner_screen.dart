@@ -51,7 +51,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
           Navigator.pop(context, product);
           Fluttertoast.showToast(
             msg: 'Added ${product.name} to cart',
-            backgroundColor: ColorPalette.pacificBlue,
+            backgroundColor: ColorPalette.tealAccent,
             textColor: ColorPalette.white,
           );
         }

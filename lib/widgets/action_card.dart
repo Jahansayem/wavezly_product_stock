@@ -40,12 +40,12 @@ class ActionCard extends StatelessWidget {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: ColorPalette.pacificBlue.withOpacity(0.1),
+                color: ColorPalette.tealAccent.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
                 icon,
-                color: ColorPalette.pacificBlue,
+                color: ColorPalette.tealAccent,
                 size: 32,
               ),
             ),

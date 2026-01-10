@@ -56,7 +56,7 @@ class ProductItem {
   Color get stockColor {
     if (badge == ProductBadge.lowStock) return ColorPalette.warningAmber;
     if (badge == ProductBadge.expired) return ColorPalette.slate500;
-    return ColorPalette.pacificBlue;
+    return ColorPalette.tealAccent;
   }
 }
 
@@ -85,10 +85,10 @@ class InventoryScreen extends StatefulWidget {
 class _InventoryScreenState extends State<InventoryScreen> {
   final ProductService _productService = ProductService();
 
-  static const Color _primary = ColorPalette.pacificBlue;
+  static const Color _primary = ColorPalette.tealAccent;
   static const Color _secondary = ColorPalette.warningAmber;
   static const Color _danger = ColorPalette.danger;
-  static const Color _background = ColorPalette.aquaHaze;
+  static const Color _background = Colors.white;
   static const Color _slate50 = ColorPalette.slate50;
   static const Color _slate100 = ColorPalette.slate100;
   static const Color _slate200 = ColorPalette.slate200;
@@ -297,7 +297,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
             child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(ColorPalette.pacificBlue),
+              valueColor: AlwaysStoppedAnimation<Color>(ColorPalette.tealAccent),
             ),
           );
         }
@@ -420,7 +420,7 @@ class _FilterChip extends StatelessWidget {
     required this.isActive,
   });
 
-  static const Color _primary = ColorPalette.pacificBlue;
+  static const Color _primary = ColorPalette.tealAccent;
   static const Color _slate50 = ColorPalette.slate50;
   static const Color _slate200 = ColorPalette.slate200;
   static const Color _slate500 = ColorPalette.slate500;
@@ -597,7 +597,7 @@ class _BottomNavItem extends StatelessWidget {
     required this.onTap,
   });
 
-  static const Color _primary = ColorPalette.pacificBlue;
+  static const Color _primary = ColorPalette.tealAccent;
   static const Color _slate400 = ColorPalette.slate400;
 
   @override

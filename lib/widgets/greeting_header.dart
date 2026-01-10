@@ -9,7 +9,7 @@ class GreetingHeader extends StatelessWidget {
     return Container(
       height: 160,
       decoration: const BoxDecoration(
-        color: ColorPalette.pacificBlue,
+        color: ColorPalette.tealAccent,
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(40),
           bottomRight: Radius.circular(40),

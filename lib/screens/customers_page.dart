@@ -76,7 +76,7 @@ class _CustomersPageState extends State<CustomersPage> {
               MaterialPageRoute(builder: (context) => const NewCustomerPage()),
             );
           },
-          backgroundColor: ColorPalette.pacificBlue,
+          backgroundColor: ColorPalette.tealAccent,
           child: const Icon(Icons.add, size: 28, color: Colors.white),
         ),
       ),
@@ -87,10 +87,10 @@ class _CustomersPageState extends State<CustomersPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: ColorPalette.pacificBlue,
+                color: ColorPalette.tealAccent,
                 boxShadow: [
                   BoxShadow(
-                    color: ColorPalette.pacificBlue.withOpacity(0.2),
+                    color: ColorPalette.tealAccent.withOpacity(0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -267,8 +267,8 @@ class _CustomersPageState extends State<CustomersPage> {
                           icon: const Icon(Icons.history, size: 16),
                           label: const Text('History'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: ColorPalette.pacificBlue,
-                            side: const BorderSide(color: ColorPalette.pacificBlue),
+                            foregroundColor: ColorPalette.tealAccent,
+                            side: const BorderSide(color: ColorPalette.tealAccent),
                           ),
                         ),
                       ],
@@ -284,7 +284,7 @@ class _CustomersPageState extends State<CustomersPage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border(
-                  bottom: BorderSide(color: ColorPalette.aquaHaze),
+                  bottom: BorderSide(color: Colors.white),
                 ),
               ),
               child: Column(
@@ -294,7 +294,7 @@ class _CustomersPageState extends State<CustomersPage> {
                       Expanded(
                         child: Container(
                           decoration: BoxDecoration(
-                            color: ColorPalette.aquaHaze,
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: TextField(
@@ -319,7 +319,7 @@ class _CustomersPageState extends State<CustomersPage> {
                       const SizedBox(width: 12),
                       Container(
                         decoration: BoxDecoration(
-                          color: ColorPalette.aquaHaze,
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: IconButton(
@@ -379,7 +379,7 @@ class _CustomersPageState extends State<CustomersPage> {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
                       child: CircularProgressIndicator(
-                        color: ColorPalette.pacificBlue,
+                        color: ColorPalette.tealAccent,
                       ),
                     );
                   }
@@ -461,7 +461,7 @@ class _CustomersPageState extends State<CustomersPage> {
         decoration: BoxDecoration(
           color: isSelected
               ? (indicatorColor ?? ColorPalette.nileBlue).withOpacity(0.1)
-              : ColorPalette.aquaHaze,
+              : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected

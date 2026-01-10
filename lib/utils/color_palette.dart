@@ -23,4 +23,9 @@ mixin ColorPalette {
   // Status colors
   static const Color warningAmber = Color(0xFFF59E0B);
   static const Color danger = Color(0xFFEF4444);
+
+  // Teal accent (from LogNewSaleScreen)
+  static const Color tealAccent = Color(0xFF00BFA5);
+  static const Color tealDark = Color(0xFF00897b);
+  static const Color slate600 = Color(0xFF475569);
 }

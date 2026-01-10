@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:wavezly/models/sale.dart';
 import 'package:wavezly/models/sale_item.dart';
-import 'package:wavezly/screens/sales_page.dart';
 import 'package:wavezly/screens/main_navigation.dart';
+import 'package:wavezly/screens/log_new_sale_screen.dart';
+import 'package:wavezly/utils/color_palette.dart';
 import 'package:intl/intl.dart';
 
 class SaleSuccessScreen extends StatelessWidget {
@@ -15,29 +16,14 @@ class SaleSuccessScreen extends StatelessWidget {
     required this.saleItems,
   }) : super(key: key);
 
-  static const Color _brandTeal = Color(0xFF2DD4BF);
-  static const Color _brandTealDark = Color(0xFF0D9488);
-  static const Color _mutedBlue = Color(0xFF4C799A);
-  static const Color _darkBackground = Color(0xFF101A22);
-  static const Color _darkCard = Color(0xFF0F172A);
-  static const Color _darkBorder = Color(0xFF1E293B);
-  static const Color _slateText = Color(0xFF94A3B8);
-  static const Color _slateLight100 = Color(0xFFF1F5F9);
-  static const Color _lightGray = Color(0xFFE7EEF3);
-  static const Color _lightBorder = Color(0xFFE2E8F0);
-
   @override
   Widget build(BuildContext context) {
-    final isDark = false; // Always use light mode
-    final currencyFormatter = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
-    final dateFormatter = DateFormat('MMM dd, h:mm a');
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7F8), // Always light background
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: _brandTeal,
+        backgroundColor: ColorPalette.tealAccent,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
+          icon: const Icon(Icons.close, color: Colors.white, size: 24),
           onPressed: () {
             Navigator.pushAndRemoveUntil(
               context,
@@ -63,37 +49,37 @@ class SaleSuccessScreen extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            _buildSuccessIconSection(isDark),
-            _buildHeadingSection(isDark),
-            _buildDetailsCard(isDark),
-            _buildActionButtons(context, isDark),
+            _buildSuccessIconSection(),
+            _buildHeadingSection(),
+            _buildDetailsCard(),
+            _buildActionButtons(context),
             const SizedBox(height: 20),
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomActionBar(context, isDark),
+      bottomNavigationBar: _buildBottomActionBar(context),
     );
   }
 
-  Widget _buildSuccessIconSection(bool isDark) {
+  Widget _buildSuccessIconSection() {
     return Padding(
       padding: const EdgeInsets.only(top: 40, bottom: 24),
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: _brandTeal.withOpacity(0.1), // Always light mode
+          color: ColorPalette.tealAccent.withOpacity(0.1),
           shape: BoxShape.circle,
         ),
-        child: Icon(
+        child: const Icon(
           Icons.check_circle,
           size: 60,
-          color: _brandTealDark, // Always dark teal for visibility
+          color: ColorPalette.tealDark,
         ),
       ),
     );
   }
 
-  Widget _buildHeadingSection(bool isDark) {
+  Widget _buildHeadingSection() {
     final dateFormatter = DateFormat('MMM dd, h:mm a');
     final transactionDateTime = sale.createdAt != null
         ? dateFormatter.format(sale.createdAt!)
@@ -103,23 +89,24 @@ class SaleSuccessScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
-          Text(
+          const Text(
             'Sale Successful',
             style: TextStyle(
               fontFamily: 'Nunito',
               fontSize: 32,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF0D161B), // Always dark text
+              color: ColorPalette.timberGreen,
+              letterSpacing: -0.48, // -0.015em converted to pixels
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
-            transactionDateTime,
-            style: TextStyle(
+            'Transaction completed on $transactionDateTime',
+            style: const TextStyle(
               fontFamily: 'Nunito',
               fontSize: 14,
-              color: _mutedBlue, // Always muted blue for light background
+              color: ColorPalette.slate500,
             ),
             textAlign: TextAlign.center,
           ),
@@ -128,7 +115,7 @@ class SaleSuccessScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailsCard(bool isDark) {
+  Widget _buildDetailsCard() {
     final currencyFormatter = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
     final totalAmount = currencyFormatter.format(sale.totalAmount ?? 0);
     final paymentMethod = sale.paymentMethod?.toUpperCase() ?? 'CASH';
@@ -140,11 +127,9 @@ class SaleSuccessScreen extends StatelessWidget {
         child: Container(
           constraints: const BoxConstraints(maxWidth: 480),
           decoration: BoxDecoration(
-            color: Colors.white, // Always white card
+            color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: _lightBorder, // Always light border
-            ),
+            border: Border.all(color: ColorPalette.slate200),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.05),
@@ -159,19 +144,16 @@ class SaleSuccessScreen extends StatelessWidget {
                 label: 'Total Amount',
                 value: totalAmount,
                 isBold: true,
-                isDark: isDark,
               ),
-              _buildDivider(isDark),
+              _buildDivider(),
               _InfoRow(
                 label: 'Payment Method',
                 value: paymentMethod,
-                isDark: isDark,
               ),
-              _buildDivider(isDark),
+              _buildDivider(),
               _InfoRow(
                 label: 'Customer',
                 value: customerName,
-                isDark: isDark,
               ),
             ],
           ),
@@ -180,15 +162,15 @@ class SaleSuccessScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDivider(bool isDark) {
-    return Divider(
+  Widget _buildDivider() {
+    return const Divider(
       height: 1,
       thickness: 1,
-      color: _slateLight100, // Always light divider
+      color: ColorPalette.slate50,
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, bool isDark) {
+  Widget _buildActionButtons(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Center(
@@ -206,7 +188,7 @@ class SaleSuccessScreen extends StatelessWidget {
                   );
                 },
                 height: 48,
-                backgroundColor: _brandTealDark,
+                backgroundColor: ColorPalette.tealDark,
                 foregroundColor: Colors.white,
                 elevation: 3,
                 child: Row(
@@ -220,7 +202,7 @@ class SaleSuccessScreen extends StatelessWidget {
                         fontFamily: 'Nunito',
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 0.015,
+                        letterSpacing: 0.24, // 0.015em converted
                       ),
                     ),
                   ],
@@ -237,8 +219,8 @@ class SaleSuccessScreen extends StatelessWidget {
                   );
                 },
                 height: 48,
-                backgroundColor: _lightGray, // Always light gray
-                foregroundColor: const Color(0xFF0D161B), // Always dark text
+                backgroundColor: ColorPalette.slate100,
+                foregroundColor: ColorPalette.timberGreen,
                 elevation: 0,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -251,7 +233,7 @@ class SaleSuccessScreen extends StatelessWidget {
                         fontFamily: 'Nunito',
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 0.015,
+                        letterSpacing: 0.24, // 0.015em converted
                       ),
                     ),
                   ],
@@ -264,14 +246,12 @@ class SaleSuccessScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBottomActionBar(BuildContext context, bool isDark) {
+  Widget _buildBottomActionBar(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white, // Always white background
+      decoration: const BoxDecoration(
+        color: Colors.white,
         border: Border(
-          top: BorderSide(
-            color: _lightBorder, // Always light border
-          ),
+          top: BorderSide(color: ColorPalette.slate200),
         ),
       ),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
@@ -283,13 +263,13 @@ class SaleSuccessScreen extends StatelessWidget {
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const SalesPage(),
+                  builder: (context) => const LogNewSaleScreen(),
                 ),
-                (route) => route.isFirst,
+                (route) => false,
               );
             },
             height: 56,
-            backgroundColor: _brandTealDark,
+            backgroundColor: ColorPalette.tealDark,
             foregroundColor: Colors.white,
             elevation: 8,
             child: Row(
@@ -303,7 +283,7 @@ class SaleSuccessScreen extends StatelessWidget {
                     fontFamily: 'Nunito',
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: 0.015,
+                    letterSpacing: 0.24, // 0.015em converted
                   ),
                 ),
               ],
@@ -319,13 +299,11 @@ class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
   final bool isBold;
-  final bool isDark;
 
   const _InfoRow({
     required this.label,
     required this.value,
     this.isBold = false,
-    required this.isDark,
   });
 
   @override
@@ -337,11 +315,11 @@ class _InfoRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               fontFamily: 'Nunito',
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: const Color(0xFF4C799A), // Always muted blue
+              color: ColorPalette.slate500,
             ),
           ),
           Text(
@@ -350,7 +328,7 @@ class _InfoRow extends StatelessWidget {
               fontFamily: 'Nunito',
               fontSize: isBold ? 16 : 14,
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              color: const Color(0xFF0D161B), // Always dark text
+              color: ColorPalette.timberGreen,
             ),
           ),
         ],

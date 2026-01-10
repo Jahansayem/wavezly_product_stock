@@ -3,7 +3,7 @@ import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/widgets/action_card.dart';
 import 'package:wavezly/widgets/greeting_header.dart';
 import 'package:wavezly/screens/new_product_page.dart';
-import 'package:wavezly/screens/sales_page.dart';
+import 'package:wavezly/screens/log_new_sale_screen.dart';
 import 'package:wavezly/screens/reports_page.dart';
 import 'package:wavezly/screens/customers_page.dart';
 
@@ -14,10 +14,10 @@ class DashboardHome extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        color: ColorPalette.pacificBlue,
+        color: ColorPalette.tealAccent,
         child: SafeArea(
           child: Container(
-            color: ColorPalette.aquaHaze,
+            color: Colors.white,
             child: Column(
               children: [
                 const GreetingHeader(),
@@ -35,7 +35,7 @@ class DashboardHome extends StatelessWidget {
                           label: 'New Sale',
                           subtitle: 'Process transaction',
                           onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (context) => const SalesPage()),
+                            MaterialPageRoute(builder: (context) => const LogNewSaleScreen()),
                           ),
                         ),
                         ActionCard(
