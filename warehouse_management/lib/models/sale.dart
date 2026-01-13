@@ -33,11 +33,13 @@ class Sale {
       );
 
   Map<String, dynamic> toJson() => {
+        "id": id,
         "sale_number": saleNumber,
         "total_amount": totalAmount,
         "tax_amount": taxAmount,
         "subtotal": subtotal,
         "customer_name": customerName,
         "payment_method": paymentMethod,
+        "created_at": createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
       };
 }

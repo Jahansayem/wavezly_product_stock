@@ -61,15 +61,20 @@ class Customer {
       );
 
   Map<String, dynamic> toMap() => {
+        "id": id,
+        "user_id": userId,
         "name": name,
         "phone": phone,
         "email": email,
         "address": address,
         "customer_type": customerType,
         "total_due": totalDue,
+        "is_paid": totalDue == 0 ? 1 : 0,
         "avatar_color": avatarColor,
         "avatar_url": avatarUrl,
         "notes": notes,
+        "created_at": createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
+        "updated_at": updatedAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
         "last_transaction_date": lastTransactionDate?.toIso8601String(),
       };
 }

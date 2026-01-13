@@ -33,10 +33,13 @@ class CustomerTransaction {
       );
 
   Map<String, dynamic> toMap() => {
+        "id": id,
         "customer_id": customerId,
+        "user_id": userId,
         "transaction_type": transactionType,
         "amount": amount,
         "description": description,
         "sale_id": saleId,
+        "created_at": createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
       };
 }

@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wavezly/screens/main_navigation.dart';
 import 'package:wavezly/screens/login.dart';
 import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/sync/sync_service.dart';
 
 class MyApp extends StatelessWidget {
   @override
@@ -25,6 +26,9 @@ class MyApp extends StatelessWidget {
           if (snapshot.hasData &&
               snapshot.data!.session != null &&
               snapshot.data!.session!.user != null) {
+            // User authenticated - trigger initial sync
+            print('User authenticated, triggering sync...');
+            SyncService().syncNow();
             return const MainNavigation();
           } else {
             return Login();

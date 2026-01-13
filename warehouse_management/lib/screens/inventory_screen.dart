@@ -5,6 +5,8 @@ import 'package:wavezly/models/product.dart';
 
 enum ProductBadge { none, lowStock, expired }
 
+enum ProductFilter { all, lowStock, expired }
+
 class ProductItem {
   final String id;
   final String title;
@@ -87,6 +89,7 @@ class InventoryScreen extends StatefulWidget {
 
 class _InventoryScreenState extends State<InventoryScreen> {
   final ProductService _productService = ProductService();
+  ProductFilter _selectedFilter = ProductFilter.all;
 
   static const Color _primary = ColorPalette.tealAccent;
   static const Color _secondary = ColorPalette.warningAmber;
@@ -218,13 +221,23 @@ class _InventoryScreenState extends State<InventoryScreen> {
         physics: const BouncingScrollPhysics(),
         child: Row(
           children: [
-            _FilterChip(label: 'All Items', isActive: true),
+            _FilterChip(
+              label: 'All Items',
+              isActive: _selectedFilter == ProductFilter.all,
+              onTap: () => setState(() => _selectedFilter = ProductFilter.all),
+            ),
             const SizedBox(width: 8),
-            _FilterChip(label: 'Low Stock', isActive: false),
+            _FilterChip(
+              label: 'Low Stock',
+              isActive: _selectedFilter == ProductFilter.lowStock,
+              onTap: () => setState(() => _selectedFilter = ProductFilter.lowStock),
+            ),
             const SizedBox(width: 8),
-            _FilterChip(label: 'Expired', isActive: false),
-            const SizedBox(width: 8),
-            _FilterChip(label: 'Pharmacy', isActive: false),
+            _FilterChip(
+              label: 'Expired',
+              isActive: _selectedFilter == ProductFilter.expired,
+              onTap: () => setState(() => _selectedFilter = ProductFilter.expired),
+            ),
           ],
         ),
       ),
@@ -344,18 +357,49 @@ class _InventoryScreenState extends State<InventoryScreen> {
         final products = snapshot.data!;
         final productItems = products.map((p) => ProductItem.fromProduct(p)).toList();
 
+        // Filter products based on selected filter
+        final filteredProducts = _filterProducts(productItems);
+
+        // Show empty state if no products match filter
+        if (filteredProducts.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.filter_list_off, size: 64, color: ColorPalette.slate400),
+                const SizedBox(height: 16),
+                Text(
+                  'No products match this filter',
+                  style: TextStyle(color: ColorPalette.slate700),
+                ),
+              ],
+            ),
+          );
+        }
+
         return ListView.builder(
           padding: const EdgeInsets.only(bottom: 96),
-          itemCount: productItems.length,
+          itemCount: filteredProducts.length,
           itemBuilder: (context, index) {
             return _ProductRow(
-              product: productItems[index],
-              onTap: () => widget.onProductTap(productItems[index]),
+              product: filteredProducts[index],
+              onTap: () => widget.onProductTap(filteredProducts[index]),
             );
           },
         );
       },
     );
+  }
+
+  List<ProductItem> _filterProducts(List<ProductItem> products) {
+    switch (_selectedFilter) {
+      case ProductFilter.all:
+        return products;
+      case ProductFilter.lowStock:
+        return products.where((p) => p.badge == ProductBadge.lowStock).toList();
+      case ProductFilter.expired:
+        return products.where((p) => p.badge == ProductBadge.expired).toList();
+    }
   }
 
   Widget _buildBottomNav(BuildContext context) {
@@ -418,10 +462,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
 class _FilterChip extends StatelessWidget {
   final String label;
   final bool isActive;
+  final VoidCallback onTap;
 
   const _FilterChip({
     required this.label,
     required this.isActive,
+    required this.onTap,
   });
 
   static const Color _primary = ColorPalette.tealAccent;
@@ -431,19 +477,23 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: isActive ? _primary.withOpacity(0.1) : _slate50,
-        borderRadius: BorderRadius.circular(6),
-        border: isActive ? null : Border.all(color: _slate200),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: isActive ? _primary : _slate500,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: isActive ? _primary.withOpacity(0.1) : _slate50,
+          borderRadius: BorderRadius.circular(6),
+          border: isActive ? null : Border.all(color: _slate200),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: isActive ? _primary : _slate500,
+          ),
         ),
       ),
     );
