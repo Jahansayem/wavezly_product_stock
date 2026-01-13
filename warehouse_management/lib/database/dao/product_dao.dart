@@ -168,17 +168,15 @@ class ProductDao extends BaseDao<Product> {
     return fromMap(results.first);
   }
 
-  // Mark as synced
-  Future<void> markAsSynced(String id) async {
-    await _db.update(
-      tableName,
-      {
-        'is_synced': 1,
-        'last_synced_at': DateTime.now().toIso8601String(),
-      },
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+  // Mark as synced (override with correct signature)
+  @override
+  Future<void> markAsSynced(String id, Database db) async {
+    await super.markAsSynced(id, db);
+  }
+
+  // Convenience method without database parameter
+  Future<void> markProductAsSynced(String id) async {
+    await markAsSynced(id, _db);
   }
 
   // Get unsynced products
