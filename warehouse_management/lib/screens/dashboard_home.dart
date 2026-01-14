@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:wavezly/screens/customers_page.dart';
-import 'package:wavezly/screens/product_selling_selection_screen.dart';
+import 'package:wavezly/screens/sales_screen.dart';
 import 'package:wavezly/screens/reports_page.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/widgets/action_card.dart';
@@ -36,7 +36,7 @@ class DashboardHome extends StatelessWidget {
                           label: 'New Sale',
                           subtitle: 'Process transaction',
                           onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (context) => const ProductSellingSelectionScreen()),
+                            MaterialPageRoute(builder: (context) => const SalesScreen()),
                           ),
                         ),
                         ActionCard(
