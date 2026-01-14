@@ -222,8 +222,8 @@ class _GiveDueScreenState extends State<GiveDueScreen> {
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 420),
                     child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                       // Top Info Card
                       Container(
                         padding: const EdgeInsets.all(16),
@@ -479,6 +479,7 @@ class _GiveDueScreenState extends State<GiveDueScreen> {
                 ),
               ),
             ),
+          ),
           ],
         ),
       ),

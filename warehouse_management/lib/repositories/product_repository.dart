@@ -14,7 +14,14 @@ class ProductRepository {
   final ConnectivityService _connectivity = ConnectivityService();
   final ImageStorageService _imageService = ImageStorageService();
 
-  String get _userId => SupabaseConfig.client.auth.currentUser!.id;
+  String get _userId {
+    final currentUser = SupabaseConfig.client.auth.currentUser;
+    if (currentUser == null) {
+      print('❌ ERROR: No authenticated user in ProductRepository');
+      throw Exception('No authenticated user. Please login first.');
+    }
+    return currentUser.id;
+  }
 
   // READ: Offline-first - return local data immediately, sync in background
   Stream<List<Product>> getAllProducts() {
@@ -104,7 +111,7 @@ class ProductRepository {
       }
 
       // Update local database
-      await _productDao.updateProduct(id, product);
+      await _productDao.updateProduct(id, product, _userId);
 
       // Queue for sync
       final data = product.toMap();
@@ -171,7 +178,7 @@ class ProductRepository {
       final product = await _productDao.getProductById(productId);
       if (product != null) {
         product.image = null;
-        await _productDao.updateProduct(productId, product);
+        await _productDao.updateProduct(productId, product, _userId);
 
         // Queue update for sync
         final data = product.toMap();

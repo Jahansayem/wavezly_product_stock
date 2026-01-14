@@ -10,6 +10,10 @@ class ProductDao extends BaseDao<Product> {
 
   Database get _db => DatabaseConfig.database;
 
+  // Broadcast stream controller for reactive product updates
+  StreamController<List<Product>>? _productsController;
+  String? _currentUserId;
+
   @override
   Product fromMap(Map<String, dynamic> map) {
     return Product.fromMap(map);
@@ -37,10 +41,13 @@ class ProductDao extends BaseDao<Product> {
       map,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+
+    // Notify stream listeners
+    await notifyProductsChanged(userId);
   }
 
   // Update product
-  Future<void> updateProduct(String id, Product product) async {
+  Future<void> updateProduct(String id, Product product, String userId) async {
     final map = toMap(product);
     map['is_synced'] = 0;
     map['last_synced_at'] = null;
@@ -52,42 +59,131 @@ class ProductDao extends BaseDao<Product> {
       where: 'id = ?',
       whereArgs: [id],
     );
+
+    // Notify stream listeners
+    await notifyProductsChanged(userId);
   }
 
   // Delete product
   Future<void> deleteProduct(String id) async {
+    // Get userId before deleting
+    final results = await _db.query(
+      tableName,
+      columns: ['user_id'],
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+
     await _db.delete(
       tableName,
       where: 'id = ?',
       whereArgs: [id],
     );
+
+    // Notify stream listeners
+    if (results.isNotEmpty) {
+      final userId = results.first['user_id'] as String?;
+      if (userId != null) {
+        await notifyProductsChanged(userId);
+      }
+    }
   }
 
   // Get all products for user (Stream for reactive UI)
   Stream<List<Product>> getAllProducts(String userId) {
-    final controller = StreamController<List<Product>>();
+    print('🔍 ProductDao.getAllProducts called for userId: $userId');
 
-    // Initial query
-    _queryProducts(userId).then((products) {
-      if (!controller.isClosed) {
-        controller.add(products);
-      }
-    });
+    // Reset controller if userId changes (e.g., logout/login)
+    if (_currentUserId != userId) {
+      print('🔄 Resetting stream controller (userId changed)');
+      _productsController?.close();
+      _productsController = null;
+      _currentUserId = userId;
+    }
 
-    // Note: SQLite doesn't have built-in real-time updates like Supabase
-    // This stream emits once. For real-time updates, we'll trigger refreshes after writes
-    return controller.stream;
+    // Create broadcast controller if needed
+    if (_productsController == null) {
+      print('✨ Creating new broadcast stream controller');
+      _productsController = StreamController<List<Product>>.broadcast(
+        onListen: () {
+          print('👂 LISTENER ATTACHED - onListen fired');
+          _refreshProducts(userId);
+        },
+        onCancel: () {
+          print('❌ LISTENER CANCELLED');
+        },
+      );
+    } else {
+      print('♻️ Reusing existing stream controller');
+    }
+
+    return _productsController!.stream;
+  }
+
+  // Refresh products stream with latest data from database
+  Future<void> _refreshProducts(String userId) async {
+    print('🔄 _refreshProducts called for userId: $userId');
+
+    if (_productsController == null) {
+      print('⚠️ Controller is null, cannot refresh');
+      return;
+    }
+
+    if (_productsController!.isClosed) {
+      print('⚠️ Controller is closed, cannot refresh');
+      return;
+    }
+
+    try {
+      print('📊 Querying products from database...');
+      final products = await _queryProducts(userId);
+      print('✅ Query successful: ${products.length} products found');
+      _productsController!.add(products);
+      print('✅ Products added to stream');
+    } catch (e, stackTrace) {
+      print('❌ ERROR in _refreshProducts: $e');
+      print('Stack trace: $stackTrace');
+      _productsController!.addError(e, stackTrace);
+    }
+  }
+
+  // Notify listeners that products have changed (call after insert/update/delete)
+  Future<void> notifyProductsChanged(String userId) async {
+    await _refreshProducts(userId);
+  }
+
+  // Dispose stream controller (call when no longer needed)
+  void dispose() {
+    _productsController?.close();
+    _productsController = null;
+    _currentUserId = null;
   }
 
   Future<List<Product>> _queryProducts(String userId) async {
-    final results = await _db.query(
-      tableName,
-      where: 'user_id = ?',
-      whereArgs: [userId],
-      orderBy: 'name ASC',
-    );
+    print('🔍 _queryProducts executing for userId: $userId');
 
-    return results.map((map) => fromMap(map)).toList();
+    try {
+      final db = DatabaseConfig.database;
+      print('✅ Database connection obtained');
+
+      final results = await db.query(
+        tableName,
+        where: 'user_id = ?',
+        whereArgs: [userId],
+        orderBy: 'name ASC',
+      );
+
+      print('✅ Query executed: ${results.length} rows returned');
+      final products = results.map((map) => fromMap(map)).toList();
+      print('✅ Mapped to ${products.length} Product objects');
+
+      return products;
+    } catch (e, stackTrace) {
+      print('❌ ERROR in _queryProducts: $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   // Get products by group

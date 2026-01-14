@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:wavezly/config/database_config.dart';
 import 'package:wavezly/config/supabase_config.dart';
 import 'package:wavezly/sync/connectivity_service.dart';
@@ -8,6 +9,9 @@ import 'package:wavezly/my_app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize date formatting for intl package
+  await initializeDateFormatting('en', null);
 
   // Initialize SQLite database FIRST (for offline support)
   print('Initializing local database...');

@@ -6,6 +6,7 @@ import '../config/database_config.dart';
 import '../config/supabase_config.dart';
 import '../config/sync_config.dart';
 import '../database/dao/sync_queue_dao.dart';
+import '../database/dao/product_dao.dart';
 import 'connectivity_service.dart';
 
 class SyncResult {
@@ -44,6 +45,7 @@ class SyncService {
 
   final SyncQueueDao _queueDao = SyncQueueDao();
   final ConnectivityService _connectivity = ConnectivityService();
+  final ProductDao _productDao = ProductDao();
   SupabaseClient get _supabase => SupabaseConfig.client;
 
   Timer? _periodicTimer;
@@ -207,6 +209,11 @@ class SyncService {
         totalPulled += count;
       }
 
+      // Notify ProductDao to refresh stream after sync
+      if (totalPulled > 0) {
+        await _productDao.notifyProductsChanged(userId);
+      }
+
       print('Pulled $totalPulled records from server');
       return SyncResult.success(syncedCount: totalPulled);
     } catch (e) {
@@ -228,8 +235,9 @@ class SyncService {
         query = query.eq('user_id', userId);
       }
 
-      // Filter by updated_at if table has it
-      if (tableName != 'product_groups' && tableName != 'locations' && tableName != 'sale_items') {
+      // Filter by updated_at if table has it (some tables don't have updated_at)
+      final tablesWithoutUpdatedAt = ['product_groups', 'locations', 'sale_items', 'sales', 'customer_transactions'];
+      if (!tablesWithoutUpdatedAt.contains(tableName)) {
         if (lastSync != null) {
           query = query.gt('updated_at', lastSync);
         }

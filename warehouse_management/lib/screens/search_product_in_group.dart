@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:wavezly/models/product.dart';
-import 'package:wavezly/screens/new_product_page.dart';
 import 'package:wavezly/services/product_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/widgets/product_card.dart';

@@ -10,7 +10,7 @@ import 'supabase_config.dart';
 class DatabaseConfig {
   static Database? _database;
   static const String _databaseName = 'wavezly.db';
-  static const int _databaseVersion = 1;
+  static const int _databaseVersion = 2;
 
   static Future<void> initialize() async {
     if (_database != null) return;
@@ -42,10 +42,15 @@ class DatabaseConfig {
   }
 
   static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Handle future schema migrations here
-    if (oldVersion < newVersion) {
-      // For now, recreate schema
-      await _createSchema(db);
+    // Handle schema migrations
+    if (oldVersion < 2) {
+      // Add missing columns for Supabase sync compatibility
+      await db.execute('ALTER TABLE products ADD COLUMN sale_price REAL');
+      await db.execute('ALTER TABLE sales ADD COLUMN customer_phone TEXT');
+      await db.execute('ALTER TABLE sales ADD COLUMN payment_status TEXT DEFAULT "paid"');
+      await db.execute('ALTER TABLE sales ADD COLUMN notes TEXT');
+      await db.execute('ALTER TABLE sale_items ADD COLUMN product_id TEXT');
+      print('Database migrated to version 2: Added sale_price, customer_phone, payment_status, notes, product_id columns');
     }
   }
 
@@ -56,6 +61,7 @@ class DatabaseConfig {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         cost REAL,
+        sale_price REAL,
         quantity INTEGER DEFAULT 0,
         product_group TEXT,
         location TEXT,
@@ -168,7 +174,10 @@ class DatabaseConfig {
         tax_amount REAL DEFAULT 0,
         subtotal REAL NOT NULL,
         customer_name TEXT DEFAULT 'Walk-in Customer',
+        customer_phone TEXT,
         payment_method TEXT DEFAULT 'cash',
+        payment_status TEXT DEFAULT 'paid',
+        notes TEXT,
         created_at TEXT NOT NULL,
         user_id TEXT NOT NULL,
         is_synced INTEGER DEFAULT 0,
@@ -186,6 +195,7 @@ class DatabaseConfig {
       CREATE TABLE IF NOT EXISTS sale_items (
         id TEXT PRIMARY KEY,
         sale_id TEXT NOT NULL,
+        product_id TEXT,
         product_name TEXT NOT NULL,
         quantity INTEGER NOT NULL,
         unit_price REAL NOT NULL,

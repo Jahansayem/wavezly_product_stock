@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -6,6 +7,7 @@ import 'package:wavezly/models/product.dart';
 import 'package:wavezly/services/product_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/widgets/location_drop_down.dart';
+import 'package:wavezly/widgets/product_image_picker.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   final Product? product;
@@ -19,6 +21,8 @@ class ProductDetailsPage extends StatefulWidget {
 
 class _ProductDetailsPageState extends State<ProductDetailsPage> {
   final ProductService _productService = ProductService();
+  File? _selectedImageFile;
+  bool _imageDeleted = false;
 
   @override
   Widget build(BuildContext context) {
@@ -29,14 +33,18 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           right: 10,
         ),
         child: FloatingActionButton(
+          heroTag: 'product_details_fab',
           onPressed: () async {
             try {
               await _productService.updateProduct(
-                  widget.docID!, widget.product!);
+                widget.docID!,
+                widget.product!,
+                newImageFile: _selectedImageFile,
+              );
               showTextToast('Updated Successfully!');
               Navigator.of(context).pop();
             } catch (e) {
-              showTextToast('Failed!');
+              showTextToast('Failed: ${e.toString()}');
             }
           },
           splashColor: ColorPalette.tealAccent,
@@ -522,41 +530,32 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                   alignment: Alignment.topCenter,
                                   child: Padding(
                                     padding: const EdgeInsets.only(top: 10),
-                                    child: SizedBox(
-                                      height: 100,
-                                      width: 100,
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(11),
-                                        child: Container(
-                                          color: ColorPalette.white,
-                                          child: Container(
-                                            color: ColorPalette.timberGreen
-                                                .withOpacity(0.1),
-                                            child: (widget.product!.image == null)
-                                                ? Center(
-                                                    child: Icon(
-                                                      Icons.image,
-                                                      color: ColorPalette
-                                                          .nileBlue
-                                                          .withOpacity(0.5),
-                                                    ),
-                                                  )
-                                                : CachedNetworkImage(
-                                                    fit: BoxFit.cover,
-                                                    imageUrl: widget.product!.image!,
-                                                    errorWidget:
-                                                        (context, s, a) {
-                                                      return Icon(
-                                                        Icons.image,
-                                                        color: ColorPalette
-                                                            .nileBlue
-                                                            .withOpacity(0.5),
-                                                      );
-                                                    },
-                                                  ),
-                                          ),
-                                        ),
-                                      ),
+                                    child: ProductImagePicker(
+                                      currentImageUrl: widget.product!.image,
+                                      onImageSelected: (File? imageFile) {
+                                        setState(() {
+                                          _selectedImageFile = imageFile;
+                                          _imageDeleted = false;
+                                        });
+                                      },
+                                      onImageDeleted: () async {
+                                        setState(() {
+                                          _imageDeleted = true;
+                                          _selectedImageFile = null;
+                                        });
+                                        if (widget.product!.image != null) {
+                                          try {
+                                            await _productService.deleteProductImage(
+                                              widget.docID!,
+                                              widget.product!.image!,
+                                            );
+                                            widget.product!.image = null;
+                                            showTextToast('Image removed');
+                                          } catch (e) {
+                                            showTextToast('Failed to remove image');
+                                          }
+                                        }
+                                      },
                                     ),
                                   ),
                                 ),

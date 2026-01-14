@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:wavezly/screens/inventory_screen.dart';
-import 'package:wavezly/screens/new_product_page.dart';
+import 'package:wavezly/screens/add_product_screen.dart';
 import 'package:wavezly/screens/product_details_page.dart';
 import 'package:wavezly/screens/product_details_screen.dart';
 import 'package:wavezly/screens/global_search_page.dart';
@@ -70,7 +70,7 @@ class InventoryScreenWrapper extends StatelessWidget {
 
   void _handleAddNewProduct(BuildContext context) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const NewProductPage()),
+      MaterialPageRoute(builder: (context) => const AddProductScreen()),
     );
   }
 
@@ -251,29 +251,13 @@ class InventoryScreenWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // InventoryScreen with all its content including its own bottom nav
-        InventoryScreen(
-          onBack: () => _handleBack(context),
-          onSearch: () => _handleSearch(context),
-          onMore: () => _handleMore(context),
-          onAddNewProduct: () => _handleAddNewProduct(context),
-          onTabSelected: onTabSelected,
-          onProductTap: (product) => _handleProductTap(context, product),
-        ),
-        // White overlay to hide InventoryScreen's bottom nav
-        // This allows MainNavigation's bottom nav to show instead
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: 80,
-          child: Container(
-            color: Colors.white,
-          ),
-        ),
-      ],
+    return InventoryScreen(
+      onBack: () => _handleBack(context),
+      onSearch: () => _handleSearch(context),
+      onMore: () => _handleMore(context),
+      onAddNewProduct: () => _handleAddNewProduct(context),
+      onTabSelected: onTabSelected,
+      onProductTap: (product) => _handleProductTap(context, product),
     );
   }
 }

@@ -24,6 +24,7 @@ class _NewCustomerPageState extends State<NewCustomerPage> {
           right: 10,
         ),
         child: FloatingActionButton(
+          heroTag: 'new_customer_fab',
           onPressed: () async {
             // Validate required fields
             if (newCustomer.name == null || newCustomer.name!.isEmpty) {

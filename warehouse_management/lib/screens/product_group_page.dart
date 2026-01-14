@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:wavezly/models/product.dart';
-import 'package:wavezly/screens/new_product_page.dart';
+import 'package:wavezly/screens/add_product_screen.dart';
 import 'package:wavezly/screens/search_product_in_group.dart';
 import 'package:wavezly/services/product_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
@@ -21,11 +21,12 @@ class ProductGroupPage extends StatelessWidget {
           right: 10,
         ),
         child: FloatingActionButton(
+          heroTag: 'product_group_fab',
           onPressed: () {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) {
-                  return NewProductPage(
+                  return AddProductScreen(
                     group: name,
                   );
                 },

@@ -71,6 +71,7 @@ class _CustomersPageState extends State<CustomersPage> {
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 80),
         child: FloatingActionButton(
+          heroTag: 'customers_fab',
           onPressed: () {
             Navigator.push(
               context,
@@ -98,41 +99,35 @@ class _CustomersPageState extends State<CustomersPage> {
                 ],
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Customers & Dues',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
-                        onPressed: () {
-                          // TODO: Export PDF
-                        },
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: const Text(
+                      'Customers & Dues',
+                      style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.help_outline, color: Colors.white),
-                        onPressed: () {
-                          // TODO: Show help
-                        },
-                      ),
-                    ],
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
+                    onPressed: () {
+                      // TODO: Export PDF
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.help_outline, color: Colors.white),
+                    onPressed: () {
+                      // TODO: Show help
+                    },
                   ),
                 ],
               ),

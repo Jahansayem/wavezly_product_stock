@@ -8,6 +8,10 @@ class ProductService {
   // Delegate to repository
   Stream<List<Product>> getAllProducts() => _repository.getAllProducts();
 
+  Future<List<Product>> getProducts() async {
+    return await getAllProducts().first;
+  }
+
   Stream<List<Product>> getProductsByGroup(String group) =>
       _repository.getProductsByGroup(group);
 

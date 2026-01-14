@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/services/product_service.dart';
 import 'package:wavezly/models/product.dart';
+import 'package:wavezly/screens/select_product_buying_screen.dart';
 
 enum ProductBadge { none, lowStock, expired }
 
@@ -109,25 +110,38 @@ class _InventoryScreenState extends State<InventoryScreen> {
       backgroundColor: _background,
       body: SafeArea(
         top: false,
-        child: Stack(
+        child: Column(
           children: [
-            Column(
-              children: [
-                _buildHeader(),
-                _buildFilterChips(),
-                _buildTableHeader(),
-                Expanded(child: _buildProductList()),
-              ],
-            ),
-            Positioned.fill(
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: _buildBottomNav(context),
-              ),
-            ),
+            _buildHeader(),
+            _buildFilterChips(),
+            _buildTableHeader(),
+            Expanded(child: _buildProductList()),
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'inventory_fab',
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const SelectProductBuyingScreen(),
+            ),
+          );
+        },
+        backgroundColor: _primary,
+        icon: const Icon(Icons.add_shopping_cart, color: Colors.white, size: 20),
+        label: const Text(
+          'স্টক যোগ করুন',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+        elevation: 6,
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -310,8 +324,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return StreamBuilder<List<Product>>(
       stream: _productService.getAllProducts(),
       builder: (context, snapshot) {
+        print('📺 StreamBuilder rebuild - ConnectionState: ${snapshot.connectionState}');
+
         // Loading state
         if (snapshot.connectionState == ConnectionState.waiting) {
+          print('⏳ StreamBuilder WAITING...');
           return const Center(
             child: CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(ColorPalette.tealAccent),
@@ -321,6 +338,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
         // Error state
         if (snapshot.hasError) {
+          print('❌ StreamBuilder ERROR: ${snapshot.error}');
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -329,7 +347,23 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'Error loading products',
-                  style: TextStyle(color: ColorPalette.slate700),
+                  style: TextStyle(color: ColorPalette.slate700, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    '${snapshot.error}',
+                    style: TextStyle(color: ColorPalette.danger, fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {}); // Force rebuild to retry
+                  },
+                  child: const Text('Retry'),
                 ),
               ],
             ),
@@ -338,6 +372,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
         // Empty state
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          print('⚠️ StreamBuilder NO DATA (hasData: ${snapshot.hasData}, isEmpty: ${snapshot.data?.isEmpty})');
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -355,6 +390,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
         // Success state - convert and display
         final products = snapshot.data!;
+        print('✅ StreamBuilder DATA: ${products.length} products');
         final productItems = products.map((p) => ProductItem.fromProduct(p)).toList();
 
         // Filter products based on selected filter
@@ -402,61 +438,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     }
   }
 
-  Widget _buildBottomNav(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: _slate100)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 64,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _BottomNavItem(
-                icon: Icons.dashboard_outlined,
-                label: 'Dash',
-                isActive: false,
-                index: 0,
-                onTap: widget.onTabSelected,
-              ),
-              _BottomNavItem(
-                icon: Icons.inventory_2,
-                label: 'Stock',
-                isActive: true,
-                hasNotification: true,
-                index: 1,
-                onTap: widget.onTabSelected,
-              ),
-              _BottomNavItem(
-                icon: Icons.qr_code_scanner_outlined,
-                label: 'Scan',
-                isActive: false,
-                index: 2,
-                onTap: widget.onTabSelected,
-              ),
-              _BottomNavItem(
-                icon: Icons.group_outlined,
-                label: 'CRM',
-                isActive: false,
-                index: 3,
-                onTap: widget.onTabSelected,
-              ),
-              _BottomNavItem(
-                icon: Icons.settings_outlined,
-                label: 'Settings',
-                isActive: false,
-                index: 4,
-                onTap: widget.onTabSelected,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _FilterChip extends StatelessWidget {
@@ -634,72 +615,3 @@ class _ProductRow extends StatelessWidget {
   }
 }
 
-class _BottomNavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final bool hasNotification;
-  final int index;
-  final Function(int) onTap;
-
-  const _BottomNavItem({
-    required this.icon,
-    required this.label,
-    required this.isActive,
-    this.hasNotification = false,
-    required this.index,
-    required this.onTap,
-  });
-
-  static const Color _primary = ColorPalette.tealAccent;
-  static const Color _slate400 = ColorPalette.slate400;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: InkWell(
-        onTap: () => onTap(index),
-        child: SizedBox(
-          height: double.infinity,
-          child: Stack(
-            children: [
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    icon,
-                    size: 24,
-                    color: isActive ? _primary : _slate400,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      color: isActive ? _primary : _slate400,
-                    ),
-                  ),
-                ],
-              ),
-              if (hasNotification)
-                Positioned(
-                  top: 8,
-                  right: MediaQuery.of(context).size.width / 10 - 12,
-                  child: Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

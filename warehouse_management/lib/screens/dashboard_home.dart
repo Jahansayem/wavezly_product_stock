@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/widgets/action_card.dart';
 import 'package:wavezly/widgets/greeting_header.dart';
-import 'package:wavezly/screens/new_product_page.dart';
 import 'package:wavezly/screens/log_new_sale_screen.dart';
 import 'package:wavezly/screens/reports_page.dart';
 import 'package:wavezly/screens/customers_page.dart';
 
 class DashboardHome extends StatelessWidget {
-  const DashboardHome({Key? key}) : super(key: key);
+  final Function(int)? onTabSelected;
+
+  const DashboardHome({Key? key, this.onTabSelected}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -39,12 +40,14 @@ class DashboardHome extends StatelessWidget {
                           ),
                         ),
                         ActionCard(
-                          icon: Icons.add_box,
-                          label: 'Product Add',
-                          subtitle: 'Update stock',
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (context) => NewProductPage()),
-                          ),
+                          icon: Icons.inventory_2,
+                          label: 'Product List',
+                          subtitle: 'View products',
+                          onTap: () {
+                            if (onTabSelected != null) {
+                              onTabSelected!(1); // Navigate to inventory tab
+                            }
+                          },
                         ),
                         ActionCard(
                           icon: Icons.assessment,

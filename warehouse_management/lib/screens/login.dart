@@ -112,7 +112,6 @@ class _LoginState extends State<Login> {
                 height: 50,
                 child: TextField(
                   textInputAction: TextInputAction.next,
-                  key: UniqueKey(),
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   style: const TextStyle(
@@ -154,7 +153,6 @@ class _LoginState extends State<Login> {
                   children: [
                     Expanded(
                       child: TextField(
-                        key: UniqueKey(),
                         obscureText: !_isVisible,
                         controller: _passwordController,
                         textInputAction: TextInputAction.done,

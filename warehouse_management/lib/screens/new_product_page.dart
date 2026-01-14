@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -6,6 +7,7 @@ import 'package:wavezly/models/product.dart';
 import 'package:wavezly/services/product_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/widgets/location_drop_down.dart';
+import 'package:wavezly/widgets/product_image_picker.dart';
 
 class NewProductPage extends StatefulWidget {
   final String? group;
@@ -18,6 +20,7 @@ class NewProductPage extends StatefulWidget {
 class _NewProductPageState extends State<NewProductPage> {
   final Product newProduct = Product();
   final ProductService _productService = ProductService();
+  File? _selectedImageFile;
 
   @override
   Widget build(BuildContext context) {
@@ -28,14 +31,18 @@ class _NewProductPageState extends State<NewProductPage> {
           right: 10,
         ),
         child: FloatingActionButton(
+          heroTag: 'new_product_fab',
           onPressed: () async {
             newProduct.group = widget.group;
             try {
-              await _productService.addProduct(newProduct);
+              await _productService.addProduct(
+                newProduct,
+                imageFile: _selectedImageFile,
+              );
               showTextToast('Added Successfully!');
               Navigator.of(context).pop();
             } catch (e) {
-              showTextToast('Failed!');
+              showTextToast('Failed: ${e.toString()}');
             }
           },
           splashColor: ColorPalette.tealAccent,
@@ -501,41 +508,13 @@ class _NewProductPageState extends State<NewProductPage> {
                                   alignment: Alignment.topCenter,
                                   child: Padding(
                                     padding: const EdgeInsets.only(top: 10),
-                                    child: SizedBox(
-                                      height: 100,
-                                      width: 100,
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(11),
-                                        child: Container(
-                                          color: ColorPalette.white,
-                                          child: Container(
-                                            color: ColorPalette.timberGreen
-                                                .withOpacity(0.1),
-                                            child: (newProduct.image == null)
-                                                ? Center(
-                                                    child: Icon(
-                                                      Icons.image,
-                                                      color: ColorPalette
-                                                          .nileBlue
-                                                          .withOpacity(0.5),
-                                                    ),
-                                                  )
-                                                : CachedNetworkImage(
-                                                    fit: BoxFit.cover,
-                                                    imageUrl: newProduct.image!,
-                                                    errorWidget:
-                                                        (context, s, a) {
-                                                      return Icon(
-                                                        Icons.image,
-                                                        color: ColorPalette
-                                                            .nileBlue
-                                                            .withOpacity(0.5),
-                                                      );
-                                                    },
-                                                  ),
-                                          ),
-                                        ),
-                                      ),
+                                    child: ProductImagePicker(
+                                      currentImageUrl: newProduct.image,
+                                      onImageSelected: (File? imageFile) {
+                                        setState(() {
+                                          _selectedImageFile = imageFile;
+                                        });
+                                      },
                                     ),
                                   ),
                                 ),

@@ -18,7 +18,7 @@ class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
 
   List<Widget> get _screens => [
-    const DashboardHome(),    // Index 0
+    DashboardHome(onTabSelected: _onTabTapped),    // Index 0
     InventoryScreenWrapper(   // Index 1
       onTabSelected: _onTabTapped,
     ),

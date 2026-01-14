@@ -6,6 +6,8 @@ import 'package:wavezly/services/customer_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/functions/toast.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:wavezly/screens/give_due_screen.dart';
+import 'package:wavezly/screens/take_due_screen.dart' hide DueTransactionResult, DueTxnType;
 
 enum DueFilter { day, week, month, year, custom }
 
@@ -129,9 +131,76 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
       );
 
       await _customerService.addTransaction(transaction);
-      
+
       if (mounted) {
         Navigator.pop(context); // Close dialog
+        showTextToast('Transaction added successfully');
+      }
+    } catch (e) {
+      if (mounted) {
+        showTextToast('Error adding transaction: $e');
+      }
+    }
+  }
+
+  Future<void> _handleGivePressed() async {
+    final result = await Navigator.push<DueTransactionResult>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GiveDueScreen(
+          customerId: widget.customer.id ?? '',
+          customerName: widget.customer.name ?? 'Unknown',
+          currentDue: widget.customer.totalDue,
+        ),
+      ),
+    );
+
+    if (result != null && mounted) {
+      await _processTransactionResult(result);
+    }
+  }
+
+  Future<void> _handleTakePressed() async {
+    final result = await Navigator.push<DueTransactionResult>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TakeDueScreen(
+          customerId: widget.customer.id ?? '',
+          customerName: widget.customer.name ?? 'Unknown',
+          currentDue: widget.customer.totalDue,
+        ),
+      ),
+    );
+
+    if (result != null && mounted) {
+      await _processTransactionResult(result);
+    }
+  }
+
+  Future<void> _processTransactionResult(DueTransactionResult result) async {
+    try {
+      // Map DueTxnType to transaction type for CustomerService
+      final transactionType = result.type == DueTxnType.give ? 'GIVEN' : 'RECEIVED';
+
+      // Calculate amount based on type
+      // GIVE (debit): We give money to customer → increases their due (positive)
+      // TAKE (credit): We take money from customer → decreases their due (negative)
+      final amount = result.type == DueTxnType.give ? result.amount : -result.amount;
+
+      final transaction = CustomerTransaction(
+        customerId: widget.customer.id,
+        userId: null, // Will be set by service from auth.uid()
+        transactionType: transactionType,
+        amount: amount,
+        description: result.note.isEmpty
+            ? '${result.type == DueTxnType.give ? 'Given to' : 'Received from'} ${widget.customer.name}'
+            : result.note,
+        createdAt: result.date,
+      );
+
+      await _customerService.addTransaction(transaction);
+
+      if (mounted) {
         showTextToast('Transaction added successfully');
       }
     } catch (e) {
@@ -1211,7 +1280,7 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
           children: [
             Expanded(
               child: GestureDetector(
-                onTap: () => _showTransactionDialog('debit'),
+                onTap: _handleGivePressed,
                 child: Container(
                   height: 56,
                   decoration: BoxDecoration(
@@ -1252,7 +1321,7 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: GestureDetector(
-                onTap: () => _showTransactionDialog('credit'),
+                onTap: _handleTakePressed,
                 child: Container(
                   height: 56,
                   decoration: BoxDecoration(

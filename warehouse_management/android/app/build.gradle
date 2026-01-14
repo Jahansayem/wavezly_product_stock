@@ -28,7 +28,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace 'com.example.warehouse_management'
+    namespace 'com.inventory.management'
     compileSdkVersion 36
 
     sourceSets {
@@ -36,7 +36,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.example.warehouse_management"
+        applicationId "com.inventory.management"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion 36
         versionCode flutterVersionCode.toInteger()
