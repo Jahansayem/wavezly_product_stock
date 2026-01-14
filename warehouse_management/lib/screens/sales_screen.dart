@@ -1,12 +1,21 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:math_expressions/math_expressions.dart';
 import 'package:wavezly/functions/toast.dart';
+import 'package:wavezly/models/cart_item.dart';
+import 'package:wavezly/models/customer.dart';
 import 'package:wavezly/models/product.dart';
+import 'package:wavezly/models/sale.dart';
 import 'package:wavezly/models/selling_cart_item.dart';
 import 'package:wavezly/screens/barcode_scanner_screen.dart';
+import 'package:wavezly/screens/selling_checkout_screen.dart';
+import 'package:wavezly/services/customer_service.dart';
 import 'package:wavezly/services/product_service.dart';
+import 'package:wavezly/services/sales_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/utils/date_formatter.dart';
+import 'package:wavezly/utils/number_formatter.dart';
 
 /// Unified Sales Screen with tab-based view switching
 /// Contains Quick Sell and Product List views with state preservation
@@ -250,8 +259,12 @@ class _QuickSellView extends StatefulWidget {
 }
 
 class _QuickSellViewState extends State<_QuickSellView> {
+  // Services
+  final SalesService _salesService = SalesService();
+  final CustomerService _customerService = CustomerService();
+
   // Cash calculator state
-  String _cashAmount = '৫০'; // Default "50" in Bengali
+  String _cashAmount = ''; // Start empty instead of hardcoded "50"
 
   // Form controllers
   final TextEditingController _mobileController = TextEditingController();
@@ -260,6 +273,12 @@ class _QuickSellViewState extends State<_QuickSellView> {
 
   // Toggle state
   bool _receiptSmsEnabled = true; // Default ON
+
+  // Dynamic state
+  DateTime _selectedDate = DateTime.now();
+  bool _isSubmitting = false;
+  String? _customerName;
+  String? _customerId;
 
   // Colors
   static const Color primary = ColorPalette.tealAccent;
@@ -302,37 +321,149 @@ class _QuickSellViewState extends State<_QuickSellView> {
   }
 
   String _evaluateExpression(String expression) {
-    // TODO: Implement safe expression evaluation
-    return expression;
+    if (expression.isEmpty) return '';
+
+    try {
+      // Convert Bengali to English for evaluation
+      String englishExpression = NumberFormatter.bengaliToEnglish(expression);
+
+      // Replace display operators with math operators
+      englishExpression = englishExpression
+          .replaceAll('×', '*')
+          .replaceAll('÷', '/');
+
+      // Parse and evaluate
+      Parser parser = Parser();
+      Expression exp = parser.parse(englishExpression);
+      ContextModel cm = ContextModel();
+      double result = exp.evaluate(EvaluationType.REAL, cm);
+
+      // Convert back to Bengali
+      return NumberFormatter.formatToBengali(result, decimals: 2);
+    } catch (e) {
+      // Invalid expression, return original
+      return expression;
+    }
   }
 
   Future<void> _handleSubmit() async {
+    if (_isSubmitting) return;
+
     try {
-      final double amount = _parseBengaliNumber(_cashAmount);
+      setState(() => _isSubmitting = true);
+
+      // Parse cash amount
+      final String englishAmount = NumberFormatter.bengaliToEnglish(_cashAmount);
+      final double amount = double.tryParse(englishAmount) ?? 0.0;
 
       if (amount <= 0) {
         showTextToast('অনুগ্রহ করে ক্যাশ পরিমাণ লিখুন');
+        setState(() => _isSubmitting = false);
         return;
       }
 
-      // TODO: Implement sale creation
+      // Validate date
+      if (_selectedDate.isAfter(DateTime.now())) {
+        showTextToast('ভবিষ্যতের তারিখ নির্বাচন করা যাবে না');
+        setState(() => _isSubmitting = false);
+        return;
+      }
+
+      // Validate mobile if provided
+      final mobile = _mobileController.text.trim();
+      if (mobile.isNotEmpty && mobile.length != 11) {
+        showTextToast('সঠিক মোবাইল নম্বর লিখুন (১১ ডিজিট)');
+        setState(() => _isSubmitting = false);
+        return;
+      }
+
+      // Parse profit (optional)
+      final double profit = double.tryParse(_profitController.text) ?? 0.0;
+
+      // Get product details
+      final String details = _detailsController.text.trim();
+      final String productName = details.isNotEmpty ? details : 'দ্রুত বিক্রি';
+
+      // Create Sale object
+      final sale = Sale(
+        totalAmount: amount,
+        subtotal: amount - profit,
+        taxAmount: 0.0,
+        customerName: _customerName,
+        paymentMethod: 'cash',
+        createdAt: _selectedDate,
+      );
+
+      // Create CartItem with pseudo-product
+      final cartItem = CartItem(
+        product: Product(
+          id: null, // Quick sale has no product ID
+          name: productName,
+          cost: amount,
+        ),
+        quantity: 1,
+      );
+
+      // Process sale
+      final saleId = await _salesService.processSale(sale, [cartItem]);
+
       showTextToast('বিক্রয় সফল হয়েছে!');
       Navigator.pop(context);
     } catch (e) {
       showTextToast('ত্রুটি: ${e.toString()}');
+      setState(() => _isSubmitting = false);
     }
   }
 
   double _parseBengaliNumber(String bengaliNumber) {
-    const bengaliDigits = '০১২৩৪৫৬৭৮৯';
-    const englishDigits = '0123456789';
+    return NumberFormatter.parseBengaliNumber(bengaliNumber);
+  }
 
-    String result = bengaliNumber;
-    for (int i = 0; i < bengaliDigits.length; i++) {
-      result = result.replaceAll(bengaliDigits[i], englishDigits[i]);
+  Future<void> _handleCustomerLookup() async {
+    final phone = _mobileController.text.trim();
+    if (phone.isEmpty || phone.length < 11) return;
+
+    try {
+      final customers = await _customerService.searchCustomers(phone);
+      if (customers.isNotEmpty) {
+        setState(() {
+          _customerName = customers.first.name;
+          _customerId = customers.first.id;
+        });
+        showTextToast('কাস্টমার পাওয়া গেছে: ${customers.first.name}');
+      } else {
+        setState(() {
+          _customerName = null;
+          _customerId = null;
+        });
+      }
+    } catch (e) {
+      print('Customer lookup error: $e');
     }
+  }
 
-    return double.tryParse(result) ?? 0;
+  Future<String?> _showCreateCustomerDialog() async {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('কাস্টমার নাম লিখুন', style: GoogleFonts.notoSansBengali()),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(hintText: 'নাম'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('বাতিল', style: GoogleFonts.notoSansBengali()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: Text('যোগ করুন', style: GoogleFonts.notoSansBengali()),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -371,8 +502,27 @@ class _QuickSellViewState extends State<_QuickSellView> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
               child: InkWell(
-                onTap: () {
-                  showTextToast('Date picker coming soon');
+                onTap: () async {
+                  final DateTime? picked = await showDatePicker(
+                    context: context,
+                    initialDate: _selectedDate,
+                    firstDate: DateTime.now().subtract(Duration(days: 365)),
+                    lastDate: DateTime.now(),
+                    builder: (context, child) {
+                      return Theme(
+                        data: Theme.of(context).copyWith(
+                          colorScheme: ColorScheme.light(primary: primary),
+                        ),
+                        child: child!,
+                      );
+                    },
+                  );
+
+                  if (picked != null && picked != _selectedDate) {
+                    setState(() {
+                      _selectedDate = picked;
+                    });
+                  }
                 },
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
@@ -396,7 +546,7 @@ class _QuickSellViewState extends State<_QuickSellView> {
                           color: ColorPalette.gray600, size: 18),
                       const SizedBox(width: 8),
                       Text(
-                        '১৪ জানুয়ারী',
+                        DateFormatter.toBengaliDate(_selectedDate),
                         style: GoogleFonts.notoSansBengali(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -708,12 +858,37 @@ class _QuickSellViewState extends State<_QuickSellView> {
                       fontSize: 14,
                       color: ColorPalette.gray900,
                     ),
+                    onChanged: (value) {
+                      if (value.length == 11) {
+                        _handleCustomerLookup();
+                      }
+                    },
                   ),
                 ),
                 IconButton(
                   icon: Icon(Icons.person_add, color: primary),
-                  onPressed: () {
-                    showTextToast('Add customer feature coming soon');
+                  onPressed: () async {
+                    final phone = _mobileController.text.trim();
+                    if (phone.isEmpty || phone.length != 11) {
+                      showTextToast('সঠিক মোবাইল নম্বর লিখুন');
+                      return;
+                    }
+
+                    // Create customer dialog
+                    final name = await _showCreateCustomerDialog();
+                    if (name != null && name.isNotEmpty) {
+                      try {
+                        final customer = Customer(name: name, phone: phone);
+                        final createdCustomer = await _customerService.createCustomer(customer);
+                        setState(() {
+                          _customerName = createdCustomer.name;
+                          _customerId = createdCustomer.id;
+                        });
+                        showTextToast('কাস্টমার যোগ হয়েছে!');
+                      } catch (e) {
+                        showTextToast('ত্রুটি: ${e.toString()}');
+                      }
+                    }
                   },
                 ),
               ],
@@ -891,7 +1066,7 @@ class _QuickSellViewState extends State<_QuickSellView> {
         children: [
           Expanded(
             child: ElevatedButton(
-              onPressed: _handleSubmit,
+              onPressed: _isSubmitting ? null : _handleSubmit,
               style: ElevatedButton.styleFrom(
                 backgroundColor: primary,
                 foregroundColor: Colors.white,
@@ -901,13 +1076,22 @@ class _QuickSellViewState extends State<_QuickSellView> {
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
-              child: Text(
-                'সাবমিট',
-                style: GoogleFonts.notoSansBengali(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: _isSubmitting
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      'সাবমিট',
+                      style: GoogleFonts.notoSansBengali(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: 16),
@@ -960,9 +1144,10 @@ class _ProductListView extends StatefulWidget {
   _ProductListViewState createState() => _ProductListViewState();
 }
 
-class _ProductListViewState extends State<_ProductListView> {
+class _ProductListViewState extends State<_ProductListView> with TickerProviderStateMixin {
   // Services
   final ProductService _productService = ProductService();
+  final SalesService _salesService = SalesService();
 
   // State
   final Set<String> _selectedProductIds = {};
@@ -970,10 +1155,22 @@ class _ProductListViewState extends State<_ProductListView> {
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
   List<Product>? _filteredProducts;
+  bool _isProcessing = false;
 
   // Cart totals
   double _cartTotal = 0.0;
   int _cartItemCount = 0;
+
+  // Animation controllers and state
+  late AnimationController _flyingAnimationController;
+  late AnimationController _badgePulseController;
+  late Animation<double> _flyingOpacity;
+  late Animation<double> _badgeScale;
+
+  bool _showFlyingIcon = false;
+  Offset _flyingIconStart = Offset.zero;
+  Offset _flyingIconEnd = Offset.zero;
+  final GlobalKey _cartButtonKey = GlobalKey();
 
   // Colors
   static const Color primary = ColorPalette.tealAccent;
@@ -992,12 +1189,56 @@ class _ProductListViewState extends State<_ProductListView> {
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
+
+    // Initialize animation controllers
+    _flyingAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _badgePulseController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    // Setup animations
+    _flyingOpacity = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _flyingAnimationController,
+        curve: Curves.easeOut,
+      ),
+    );
+
+    _badgeScale = Tween<double>(begin: 1.0, end: 1.3).animate(
+      CurvedAnimation(
+        parent: _badgePulseController,
+        curve: Curves.elasticOut,
+      ),
+    );
+
+    // Listen to animation completion
+    _flyingAnimationController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        setState(() {
+          _showFlyingIcon = false;
+        });
+        _flyingAnimationController.reset();
+      }
+    });
+
+    _badgePulseController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _badgePulseController.reverse();
+      }
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _debounce?.cancel();
+    _flyingAnimationController.dispose();
+    _badgePulseController.dispose();
     super.dispose();
   }
 
@@ -1018,13 +1259,15 @@ class _ProductListViewState extends State<_ProductListView> {
     });
   }
 
-  void _toggleProductSelection(Product product) {
+  void _toggleProductSelection(Product product, {GlobalKey? productIconKey}) {
     if (product.id == null) return;
 
     if ((product.quantity ?? 0) == 0) {
       showTextToast('এই পণ্যটি স্টকে নেই!');
       return;
     }
+
+    final bool isAdding = !_selectedProductIds.contains(product.id);
 
     setState(() {
       if (_selectedProductIds.contains(product.id)) {
@@ -1043,6 +1286,49 @@ class _ProductListViewState extends State<_ProductListView> {
       }
       _updateCartTotal();
     });
+
+    // Trigger flying animation only when adding to cart
+    if (isAdding && productIconKey != null) {
+      _triggerFlyingAnimation(productIconKey);
+    }
+  }
+
+  void _triggerFlyingAnimation(GlobalKey productIconKey) {
+    try {
+      // Get product icon position
+      final RenderBox? productBox = productIconKey.currentContext?.findRenderObject() as RenderBox?;
+      if (productBox == null) return;
+
+      // Get cart button position
+      final RenderBox? cartBox = _cartButtonKey.currentContext?.findRenderObject() as RenderBox?;
+      if (cartBox == null) return;
+
+      // Get positions relative to screen
+      final Offset productPosition = productBox.localToGlobal(Offset.zero);
+      final Offset cartPosition = cartBox.localToGlobal(Offset.zero);
+
+      // Calculate center positions for both icons
+      final Offset productCenter = Offset(
+        productPosition.dx + productBox.size.width / 2,
+        productPosition.dy + productBox.size.height / 2,
+      );
+      final Offset cartCenter = Offset(
+        cartPosition.dx + cartBox.size.width / 2,
+        cartPosition.dy + cartBox.size.height / 2,
+      );
+
+      setState(() {
+        _flyingIconStart = productCenter;
+        _flyingIconEnd = cartCenter;
+        _showFlyingIcon = true;
+      });
+
+      // Start animations
+      _flyingAnimationController.forward(from: 0);
+      _badgePulseController.forward(from: 0);
+    } catch (e) {
+      print('Animation error: $e');
+    }
   }
 
   void _updateCartTotal() {
@@ -1078,13 +1364,77 @@ class _ProductListViewState extends State<_ProductListView> {
       return;
     }
 
-    showTextToast('Checkout feature coming soon');
+    if (_isProcessing) return;
+
+    // Navigate to checkout screen
+    final result = await Navigator.push<SellingCheckoutResult>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SellingCheckoutScreen(
+          cartItems: _cartItems.values.toList(),
+          totalAmount: _cartTotal,
+        ),
+      ),
+    );
+
+    if (result == null) return; // User cancelled
+
+    setState(() => _isProcessing = true);
+
+    try {
+      // Get sale items from cart (already has toSaleItemJson)
+      final saleItems = _cartItems.values
+          .map((item) => item.toSaleItemJson())
+          .toList();
+
+      // Create Sale object
+      final sale = Sale(
+        totalAmount: _cartTotal,
+        subtotal: _cartTotal,
+        taxAmount: 0.0,
+        customerName: result.customerName,
+        paymentMethod: result.paymentMethod,
+        createdAt: result.saleDate,
+      );
+
+      // Process sale
+      final saleId = await _salesService.processSale(sale, _cartItems.values.map((item) {
+        return CartItem(
+          product: Product(
+            id: item.productId,
+            name: item.productName,
+            cost: item.salePrice,
+          ),
+          quantity: item.quantity,
+        );
+      }).toList());
+
+      // Clear cart on success
+      setState(() {
+        _selectedProductIds.clear();
+        _cartItems.clear();
+        _updateCartTotal();
+        _isProcessing = false;
+      });
+
+      showTextToast('বিক্রয় সফল হয়েছে!');
+    } catch (e) {
+      setState(() => _isProcessing = false);
+
+      // Check for insufficient stock error
+      if (e.toString().contains('Insufficient stock')) {
+        showTextToast('স্টক অপর্যাপ্ত! পণ্যের স্টক চেক করুন');
+      } else {
+        showTextToast('ত্রুটি: ${e.toString()}');
+      }
+    }
   }
 
   void _showFilterDialog() {
     showTextToast('Filter feature coming soon');
   }
 
+  // Fallback products for offline mode or service errors
   List<Product> _getHardcodedProducts() {
     return [
       Product(
@@ -1114,55 +1464,88 @@ class _ProductListViewState extends State<_ProductListView> {
     ];
   }
 
+  // Uniform product icon
   IconData _getProductIcon(Product product) {
-    if (product.id == '3') {
-      return Icons.local_offer;
-    }
-    return Icons.hexagon;
+    return Icons.inventory_2;
   }
 
+  // Uniform product icon color
   Color _getProductIconColor(Product product) {
-    if (product.id == '3') {
-      return blue;
-    }
-    return amberYellow;
+    return primary;
   }
 
+  // Uniform product icon background
   Color _getProductIconBackgroundColor(Product product) {
-    if (product.id == '3') {
-      return blue.withOpacity(0.1);
-    }
-    return amberYellow.withOpacity(0.1);
+    return primary.withOpacity(0.1);
   }
 
+  // Product title color (only special case: out of stock)
   Color _getProductTitleColor(Product product) {
-    if (product.name == 'rahman') {
-      return danger;
-    }
-    return slate800;
+    return (product.quantity ?? 0) == 0
+        ? ColorPalette.gray400
+        : slate800;
   }
 
+  // Product opacity (out of stock indicator)
   double _getProductOpacity(Product product) {
-    if ((product.quantity ?? 0) == 0) {
-      return 0.5;
-    }
-    if (product.id == '3') {
-      return 0.7;
-    }
-    return 1.0;
+    return (product.quantity ?? 0) == 0 ? 0.5 : 1.0;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Stack(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: _buildSearchRow(),
+        Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: _buildSearchRow(),
+            ),
+            Expanded(child: _buildProductList()),
+            _buildBottomBar(),
+          ],
         ),
-        Expanded(child: _buildProductList()),
-        _buildBottomBar(),
+        // Flying icon animation overlay
+        if (_showFlyingIcon) _buildFlyingIcon(),
       ],
+    );
+  }
+
+  Widget _buildFlyingIcon() {
+    return AnimatedBuilder(
+      animation: _flyingAnimationController,
+      builder: (context, child) {
+        // Calculate current position using linear interpolation
+        final double t = _flyingAnimationController.value;
+        final Offset currentPosition = Offset.lerp(
+          _flyingIconStart,
+          _flyingIconEnd,
+          t,
+        )!;
+
+        return Positioned(
+          left: currentPosition.dx - 18, // Center the 36px icon
+          top: currentPosition.dy - 18,
+          child: Opacity(
+            opacity: _flyingOpacity.value,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: primary.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.inventory_2,
+                  color: primary,
+                  size: 18,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1316,11 +1699,12 @@ class _ProductListViewState extends State<_ProductListView> {
   Widget _buildProductCard(Product product) {
     final opacity = _getProductOpacity(product);
     final isSelected = _selectedProductIds.contains(product.id);
+    final GlobalKey productIconKey = GlobalKey();
 
     return Opacity(
       opacity: opacity,
       child: InkWell(
-        onTap: () => _toggleProductSelection(product),
+        onTap: () => _toggleProductSelection(product, productIconKey: productIconKey),
         child: Container(
           margin: const EdgeInsets.only(bottom: 6),
           padding: const EdgeInsets.all(8),
@@ -1342,6 +1726,7 @@ class _ProductListViewState extends State<_ProductListView> {
           child: Row(
             children: [
               Container(
+                key: productIconKey,
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
@@ -1476,7 +1861,8 @@ class _ProductListViewState extends State<_ProductListView> {
             ],
           ),
           ElevatedButton(
-            onPressed: _handleCheckout,
+            key: _cartButtonKey,
+            onPressed: _isProcessing ? null : _handleCheckout,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: slate800,
@@ -1487,19 +1873,37 @@ class _ProductListViewState extends State<_ProductListView> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               minimumSize: const Size(0, 36),
             ),
-            child: Row(
-              children: [
-                Text(
-                  '$_cartItemCount',
-                  style: GoogleFonts.hindSiliguri(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
+            child: _isProcessing
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(slate800),
+                    ),
+                  )
+                : Row(
+                    children: [
+                      AnimatedBuilder(
+                        animation: _badgeScale,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: _badgeScale.value,
+                            child: child,
+                          );
+                        },
+                        child: Text(
+                          '$_cartItemCount',
+                          style: GoogleFonts.hindSiliguri(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.arrow_forward_ios, size: 14),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                const Icon(Icons.arrow_forward_ios, size: 14),
-              ],
-            ),
           ),
         ],
       ),
