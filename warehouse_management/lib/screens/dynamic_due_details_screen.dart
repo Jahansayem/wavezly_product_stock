@@ -32,29 +32,33 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
   DateTime _endDate = DateTime.now();
   
-  static const Color _primary = Color(0xFF0D9488);
-  static const Color _bgLight = Color(0xFFF8FAFC);
-  static const Color _bgDark = Color(0xFF0F172A);
-  static const Color _white = Color(0xFFFFFFFF);
-  static const Color _slate50 = Color(0xFFF8FAFC);
-  static const Color _slate100 = Color(0xFFF1F5F9);
-  static const Color _slate200 = Color(0xFFE2E8F0);
-  static const Color _slate300 = Color(0xFFCBD5E1);
-  static const Color _slate400 = Color(0xFF94A3B8);
-  static const Color _slate500 = Color(0xFF64748B);
-  static const Color _slate600 = Color(0xFF475569);
-  static const Color _slate700 = Color(0xFF334155);
-  static const Color _slate800 = Color(0xFF1E293B);
-  static const Color _slate900 = Color(0xFF0F172A);
-  static const Color _rose50 = Color(0xFFFFF1F2);
-  static const Color _rose100 = Color(0xFFFFE4E6);
-  static const Color _rose500 = Color(0xFFF43F5E);
-  static const Color _rose600 = Color(0xFFE11D48);
-  static const Color _emerald600 = Color(0xFF059669);
-  static const Color _emerald700 = Color(0xFF047857);
-  static const Color _teal50 = Color(0xFFF0FDFA);
-  static const Color _teal200 = Color(0xFF99F6E4);
-  static const Color _teal800 = Color(0xFF115E59);
+  // Primary color matching home screen tealAccent
+  static const Color _primary = ColorPalette.tealAccent;
+  static const Color _bgLight = ColorPalette.slate50;
+  static const Color _bgDark = ColorPalette.slate900;
+  static const Color _white = ColorPalette.white;
+  static const Color _slate50 = ColorPalette.slate50;
+  static const Color _slate100 = ColorPalette.slate100;
+  static const Color _slate200 = ColorPalette.slate200;
+  static const Color _slate300 = ColorPalette.slate300;
+  static const Color _slate400 = ColorPalette.slate400;
+  static const Color _slate500 = ColorPalette.slate500;
+  static const Color _slate600 = ColorPalette.slate600;
+  static const Color _slate700 = ColorPalette.slate700;
+  static const Color _slate800 = ColorPalette.slate800;
+  static const Color _slate900 = ColorPalette.slate900;
+  // Semantic colors: Rose = GIVE transactions (money leaving business)
+  static const Color _rose50 = ColorPalette.rose50;
+  static const Color _rose100 = ColorPalette.rose100;
+  static const Color _rose500 = ColorPalette.rose500;
+  static const Color _rose600 = ColorPalette.rose600;
+  // Semantic colors: Emerald = TAKE transactions (money entering business)
+  static const Color _emerald600 = ColorPalette.emerald600;
+  static const Color _emerald700 = ColorPalette.emerald700;
+  // Additional brand colors
+  static const Color _teal50 = ColorPalette.teal50;
+  static const Color _teal200 = ColorPalette.teal200;
+  static const Color _teal800 = ColorPalette.teal800;
 
   @override
   void initState() {

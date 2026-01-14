@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:wavezly/models/buying_cart_item.dart';
+import 'package:wavezly/utils/color_palette.dart';
 
 // ═══════════════════════════════════════════════════════════════
 // MODELS & ENUMS (Screen-specific)
@@ -42,7 +43,7 @@ enum PaymentMethod {
   Color get accentColor {
     switch (this) {
       case PaymentMethod.cash:
-        return const Color(0xFF26A69A);
+        return ColorPalette.tealAccent;
       case PaymentMethod.due:
         return const Color(0xFFFF9800);
       case PaymentMethod.mobileBanking:
@@ -218,7 +219,7 @@ class _PaymentConfirmScreenState extends State<PaymentConfirmScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF26A69A),
+              primary: ColorPalette.tealAccent,
             ),
           ),
           child: child!,
@@ -283,7 +284,7 @@ class _PaymentConfirmScreenState extends State<PaymentConfirmScreen> {
     return Container(
       height: 64,
       decoration: BoxDecoration(
-        color: const Color(0xFF26A69A),
+        color: ColorPalette.tealAccent,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.12),
@@ -342,7 +343,7 @@ class _PaymentConfirmScreenState extends State<PaymentConfirmScreen> {
             style: const TextStyle(
               fontSize: 36,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF26A69A),
+              color: ColorPalette.tealAccent,
             ),
           ),
         ],
@@ -368,7 +369,7 @@ class _PaymentConfirmScreenState extends State<PaymentConfirmScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: const Color(0xFF26A69A).withOpacity(0.3),
+              color: ColorPalette.tealAccent.withOpacity(0.3),
             ),
           ),
           child: Row(
@@ -516,7 +517,7 @@ class _PaymentConfirmScreenState extends State<PaymentConfirmScreen> {
                   icon: const Icon(Icons.camera_alt, size: 18),
                   label: const Text('রিসিপ্টের ছবি'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF26A69A),
+                    foregroundColor: ColorPalette.tealAccent,
                     side: const BorderSide(color: Color(0xFFE2E8F0)),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
@@ -532,7 +533,7 @@ class _PaymentConfirmScreenState extends State<PaymentConfirmScreen> {
                   icon: const Icon(Icons.calendar_today, size: 18),
                   label: Text(_formatBengaliDate(_selectedDate)),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF26A69A),
+                    foregroundColor: ColorPalette.tealAccent,
                     side: const BorderSide(color: Color(0xFFE2E8F0)),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
@@ -568,12 +569,12 @@ class _PaymentConfirmScreenState extends State<PaymentConfirmScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFF26A69A).withOpacity(0.1),
+              color: ColorPalette.tealAccent.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
               Icons.sms,
-              color: Color(0xFF26A69A),
+              color: ColorPalette.tealAccent,
               size: 24,
             ),
           ),
@@ -595,7 +596,7 @@ class _PaymentConfirmScreenState extends State<PaymentConfirmScreen> {
                 _smsEnabled = value;
               });
             },
-            activeColor: const Color(0xFF26A69A),
+            activeColor: ColorPalette.tealAccent,
           ),
         ],
       ),
@@ -632,7 +633,7 @@ class _PaymentConfirmScreenState extends State<PaymentConfirmScreen> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isSelected
-                    ? const Color(0xFF26A69A)
+                    ? ColorPalette.tealAccent
                     : const Color(0xFFE2E8F0),
                 width: isSelected ? 2 : 1,
               ),
@@ -674,7 +675,7 @@ class _PaymentConfirmScreenState extends State<PaymentConfirmScreen> {
                   ),
                 ],
               ),
-              activeColor: const Color(0xFF26A69A),
+              activeColor: ColorPalette.tealAccent,
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             ),
           );
@@ -707,7 +708,7 @@ class _PaymentConfirmScreenState extends State<PaymentConfirmScreen> {
     return ElevatedButton(
       onPressed: _isProcessing ? null : _handleConfirm,
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF26A69A),
+        backgroundColor: ColorPalette.tealAccent,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(

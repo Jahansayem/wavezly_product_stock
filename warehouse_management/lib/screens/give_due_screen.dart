@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:wavezly/utils/color_palette.dart';
 
 enum DueTxnType { take, give }
 
@@ -47,18 +48,19 @@ class _GiveDueScreenState extends State<GiveDueScreen> {
   double _enteredAmount = 0.0;
   String? _attachmentPath;
 
-  static const Color _primaryTeal = Color(0xFF0D9488);
-  static const Color _bgLight = Color(0xFFF9FAFB);
-  static const Color _cardBg = Color(0xFFFFFFFF);
-  static const Color _inputBorder = Color(0xFFE2E8F0);
-  static const Color _redWarning = Color(0xFFEF4444);
-  static const Color _gray100 = Color(0xFFF3F4F6);
-  static const Color _gray500 = Color(0xFF6B7280);
-  static const Color _gray600 = Color(0xFF4B5563);
-  static const Color _gray700 = Color(0xFF374151);
-  static const Color _teal50 = Color(0xFFF0FDFA);
-  static const Color _teal100 = Color(0xFFCCFBF1);
-  static const Color _teal600 = Color(0xFF0D9488);
+  // Colors matching home screen tealAccent #00BFA5
+  static const Color _primaryTeal = ColorPalette.tealAccent;
+  static const Color _bgLight = ColorPalette.gray50;
+  static const Color _cardBg = ColorPalette.white;
+  static const Color _inputBorder = ColorPalette.slate200;
+  static const Color _redWarning = ColorPalette.danger;
+  static const Color _gray100 = ColorPalette.gray100;
+  static const Color _gray500 = ColorPalette.gray500;
+  static const Color _gray600 = ColorPalette.gray600;
+  static const Color _gray700 = ColorPalette.gray700;
+  static const Color _teal50 = ColorPalette.teal50;
+  static const Color _teal100 = ColorPalette.teal100;
+  static const Color _teal600 = ColorPalette.teal600;
 
   @override
   void initState() {

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:wavezly/screens/customers_page.dart';
+import 'package:wavezly/screens/product_selling_selection_screen.dart';
+import 'package:wavezly/screens/reports_page.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/widgets/action_card.dart';
 import 'package:wavezly/widgets/greeting_header.dart';
-import 'package:wavezly/screens/log_new_sale_screen.dart';
-import 'package:wavezly/screens/reports_page.dart';
-import 'package:wavezly/screens/customers_page.dart';
 
 class DashboardHome extends StatelessWidget {
   final Function(int)? onTabSelected;
@@ -36,7 +36,7 @@ class DashboardHome extends StatelessWidget {
                           label: 'New Sale',
                           subtitle: 'Process transaction',
                           onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (context) => const LogNewSaleScreen()),
+                            MaterialPageRoute(builder: (context) => const ProductSellingSelectionScreen()),
                           ),
                         ),
                         ActionCard(

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:wavezly/models/product.dart';
+import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/models/buying_cart_item.dart';
 import 'package:wavezly/models/purchase.dart';
 import 'package:wavezly/models/customer.dart';
@@ -31,21 +32,9 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
   List<Product>? _filteredProducts;
   String _filterType = 'all'; // all, low_stock, out_of_stock, in_stock
 
-  // Colors (from design spec)
-  static const Color primary = Color(0xFF26A69A);
-  static const Color background = Color(0xFFF8F9FA);
-  static const Color slate50 = Color(0xFFF8FAFC);
-  static const Color slate100 = Color(0xFFF1F5F9);
-  static const Color slate300 = Color(0xFFCBD5E1);
-  static const Color slate400 = Color(0xFF94A3B8);
-  static const Color slate500 = Color(0xFF64748B);
-  static const Color slate600 = Color(0xFF475569);
-  static const Color slate700 = Color(0xFF334155);
-  static const Color slate800 = Color(0xFF1E293B);
-  static const Color teal50 = Color(0xFFCCFBF1);
-  static const Color teal100 = Color(0xFF99F6E4);
-  static const Color teal600 = Color(0xFF14B8A6);
-  static const Color red500 = Color(0xFFEF4444);
+  // Colors (matching home screen tealAccent #00BFA5)
+  static const Color primary = ColorPalette.tealAccent;
+  static const Color background = ColorPalette.slate50;
 
   @override
   void dispose() {
@@ -148,7 +137,7 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
       height: 72,
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: slate100)),
+        border: Border(bottom: BorderSide(color: ColorPalette.slate100)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -158,17 +147,17 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
             child: Container(
               height: 48,
               decoration: BoxDecoration(
-                color: slate100,
+                color: ColorPalette.slate100,
                 borderRadius: BorderRadius.circular(50),
               ),
               child: TextField(
                 controller: _searchController,
                 onChanged: _onSearchChanged,
-                style: const TextStyle(fontSize: 14, color: slate800),
+                style: const TextStyle(fontSize: 14, color: ColorPalette.slate800),
                 decoration: InputDecoration(
                   hintText: 'পণ্যের নাম দিয়ে খুঁজুন...',
-                  hintStyle: TextStyle(fontSize: 14, color: slate500),
-                  prefixIcon: Icon(Icons.search, size: 20, color: slate400),
+                  hintStyle: TextStyle(fontSize: 14, color: ColorPalette.slate500),
+                  prefixIcon: Icon(Icons.search, size: 20, color: ColorPalette.slate400),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 14),
@@ -182,11 +171,11 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: slate100,
+              color: ColorPalette.slate100,
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: Icon(Icons.filter_list, size: 20, color: slate600),
+              icon: Icon(Icons.filter_list, size: 20, color: ColorPalette.slate600),
               onPressed: _showFilterDialog,
               padding: EdgeInsets.zero,
             ),
@@ -229,11 +218,11 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline, size: 48, color: slate400),
+                Icon(Icons.error_outline, size: 48, color: ColorPalette.slate400),
                 const SizedBox(height: 16),
                 Text(
                   'Error loading products',
-                  style: TextStyle(fontSize: 14, color: slate600),
+                  style: TextStyle(fontSize: 14, color: ColorPalette.slate600),
                 ),
                 const SizedBox(height: 8),
                 TextButton(
@@ -255,11 +244,11 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.inventory_2_outlined, size: 48, color: slate400),
+                Icon(Icons.inventory_2_outlined, size: 48, color: ColorPalette.slate400),
                 const SizedBox(height: 16),
                 Text(
                   'কোনো পণ্য পাওয়া যায়নি',
-                  style: TextStyle(fontSize: 16, color: slate600),
+                  style: TextStyle(fontSize: 16, color: ColorPalette.slate600),
                 ),
               ],
             ),
@@ -291,7 +280,7 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: slate50),
+        border: Border.all(color: ColorPalette.slate50),
         boxShadow: [
           BoxShadow(
             offset: const Offset(0, 2),
@@ -321,9 +310,9 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
-                    color: teal50,
+                    color: ColorPalette.teal50,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: teal100.withOpacity(0.5)),
+                    border: Border.all(color: ColorPalette.teal100.withOpacity(0.5)),
                   ),
                   child: Icon(
                     _getProductIcon(product.group),
@@ -342,7 +331,7 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: slate800,
+                          color: ColorPalette.slate800,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -358,24 +347,24 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
                           Container(
                             width: 1,
                             height: 24,
-                            color: slate100,
+                            color: ColorPalette.slate100,
                             margin: const EdgeInsets.symmetric(horizontal: 8),
                           ),
                           _buildStatColumn(
                             'বিক্রয়',
                             '৳${_formatPrice(salePrice)}',
-                            slate700,
+                            ColorPalette.slate700,
                           ),
                           Container(
                             width: 1,
                             height: 24,
-                            color: slate100,
+                            color: ColorPalette.slate100,
                             margin: const EdgeInsets.symmetric(horizontal: 8),
                           ),
                           _buildStatColumn(
                             'ক্রয়',
                             '৳${_formatPrice(product.cost ?? 0)}',
-                            slate700,
+                            ColorPalette.slate700,
                           ),
                         ],
                       ),
@@ -386,7 +375,7 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
                 // Selection Icon
                 Icon(
                   isSelected ? Icons.check_circle : Icons.add_circle_outline,
-                  color: isSelected ? primary : slate300,
+                  color: isSelected ? primary : ColorPalette.slate300,
                   size: 28,
                 ),
               ],
@@ -407,7 +396,7 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: slate500,
+              color: ColorPalette.slate500,
               letterSpacing: 1.5,
             ),
           ),
@@ -532,9 +521,9 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
   }
 
   Color _getStockColor(int quantity) {
-    if (quantity < 0) return red500;
-    if (quantity == 0) return slate400;
-    return teal600;
+    if (quantity < 0) return ColorPalette.danger;
+    if (quantity == 0) return ColorPalette.slate400;
+    return ColorPalette.teal600;
   }
 
   String _formatPrice(double price) {

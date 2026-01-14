@@ -10,7 +10,7 @@ import 'supabase_config.dart';
 class DatabaseConfig {
   static Database? _database;
   static const String _databaseName = 'wavezly.db';
-  static const int _databaseVersion = 2;
+  static const int _databaseVersion = 3;
 
   static Future<void> initialize() async {
     if (_database != null) return;
@@ -52,6 +52,27 @@ class DatabaseConfig {
       await db.execute('ALTER TABLE sale_items ADD COLUMN product_id TEXT');
       print('Database migrated to version 2: Added sale_price, customer_phone, payment_status, notes, product_id columns');
     }
+
+    if (oldVersion < 3) {
+      // Add extended product columns for complete Supabase sync compatibility
+      await db.execute('ALTER TABLE products ADD COLUMN sell_online INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE products ADD COLUMN wholesale_enabled INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE products ADD COLUMN wholesale_price REAL');
+      await db.execute('ALTER TABLE products ADD COLUMN wholesale_min_qty INTEGER');
+      await db.execute('ALTER TABLE products ADD COLUMN stock_alert_enabled INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE products ADD COLUMN min_stock_level INTEGER');
+      await db.execute('ALTER TABLE products ADD COLUMN vat_enabled INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE products ADD COLUMN vat_percent REAL');
+      await db.execute('ALTER TABLE products ADD COLUMN warranty_enabled INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE products ADD COLUMN warranty_duration INTEGER');
+      await db.execute('ALTER TABLE products ADD COLUMN warranty_unit TEXT');
+      await db.execute('ALTER TABLE products ADD COLUMN discount_enabled INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE products ADD COLUMN discount_value REAL');
+      await db.execute('ALTER TABLE products ADD COLUMN discount_type TEXT');
+      await db.execute('ALTER TABLE products ADD COLUMN details TEXT');
+      await db.execute('ALTER TABLE products ADD COLUMN images TEXT');
+      print('Database migrated to version 3: Added 16 extended product columns for Supabase sync');
+    }
   }
 
   static Future<void> _createSchema(Database db) async {
@@ -73,6 +94,22 @@ class DatabaseConfig {
         user_id TEXT NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
+        sell_online INTEGER DEFAULT 0,
+        wholesale_enabled INTEGER DEFAULT 0,
+        wholesale_price REAL,
+        wholesale_min_qty INTEGER,
+        stock_alert_enabled INTEGER DEFAULT 0,
+        min_stock_level INTEGER,
+        vat_enabled INTEGER DEFAULT 0,
+        vat_percent REAL,
+        warranty_enabled INTEGER DEFAULT 0,
+        warranty_duration INTEGER,
+        warranty_unit TEXT,
+        discount_enabled INTEGER DEFAULT 0,
+        discount_value REAL,
+        discount_type TEXT,
+        details TEXT,
+        images TEXT,
         is_synced INTEGER DEFAULT 0,
         last_synced_at TEXT
       )
