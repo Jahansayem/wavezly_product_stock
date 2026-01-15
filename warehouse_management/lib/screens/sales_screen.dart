@@ -1171,6 +1171,8 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
   Offset _flyingIconStart = Offset.zero;
   Offset _flyingIconEnd = Offset.zero;
   final GlobalKey _cartButtonKey = GlobalKey();
+  final GlobalKey _cartBadgeKey = GlobalKey();
+  final GlobalKey _stackKey = GlobalKey();
 
   // Colors
   static const Color primary = ColorPalette.tealAccent;
@@ -1267,13 +1269,20 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
       return;
     }
 
-    final bool isAdding = !_selectedProductIds.contains(product.id);
-
     setState(() {
       if (_selectedProductIds.contains(product.id)) {
-        _selectedProductIds.remove(product.id);
-        _cartItems.remove(product.id);
+        // Already in cart → increment quantity (if stock allows)
+        final currentItem = _cartItems[product.id]!;
+        if (currentItem.quantity < currentItem.stockAvailable) {
+          _cartItems[product.id!] = currentItem.copyWith(
+            quantity: currentItem.quantity + 1,
+          );
+        } else {
+          showTextToast('স্টক সীমায় পৌঁছেছে!');
+          return;
+        }
       } else {
+        // Not in cart → add with quantity=1
         _selectedProductIds.add(product.id!);
         _cartItems[product.id!] = SellingCartItem(
           productId: product.id!,
@@ -1287,39 +1296,52 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
       _updateCartTotal();
     });
 
-    // Trigger flying animation only when adding to cart
-    if (isAdding && productIconKey != null) {
+    // Trigger flying animation on every add/increment
+    if (productIconKey != null) {
       _triggerFlyingAnimation(productIconKey);
     }
   }
 
   void _triggerFlyingAnimation(GlobalKey productIconKey) {
     try {
+      // Get Stack's render box for coordinate conversion
+      final RenderBox? stackBox = _stackKey.currentContext?.findRenderObject() as RenderBox?;
+      if (stackBox == null) return;
+
       // Get product icon position
       final RenderBox? productBox = productIconKey.currentContext?.findRenderObject() as RenderBox?;
       if (productBox == null) return;
 
       // Get cart button position
-      final RenderBox? cartBox = _cartButtonKey.currentContext?.findRenderObject() as RenderBox?;
-      if (cartBox == null) return;
+      final RenderBox? cartButtonBox = _cartButtonKey.currentContext?.findRenderObject() as RenderBox?;
+      if (cartButtonBox == null) return;
 
-      // Get positions relative to screen
-      final Offset productPosition = productBox.localToGlobal(Offset.zero);
-      final Offset cartPosition = cartBox.localToGlobal(Offset.zero);
+      // Get global positions (screen coordinates)
+      final Offset productGlobal = productBox.localToGlobal(Offset.zero);
+      final Offset cartButtonGlobal = cartButtonBox.localToGlobal(Offset.zero);
 
-      // Calculate center positions for both icons
+      // Convert to Stack-local coordinates (for Positioned widget)
+      final Offset productLocal = stackBox.globalToLocal(productGlobal);
+      final Offset cartButtonLocal = stackBox.globalToLocal(cartButtonGlobal);
+
+      // Calculate centers
       final Offset productCenter = Offset(
-        productPosition.dx + productBox.size.width / 2,
-        productPosition.dy + productBox.size.height / 2,
+        productLocal.dx + productBox.size.width / 2,
+        productLocal.dy + productBox.size.height / 2,
       );
-      final Offset cartCenter = Offset(
-        cartPosition.dx + cartBox.size.width / 2,
-        cartPosition.dy + cartBox.size.height / 2,
+
+      final Offset cartBadgeCenter = Offset(
+        cartButtonLocal.dx + 15, // Target the count number on left of button
+        cartButtonLocal.dy + cartButtonBox.size.height / 2,
       );
+
+      print('🎯 Animation Debug (Stack-local):');
+      print('   Product: global=$productGlobal, local=$productLocal, center=$productCenter');
+      print('   Cart: global=$cartButtonGlobal, local=$cartButtonLocal, target=$cartBadgeCenter');
 
       setState(() {
         _flyingIconStart = productCenter;
-        _flyingIconEnd = cartCenter;
+        _flyingIconEnd = cartBadgeCenter;
         _showFlyingIcon = true;
       });
 
@@ -1494,6 +1516,7 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
   @override
   Widget build(BuildContext context) {
     return Stack(
+      key: _stackKey,
       children: [
         Column(
           children: [
@@ -1884,19 +1907,22 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
                   )
                 : Row(
                     children: [
-                      AnimatedBuilder(
-                        animation: _badgeScale,
-                        builder: (context, child) {
-                          return Transform.scale(
-                            scale: _badgeScale.value,
-                            child: child,
-                          );
-                        },
-                        child: Text(
-                          '$_cartItemCount',
-                          style: GoogleFonts.hindSiliguri(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
+                      Container(
+                        key: _cartBadgeKey,
+                        child: AnimatedBuilder(
+                          animation: _badgeScale,
+                          builder: (context, child) {
+                            return Transform.scale(
+                              scale: _badgeScale.value,
+                              child: child,
+                            );
+                          },
+                          child: Text(
+                            '$_cartItemCount',
+                            style: GoogleFonts.hindSiliguri(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),

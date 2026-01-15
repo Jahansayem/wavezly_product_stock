@@ -75,4 +75,38 @@ mixin ColorPalette {
   // Accent colors for product categories
   static const Color amberYellow = Color(0xFFFFC107);
   static const Color blue = Color(0xFF2196F3);
+
+  // Stitch Design - Offer Banner Yellow Gradient
+  static const Color offerYellowStart = Color(0xFFFBBF24);  // amber-400
+  static const Color offerYellowEnd = Color(0xFFF59E0B);    // amber-500
+
+  // Additional colors for grid items
+  static const Color orange100 = Color(0xFFFFEDD5);
+  static const Color orange600 = Color(0xFFEA580C);
+  static const Color blue100 = Color(0xFFDBEAFE);
+  static const Color blue600 = Color(0xFF2563EB);
+  static const Color red100 = Color(0xFFFEE2E2);
+  static const Color red500 = Color(0xFFEF4444);
+  static const Color red600 = Color(0xFFDC2626);
+  static const Color indigo100 = Color(0xFFE0E7FF);
+  static const Color indigo600 = Color(0xFF4F46E5);
+  static const Color amber100 = Color(0xFFFEF3C7);
+  static const Color amber600 = Color(0xFFD97706);
+  static const Color lime100 = Color(0xFFECFCCB);
+  static const Color lime600 = Color(0xFF65A30D);
+  static const Color sky100 = Color(0xFFE0F2FE);
+  static const Color sky600 = Color(0xFF0284C7);
+  static const Color purple100 = Color(0xFFF3E8FF);
+  static const Color purple600 = Color(0xFF9333EA);
+  static const Color violet100 = Color(0xFFEDE9FE);
+  static const Color violet600 = Color(0xFF7C3AED);
+  static const Color fuchsia100 = Color(0xFFFAE8FF);
+  static const Color fuchsia600 = Color(0xFFC026D3);
+  static const Color cyan100 = Color(0xFFCFFAFE);
+  static const Color cyan600 = Color(0xFF0891B2);
+  static const Color yellow100 = Color(0xFFFEF9C3);
+  static const Color yellow600 = Color(0xFFCA8A04);
+  static const Color green500 = Color(0xFF22C55E);
+  static const Color navOrange = Color(0xFFF97316);
+  static const Color navBlue = Color(0xFF3B82F6);
 }
