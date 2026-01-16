@@ -261,9 +261,12 @@ class SyncService {
         record['is_synced'] = 1;
         record['last_synced_at'] = DateTime.now().toIso8601String();
 
+        // Convert boolean values to integers for SQLite compatibility
+        final sanitizedRecord = _sanitizeForSqlite(record);
+
         batch.insert(
           tableName,
-          record,
+          sanitizedRecord,
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
       }
@@ -292,6 +295,20 @@ class SyncService {
 
     if (result.isEmpty) return null;
     return result.first['last_pull_at'] as String?;
+  }
+
+  // Convert boolean values to integers for SQLite compatibility
+  Map<String, dynamic> _sanitizeForSqlite(Map<String, dynamic> record) {
+    final sanitized = <String, dynamic>{};
+    for (final entry in record.entries) {
+      final value = entry.value;
+      if (value is bool) {
+        sanitized[entry.key] = value ? 1 : 0;
+      } else {
+        sanitized[entry.key] = value;
+      }
+    }
+    return sanitized;
   }
 
   Future<void> _updateLastSync(String tableName, DateTime timestamp) async {

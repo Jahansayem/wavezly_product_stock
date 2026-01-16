@@ -10,7 +10,7 @@ import 'supabase_config.dart';
 class DatabaseConfig {
   static Database? _database;
   static const String _databaseName = 'wavezly.db';
-  static const int _databaseVersion = 3;
+  static const int _databaseVersion = 4;
 
   static Future<void> initialize() async {
     if (_database != null) return;
@@ -72,6 +72,19 @@ class DatabaseConfig {
       await db.execute('ALTER TABLE products ADD COLUMN details TEXT');
       await db.execute('ALTER TABLE products ADD COLUMN images TEXT');
       print('Database migrated to version 3: Added 16 extended product columns for Supabase sync');
+    }
+
+    if (oldVersion < 4) {
+      // Add quick sell columns to sales table
+      await db.execute('ALTER TABLE sales ADD COLUMN is_quick_sale INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE sales ADD COLUMN cash_received REAL');
+      await db.execute('ALTER TABLE sales ADD COLUMN profit_margin REAL');
+      await db.execute('ALTER TABLE sales ADD COLUMN product_details TEXT');
+      await db.execute('ALTER TABLE sales ADD COLUMN receipt_sms_sent INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE sales ADD COLUMN sale_date TEXT');
+      await db.execute('ALTER TABLE sales ADD COLUMN photo_url TEXT');
+      await db.execute('ALTER TABLE sales ADD COLUMN customer_id TEXT');
+      print('Database migrated to version 4: Added 8 quick sell columns to sales table');
     }
   }
 
@@ -217,6 +230,14 @@ class DatabaseConfig {
         notes TEXT,
         created_at TEXT NOT NULL,
         user_id TEXT NOT NULL,
+        is_quick_sale INTEGER DEFAULT 0,
+        cash_received REAL,
+        profit_margin REAL,
+        product_details TEXT,
+        receipt_sms_sent INTEGER DEFAULT 0,
+        sale_date TEXT,
+        photo_url TEXT,
+        customer_id TEXT,
         is_synced INTEGER DEFAULT 0,
         last_synced_at TEXT,
         UNIQUE(sale_number, user_id)
@@ -321,6 +342,12 @@ class DatabaseConfig {
 
   static Future<void> _migrateFromSupabase() async {
     try {
+      // Check if Supabase is initialized
+      if (!SupabaseConfig.isInitialized) {
+        print('Supabase not initialized yet - skipping first-run migration (will sync later)');
+        return;
+      }
+
       final supabase = SupabaseConfig.client;
       final userId = supabase.auth.currentUser?.id;
 

@@ -48,6 +48,11 @@ class CustomerService {
     final data = customer.toMap();
     data['user_id'] = _supabase.auth.currentUser!.id;
 
+    // Remove id if null to let database generate UUID
+    if (data['id'] == null) {
+      data.remove('id');
+    }
+
     final response = await _supabase
         .from('customers')
         .insert(data)
@@ -94,7 +99,15 @@ class CustomerService {
 
   // Add transaction
   Future<void> addTransaction(CustomerTransaction transaction) async {
-    await _supabase.from('customer_transactions').insert(transaction.toMap());
+    final data = transaction.toMap();
+    data['user_id'] = _supabase.auth.currentUser!.id;
+
+    // Remove id if null to let database generate UUID
+    if (data['id'] == null) {
+      data.remove('id');
+    }
+
+    await _supabase.from('customer_transactions').insert(data);
 
     // Update customer total_due
     final customer = await _supabase
