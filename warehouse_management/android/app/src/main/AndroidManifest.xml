@@ -4,6 +4,13 @@
    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
                     android:maxSdkVersion="32"/>
+
+   <!-- Query for WhatsApp app -->
+   <queries>
+       <package android:name="com.whatsapp" />
+       <package android:name="com.whatsapp.w4b" />
+   </queries>
+
    <application
         android:label="Wavezly"
         android:icon="@mipmap/ic_launcher">

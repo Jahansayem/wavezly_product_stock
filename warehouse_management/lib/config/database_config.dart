@@ -10,7 +10,7 @@ import 'supabase_config.dart';
 class DatabaseConfig {
   static Database? _database;
   static const String _databaseName = 'wavezly.db';
-  static const int _databaseVersion = 4;
+  static const int _databaseVersion = 5;
 
   static Future<void> initialize() async {
     if (_database != null) return;
@@ -85,6 +85,12 @@ class DatabaseConfig {
       await db.execute('ALTER TABLE sales ADD COLUMN photo_url TEXT');
       await db.execute('ALTER TABLE sales ADD COLUMN customer_id TEXT');
       print('Database migrated to version 4: Added 8 quick sell columns to sales table');
+    }
+
+    if (oldVersion < 5) {
+      // Add transaction_date column to customer_transactions for Supabase sync compatibility
+      await db.execute('ALTER TABLE customer_transactions ADD COLUMN transaction_date TEXT');
+      print('Database migrated to version 5: Added transaction_date column to customer_transactions');
     }
   }
 
@@ -204,6 +210,7 @@ class DatabaseConfig {
         description TEXT,
         sale_id TEXT,
         created_at TEXT NOT NULL,
+        transaction_date TEXT,
         is_synced INTEGER DEFAULT 0,
         last_synced_at TEXT,
         FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE

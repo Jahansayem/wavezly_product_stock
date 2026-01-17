@@ -29,6 +29,17 @@ class CustomerService {
     return (response as List).map((item) => Customer.fromMap(item)).toList();
   }
 
+  // Get customer by ID
+  Future<Customer> getCustomerById(String customerId) async {
+    final response = await _supabase
+        .from('customers')
+        .select()
+        .eq('id', customerId)
+        .single();
+
+    return Customer.fromMap(response);
+  }
+
   // Search customers
   Future<List<Customer>> searchCustomers(String query) async {
     final response = await _supabase
@@ -97,33 +108,46 @@ class CustomerService {
     };
   }
 
-  // Add transaction
+  /// Adds customer transaction using database RPC function
+  /// Amount must ALWAYS be positive - transaction_type determines balance direction
   Future<void> addTransaction(CustomerTransaction transaction) async {
-    final data = transaction.toMap();
-    data['user_id'] = _supabase.auth.currentUser!.id;
-
-    // Remove id if null to let database generate UUID
-    if (data['id'] == null) {
-      data.remove('id');
+    // Validate required fields
+    if (transaction.customerId == null || transaction.customerId!.isEmpty) {
+      throw Exception('Customer ID is required');
+    }
+    if (transaction.transactionType == null || transaction.transactionType!.isEmpty) {
+      throw Exception('Transaction type is required');
+    }
+    if (transaction.amount == null || transaction.amount! <= 0) {
+      throw Exception('Amount must be greater than 0');
+    }
+    if (!['GIVEN', 'RECEIVED'].contains(transaction.transactionType)) {
+      throw Exception('Invalid transaction type. Must be GIVEN or RECEIVED');
     }
 
-    await _supabase.from('customer_transactions').insert(data);
+    // Ensure amount is always positive (database requires positive amounts)
+    final positiveAmount = transaction.amount!.abs();
 
-    // Update customer total_due
-    final customer = await _supabase
-        .from('customers')
-        .select()
-        .eq('id', transaction.customerId!)
-        .single();
+    try {
+      // Call Supabase RPC function that handles:
+      // 1. Fetches current customer balance
+      // 2. Calculates new balance (GIVEN adds, RECEIVED subtracts)
+      // 3. Inserts transaction with balance
+      // 4. Trigger auto-updates customer.total_due
+      final response = await _supabase.rpc('add_customer_transaction', params: {
+        'p_customer_id': transaction.customerId,
+        'p_transaction_type': transaction.transactionType,
+        'p_amount': positiveAmount,
+        'p_note': transaction.description ?? '',
+        'p_transaction_date': transaction.createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
+      });
 
-    final currentDue = (customer['total_due'] as num?)?.toDouble() ?? 0.0;
-    final newDue = currentDue + (transaction.amount ?? 0.0);
-
-    await _supabase.from('customers').update({
-      'total_due': newDue,
-      'last_transaction_date': DateTime.now().toIso8601String(),
-      'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', transaction.customerId!);
+      // RPC returns transaction ID on success
+    } on PostgrestException catch (e) {
+      throw Exception('Database error: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to add transaction: $e');
+    }
   }
 
   // Get customer transactions

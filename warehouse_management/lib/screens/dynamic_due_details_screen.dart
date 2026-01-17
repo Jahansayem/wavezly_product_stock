@@ -165,52 +165,59 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
   }
 
   Future<void> _handleTakePressed() async {
-    final result = await Navigator.push<DueTransactionResult>(
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => TakeDueScreen(
           customerId: widget.customer.id ?? '',
-          customerName: widget.customer.name ?? 'Unknown',
-          currentDue: widget.customer.totalDue,
         ),
       ),
     );
 
-    if (result != null && mounted) {
-      await _processTransactionResult(result);
-    }
+    // TakeDueScreen now processes transactions internally
+    // No need to process result here
   }
 
   Future<void> _processTransactionResult(DueTransactionResult result) async {
     try {
-      // Map DueTxnType to transaction type for CustomerService
+      // Map UI type to database type
+      // DueTxnType.give → 'GIVEN' (we give money to customer)
+      // DueTxnType.take → 'RECEIVED' (we receive money from customer)
       final transactionType = result.type == DueTxnType.give ? 'GIVEN' : 'RECEIVED';
 
-      // Calculate amount based on type
-      // GIVE (debit): We give money to customer → increases their due (positive)
-      // TAKE (credit): We take money from customer → decreases their due (negative)
-      final amount = result.type == DueTxnType.give ? result.amount : -result.amount;
+      // CRITICAL: Amount must ALWAYS be positive
+      // transaction_type determines if balance increases or decreases
+      // Database has CHECK constraint: amount > 0
+      final positiveAmount = result.amount.abs();
 
       final transaction = CustomerTransaction(
         customerId: widget.customer.id,
-        userId: null, // Will be set by service from auth.uid()
+        userId: null,  // Will be set by service
         transactionType: transactionType,
-        amount: amount,
+        amount: positiveAmount,  // Always positive!
         description: result.note.isEmpty
             ? '${result.type == DueTxnType.give ? 'Given to' : 'Received from'} ${widget.customer.name}'
             : result.note,
         createdAt: result.date,
+        balance: null,  // Will be calculated by RPC - don't set manually
       );
 
       await _customerService.addTransaction(transaction);
 
       if (mounted) {
         showTextToast('Transaction added successfully');
+        // Refresh customer details to show updated balance
+        setState(() {});
+      }
+    } on Exception catch (e) {
+      if (mounted) {
+        showTextToast('Error: ${e.toString().replaceAll('Exception: ', '')}');
       }
     } catch (e) {
       if (mounted) {
-        showTextToast('Error adding transaction: $e');
+        showTextToast('Unexpected error adding transaction');
       }
+      debugPrint('Transaction error: $e');
     }
   }
 
@@ -1035,7 +1042,11 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
   Widget _buildTableRow(CustomerTransaction txn, bool isDark) {
     final dateFormat = DateFormat('dd MMM yy');
     final timeFormat = DateFormat('hh:mm a');
-    final isDebit = (txn.amount ?? 0) > 0;
+    // FIX: Check transactionType instead of amount sign
+    // GIVEN = we gave to customer (shows in GIVEN column)
+    // RECEIVED = customer paid us (shows in RECEIVED column)
+    final isGiven = txn.transactionType == 'GIVEN';
+    final isReceived = txn.transactionType == 'RECEIVED';
 
     return Container(
       decoration: BoxDecoration(
@@ -1098,7 +1109,7 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: !isDebit && txn.amount != null
+                color: isReceived && txn.amount != null
                     ? (isDark ? const Color(0x33064E3B) : const Color(0xCCF0FDF4))
                     : Colors.transparent,
                 border: Border(
@@ -1109,12 +1120,12 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
                 ),
               ),
               child: Text(
-                !isDebit && txn.amount != null ? '৳ ${_formatCurrency(txn.amount!.abs())}' : '--',
+                isReceived && txn.amount != null ? '৳ ${_formatCurrency(txn.amount!.abs())}' : '--',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: !isDebit && txn.amount != null ? FontWeight.w600 : FontWeight.w400,
-                  color: !isDebit && txn.amount != null ? _emerald700 : _slate300,
+                  fontWeight: isReceived && txn.amount != null ? FontWeight.w600 : FontWeight.w400,
+                  color: isReceived && txn.amount != null ? _emerald700 : _slate300,
                 ),
               ),
             ),
@@ -1124,7 +1135,7 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isDebit && txn.amount != null
+                color: isGiven && txn.amount != null
                     ? (isDark ? const Color(0x33881337) : const Color(0xCCFFF1F2))
                     : Colors.transparent,
                 border: Border(
@@ -1135,12 +1146,12 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
                 ),
               ),
               child: Text(
-                isDebit && txn.amount != null ? '৳ ${_formatCurrency(txn.amount!.abs())}' : '--',
+                isGiven && txn.amount != null ? '৳ ${_formatCurrency(txn.amount!.abs())}' : '--',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: isDebit && txn.amount != null ? FontWeight.w600 : FontWeight.w400,
-                  color: isDebit && txn.amount != null ? _rose600 : _slate300,
+                  fontWeight: isGiven && txn.amount != null ? FontWeight.w600 : FontWeight.w400,
+                  color: isGiven && txn.amount != null ? _rose600 : _slate300,
                 ),
               ),
             ),

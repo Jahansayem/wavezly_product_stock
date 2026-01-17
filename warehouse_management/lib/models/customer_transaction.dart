@@ -7,6 +7,7 @@ class CustomerTransaction {
     this.amount,
     this.description,
     this.saleId,
+    this.balance,
     this.createdAt,
   });
 
@@ -17,6 +18,7 @@ class CustomerTransaction {
   double? amount;
   String? description;
   String? saleId;
+  double? balance;  // Running balance after this transaction
   DateTime? createdAt;
 
   factory CustomerTransaction.fromMap(Map<String, dynamic> json) => CustomerTransaction(
@@ -25,11 +27,16 @@ class CustomerTransaction {
         userId: json["user_id"] as String?,
         transactionType: json["transaction_type"] as String?,
         amount: (json["amount"] as num?)?.toDouble(),
-        description: json["description"] as String?,
+        // Map DB "note" to "description" for backward compatibility
+        description: json["note"] as String? ?? json["description"] as String?,
         saleId: json["sale_id"] as String?,
-        createdAt: json["created_at"] != null
-            ? DateTime.parse(json["created_at"] as String)
-            : null,
+        balance: (json["balance"] as num?)?.toDouble(),
+        // Map DB "transaction_date" to createdAt, fallback to "created_at"
+        createdAt: json["transaction_date"] != null
+            ? DateTime.parse(json["transaction_date"] as String)
+            : json["created_at"] != null
+                ? DateTime.parse(json["created_at"] as String)
+                : null,
       );
 
   Map<String, dynamic> toMap() => {

@@ -10,6 +10,7 @@ import 'package:wavezly/models/sale.dart';
 import 'package:wavezly/models/selling_cart_item.dart';
 import 'package:wavezly/screens/barcode_scanner_screen.dart';
 import 'package:wavezly/screens/selling_checkout_screen.dart';
+import 'package:wavezly/services/auth_service.dart';
 import 'package:wavezly/services/customer_service.dart';
 import 'package:wavezly/services/product_service.dart';
 import 'package:wavezly/services/sales_service.dart';
@@ -262,6 +263,7 @@ class _QuickSellViewState extends State<_QuickSellView> {
   // Services
   final SalesService _salesService = SalesService();
   final CustomerService _customerService = CustomerService();
+  final AuthService _authService = AuthService();
 
   // Cash calculator state
   String _cashAmount = ''; // Start empty instead of hardcoded "50"
@@ -352,7 +354,15 @@ class _QuickSellViewState extends State<_QuickSellView> {
     try {
       setState(() => _isSubmitting = true);
 
-      // Parse cash amount
+      // Get current user ID
+      final userId = _authService.currentUser?.id;
+      if (userId == null) {
+        showTextToast('ব্যবহারকারী লগইন করা নেই');
+        setState(() => _isSubmitting = false);
+        return;
+      }
+
+      // Parse and validate cash amount
       final String englishAmount = NumberFormatter.bengaliToEnglish(_cashAmount);
       final double amount = double.tryParse(englishAmount) ?? 0.0;
 
@@ -362,14 +372,14 @@ class _QuickSellViewState extends State<_QuickSellView> {
         return;
       }
 
-      // Validate date
+      // Validate date - cannot be in the future
       if (_selectedDate.isAfter(DateTime.now())) {
         showTextToast('ভবিষ্যতের তারিখ নির্বাচন করা যাবে না');
         setState(() => _isSubmitting = false);
         return;
       }
 
-      // Validate mobile if provided
+      // Validate mobile number if provided
       final mobile = _mobileController.text.trim();
       if (mobile.isNotEmpty && mobile.length != 11) {
         showTextToast('সঠিক মোবাইল নম্বর লিখুন (১১ ডিজিট)');
@@ -377,41 +387,49 @@ class _QuickSellViewState extends State<_QuickSellView> {
         return;
       }
 
-      // Parse profit (optional)
-      final double profit = double.tryParse(_profitController.text) ?? 0.0;
+      // Parse profit margin (optional)
+      final String englishProfit = NumberFormatter.bengaliToEnglish(
+        _profitController.text.trim()
+      );
+      final double profit = double.tryParse(englishProfit) ?? 0.0;
 
-      // Get product details
+      // Get product details (optional)
       final String details = _detailsController.text.trim();
-      final String productName = details.isNotEmpty ? details : 'দ্রুত বিক্রি';
 
-      // Create Sale object
-      final sale = Sale(
-        totalAmount: amount,
-        subtotal: amount - profit,
-        taxAmount: 0.0,
-        customerName: _customerName,
-        paymentMethod: 'cash',
-        createdAt: _selectedDate,
+      // Process quick cash sale using new service method
+      final saleId = await _salesService.processQuickCashSale(
+        userId: userId,
+        cashReceived: amount,
+        customerMobile: mobile.isNotEmpty ? mobile : null,
+        profitMargin: profit,
+        productDetails: details.isNotEmpty ? details : null,
+        receiptSmsEnabled: _receiptSmsEnabled,
+        saleDate: _selectedDate,
+        photoUrl: null,
       );
 
-      // Create CartItem with pseudo-product
-      final cartItem = CartItem(
-        product: Product(
-          id: null, // Quick sale has no product ID
-          name: productName,
-          cost: amount,
-        ),
-        quantity: 1,
-      );
-
-      // Process sale
-      final saleId = await _salesService.processSale(sale, [cartItem]);
-
+      // Success feedback
       showTextToast('বিক্রয় সফল হয়েছে!');
-      Navigator.pop(context);
+
+      if (mounted) {
+        Navigator.pop(context, saleId);
+      }
     } catch (e) {
-      showTextToast('ত্রুটি: ${e.toString()}');
-      setState(() => _isSubmitting = false);
+      String errorMessage = 'ত্রুটি: ';
+
+      if (e.toString().contains('authentication')) {
+        errorMessage += 'লগইন সমস্যা, পুনরায় লগইন করুন';
+      } else if (e.toString().contains('network')) {
+        errorMessage += 'ইন্টারনেট সংযোগ চেক করুন';
+      } else {
+        errorMessage += e.toString();
+      }
+
+      showTextToast(errorMessage);
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 

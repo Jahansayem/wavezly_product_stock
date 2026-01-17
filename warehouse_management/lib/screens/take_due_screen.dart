@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/models/customer.dart';
+import 'package:wavezly/models/customer_transaction.dart';
+import 'package:wavezly/services/customer_service.dart';
+import 'package:wavezly/functions/toast.dart';
 
 enum DueTxnType { take, give }
+enum DueFilter { day, week, month, year, custom }
 
 class DueTransactionResult {
   final DueTxnType type;
@@ -25,14 +30,10 @@ class DueTransactionResult {
 
 class TakeDueScreen extends StatefulWidget {
   final String customerId;
-  final String customerName;
-  final double currentDue;
 
   const TakeDueScreen({
     super.key,
     required this.customerId,
-    required this.customerName,
-    required this.currentDue,
   });
 
   @override
@@ -40,9 +41,19 @@ class TakeDueScreen extends StatefulWidget {
 }
 
 class _TakeDueScreenState extends State<TakeDueScreen> {
+  final CustomerService _customerService = CustomerService();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
-  
+
+  // Filtering state
+  DueFilter _activeFilter = DueFilter.month;
+  DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
+  DateTime _endDate = DateTime.now();
+
+  // Customer state (loaded from DB)
+  Customer? _customer;
+  bool _isLoadingCustomer = true;
+
   DateTime _selectedDate = DateTime.now();
   bool _smsEnabled = false;
   double _enteredAmount = 0.0;
@@ -66,6 +77,8 @@ class _TakeDueScreenState extends State<TakeDueScreen> {
   void initState() {
     super.initState();
     _amountController.addListener(_updateAmount);
+    _loadCustomer();
+    _updateDateRange();
   }
 
   @override
@@ -75,6 +88,22 @@ class _TakeDueScreenState extends State<TakeDueScreen> {
     super.dispose();
   }
 
+  Future<void> _loadCustomer() async {
+    try {
+      setState(() => _isLoadingCustomer = true);
+      final customer = await _customerService.getCustomerById(widget.customerId);
+      setState(() {
+        _customer = customer;
+        _isLoadingCustomer = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingCustomer = false);
+      if (mounted) {
+        showTextToast('Error loading customer: $e');
+      }
+    }
+  }
+
   void _updateAmount() {
     final text = _amountController.text;
     setState(() {
@@ -82,21 +111,61 @@ class _TakeDueScreenState extends State<TakeDueScreen> {
     });
   }
 
+  void _updateDateRange() {
+    final now = DateTime.now();
+    switch (_activeFilter) {
+      case DueFilter.day:
+        _startDate = DateTime(now.year, now.month, now.day);
+        _endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        break;
+      case DueFilter.week:
+        final weekStart = now.subtract(Duration(days: now.weekday - 1));
+        _startDate = DateTime(weekStart.year, weekStart.month, weekStart.day);
+        _endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        break;
+      case DueFilter.month:
+        _startDate = DateTime(now.year, now.month, 1);
+        _endDate = DateTime(now.year, now.month + 1, 1).subtract(const Duration(days: 1));
+        break;
+      case DueFilter.year:
+        _startDate = DateTime(now.year, 1, 1);
+        _endDate = DateTime(now.year, 12, 31);
+        break;
+      case DueFilter.custom:
+        // Keep current dates for custom
+        break;
+    }
+    setState(() {});
+  }
+
+  List<CustomerTransaction> _filterTransactions(List<CustomerTransaction> transactions) {
+    // Filter to only RECEIVED transactions (money we take from customer)
+    final receivedOnly = transactions.where((t) => t.transactionType == 'RECEIVED').toList();
+
+    // Filter by date range
+    return receivedOnly.where((transaction) {
+      if (transaction.createdAt == null) return false;
+      final date = transaction.createdAt!;
+      return date.isAfter(_startDate.subtract(const Duration(days: 1))) &&
+             date.isBefore(_endDate.add(const Duration(days: 1)));
+    }).toList();
+  }
+
   String _formatBanglaAmount(double amount) {
     final formatter = NumberFormat('#,##,##0', 'en_US');
     String formatted = formatter.format(amount);
-    
+
     // Convert to Bangla numerals
     const englishToBangla = {
       '0': '০', '1': '১', '2': '২', '3': '৩', '4': '৪',
       '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯'
     };
-    
+
     String banglaFormatted = formatted;
     englishToBangla.forEach((english, bangla) {
       banglaFormatted = banglaFormatted.replaceAll(english, bangla);
     });
-    
+
     return banglaFormatted;
   }
 
@@ -105,7 +174,7 @@ class _TakeDueScreenState extends State<TakeDueScreen> {
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
-    
+
     return '${date.day} ${months[date.month - 1]}';
   }
 
@@ -129,7 +198,7 @@ class _TakeDueScreenState extends State<TakeDueScreen> {
         );
       },
     );
-    
+
     if (picked != null) {
       setState(() {
         _selectedDate = picked;
@@ -144,37 +213,79 @@ class _TakeDueScreenState extends State<TakeDueScreen> {
     );
   }
 
-  void _onSubmit() {
+  Future<void> _onSubmit() async {
     if (_enteredAmount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('অনুগ্রহ করে একটি বৈধ পরিমাণ প্রবেশ করান'),
-          backgroundColor: _redWarning,
-        ),
-      );
+      showTextToast('অনুগ্রহ করে একটি বৈধ পরিমাণ প্রবেশ করান');
       return;
     }
 
-    final result = DueTransactionResult(
-      type: DueTxnType.take,  // This is TAKE screen - customer pays you back
-      amount: _enteredAmount,
-      note: _noteController.text.trim(),
-      date: _selectedDate,
-      smsEnabled: _smsEnabled,
-      attachmentPath: _attachmentPath,
-    );
+    if (_customer == null) {
+      showTextToast('Customer data not loaded');
+      return;
+    }
 
-    Navigator.pop(context, result);
+    try {
+      final transaction = CustomerTransaction(
+        customerId: widget.customerId,
+        userId: null,
+        transactionType: 'RECEIVED',
+        amount: _enteredAmount.abs(),
+        description: _noteController.text.trim().isEmpty
+            ? 'Received from ${_customer!.name}'
+            : _noteController.text.trim(),
+        createdAt: _selectedDate,
+        balance: null,
+      );
+
+      await _customerService.addTransaction(transaction);
+
+      // Clear form
+      _amountController.clear();
+      _noteController.clear();
+      setState(() {
+        _enteredAmount = 0.0;
+        _selectedDate = DateTime.now();
+        _smsEnabled = false;
+        _attachmentPath = null;
+      });
+
+      // Reload customer to get updated balance
+      await _loadCustomer();
+
+      if (mounted) {
+        showTextToast('Transaction added successfully');
+      }
+    } on Exception catch (e) {
+      if (mounted) {
+        showTextToast('Error: ${e.toString().replaceAll('Exception: ', '')}');
+      }
+    } catch (e) {
+      if (mounted) {
+        showTextToast('Unexpected error adding transaction');
+      }
+      debugPrint('Transaction error: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoadingCustomer || _customer == null) {
+      return Scaffold(
+        backgroundColor: _bgLight,
+        appBar: AppBar(
+          title: const Text('নতুন বাকি'),
+          backgroundColor: _primaryTeal,
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: _bgLight,
       body: SafeArea(
         child: Column(
           children: [
-            // Fixed Header
+            // Fixed Header (ORIGINAL DESIGN)
             Container(
               height: 56,
               decoration: const BoxDecoration(
@@ -216,7 +327,7 @@ class _TakeDueScreenState extends State<TakeDueScreen> {
               ),
             ),
 
-            // Scrollable Content
+            // Scrollable Content (ORIGINAL DESIGN)
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -226,267 +337,271 @@ class _TakeDueScreenState extends State<TakeDueScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                      // Top Info Card
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: _cardBg,
-                          border: Border.all(color: _teal100, width: 1),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x0A000000),
-                              blurRadius: 4,
-                              offset: Offset(0, 1),
+                        // Top Info Card (ORIGINAL)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: _cardBg,
+                            border: Border.all(color: _teal100, width: 1),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x0A000000),
+                                blurRadius: 4,
+                                offset: Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            'মোট পাবোঃ ${_formatBanglaAmount(_enteredAmount)} ৳',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: _primaryTeal,
                             ),
-                          ],
+                          ),
                         ),
-                        child: Text(
+
+                        const SizedBox(height: 12),
+
+                        // Red Warning Text (ORIGINAL)
+                        Text(
                           'মোট পাবোঃ ${_formatBanglaAmount(_enteredAmount)} ৳',
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: _primaryTeal,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: _redWarning,
                           ),
                         ),
-                      ),
 
-                      const SizedBox(height: 12),
+                        const SizedBox(height: 20),
 
-                      // Red Warning Text
-                      Text(
-                        'মোট পাবোঃ ${_formatBanglaAmount(_enteredAmount)} ৳',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: _redWarning,
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Form Fields
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Amount Input
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Padding(
-                                padding: EdgeInsets.only(left: 4, bottom: 6),
-                                child: Text(
-                                  'টাকার পরিমাণ',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: _gray600,
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  color: _cardBg,
-                                  border: Border.all(color: _teal100, width: 1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: TextField(
-                                  controller: _amountController,
-                                  keyboardType: TextInputType.number,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                                  ],
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w500,
-                                    color: _gray700,
-                                  ),
-                                  decoration: const InputDecoration(
-                                    hintText: '০',
-                                    hintStyle: TextStyle(
-                                      color: Color(0xFFD1D5DB),
-                                      fontSize: 20,
+                        // Form Fields (ORIGINAL DESIGN)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Amount Input
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Padding(
+                                  padding: EdgeInsets.only(left: 4, bottom: 6),
+                                  child: Text(
+                                    'টাকার পরিমাণ',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: _gray600,
                                     ),
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                                    focusedBorder: InputBorder.none,
-                                    enabledBorder: InputBorder.none,
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Note Input
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Padding(
-                                padding: EdgeInsets.only(left: 4, bottom: 6),
-                                child: Text(
-                                  'নোট',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: _gray600,
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  color: _cardBg,
-                                  border: Border.all(color: _teal100, width: 1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: TextField(
-                                  controller: _noteController,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    color: _gray700,
-                                  ),
-                                  decoration: const InputDecoration(
-                                    hintText: 'নোট',
-                                    hintStyle: TextStyle(
-                                      color: Color(0xFF9CA3AF),
-                                    ),
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                                    focusedBorder: InputBorder.none,
-                                    enabledBorder: InputBorder.none,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 24),
-
-                          // Photo + Date Row
-                          Row(
-                            children: [
-                              // Photo Button
-                              GestureDetector(
-                                onTap: _onPickImage,
-                                child: Container(
-                                  width: 56,
+                                Container(
                                   height: 56,
                                   decoration: BoxDecoration(
                                     color: _cardBg,
                                     border: Border.all(color: _teal100, width: 1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: const Icon(
-                                    Icons.add_photo_alternate,
-                                    color: _teal600,
-                                    size: 24,
+                                  child: TextField(
+                                    controller: _amountController,
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                                    ],
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w500,
+                                      color: _gray700,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      hintText: '০',
+                                      hintStyle: TextStyle(
+                                        color: Color(0xFFD1D5DB),
+                                        fontSize: 20,
+                                      ),
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                      focusedBorder: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                    ),
                                   ),
                                 ),
-                              ),
+                              ],
+                            ),
 
-                              const SizedBox(width: 12),
+                            const SizedBox(height: 16),
 
-                              // Date Field
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: _selectDate,
+                            // Note Input
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Padding(
+                                  padding: EdgeInsets.only(left: 4, bottom: 6),
+                                  child: Text(
+                                    'নোট',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: _gray600,
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  height: 56,
+                                  decoration: BoxDecoration(
+                                    color: _cardBg,
+                                    border: Border.all(color: _teal100, width: 1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: TextField(
+                                    controller: _noteController,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: _gray700,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      hintText: 'নোট',
+                                      hintStyle: TextStyle(
+                                        color: Color(0xFF9CA3AF),
+                                      ),
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                      focusedBorder: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            // Photo + Date Row
+                            Row(
+                              children: [
+                                // Photo Button
+                                GestureDetector(
+                                  onTap: _onPickImage,
                                   child: Container(
+                                    width: 56,
                                     height: 56,
-                                    padding: const EdgeInsets.symmetric(horizontal: 16),
                                     decoration: BoxDecoration(
                                       color: _cardBg,
                                       border: Border.all(color: _teal100, width: 1),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          _formatDateBangla(_selectedDate),
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500,
-                                            color: _gray700,
-                                          ),
-                                        ),
-                                        const Icon(
-                                          Icons.calendar_month,
-                                          color: _primaryTeal,
-                                          size: 20,
-                                        ),
-                                      ],
+                                    child: const Icon(
+                                      Icons.add_photo_alternate,
+                                      color: _teal600,
+                                      size: 24,
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
 
-                          const SizedBox(height: 16),
+                                const SizedBox(width: 12),
 
-                          // SMS Toggle
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: _gray100,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.textsms,
-                                      color: _gray500,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    const Text(
-                                      'এস এম এস: (30)',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
-                                        color: _gray700,
+                                // Date Field
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: _selectDate,
+                                    child: Container(
+                                      height: 56,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      decoration: BoxDecoration(
+                                        color: _cardBg,
+                                        border: Border.all(color: _teal100, width: 1),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            _formatDateBangla(_selectedDate),
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w500,
+                                              color: _gray700,
+                                            ),
+                                          ),
+                                          const Icon(
+                                            Icons.calendar_month,
+                                            color: _primaryTeal,
+                                            size: 20,
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ],
-                                ),
-                                Switch(
-                                  value: _smsEnabled,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _smsEnabled = value;
-                                    });
-                                  },
-                                  activeColor: _primaryTeal,
-                                  activeTrackColor: _primaryTeal.withOpacity(0.3),
-                                  inactiveThumbColor: Colors.white,
-                                  inactiveTrackColor: Color(0xFFD1D5DB),
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
 
-                          const SizedBox(height: 24),
-                        ],
-                      ),
-                    ],
+                            const SizedBox(height: 16),
+
+                            // SMS Toggle
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: _gray100,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.textsms,
+                                        color: _gray500,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      const Text(
+                                        'এস এম এস: (30)',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                          color: _gray700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Switch(
+                                    value: _smsEnabled,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _smsEnabled = value;
+                                      });
+                                    },
+                                    activeColor: _primaryTeal,
+                                    activeTrackColor: _primaryTeal.withOpacity(0.3),
+                                    inactiveThumbColor: Colors.white,
+                                    inactiveTrackColor: Color(0xFFD1D5DB),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 24),
+                          ],
+                        ),
+
+                        // NEW: Transaction History Section
+                        const SizedBox(height: 32),
+                        _buildTransactionHistory(),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
           ],
         ),
       ),
-      
-      // Fixed Bottom Button
+
+      // Fixed Bottom Button (ORIGINAL DESIGN)
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16),
         decoration: const BoxDecoration(
@@ -527,6 +642,111 @@ class _TakeDueScreenState extends State<TakeDueScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTransactionHistory() {
+    return StreamBuilder<List<CustomerTransaction>>(
+      stream: _customerService.getCustomerTransactions(widget.customerId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        }
+
+        if (snapshot.hasError) {
+          return const SizedBox.shrink();
+        }
+
+        final allTransactions = snapshot.data ?? [];
+        final filteredTransactions = _filterTransactions(allTransactions);
+
+        if (filteredTransactions.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Transaction History',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: _gray700,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...filteredTransactions.map((transaction) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _teal100),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: _teal50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.arrow_downward, color: _teal600, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            transaction.description ?? 'Received payment',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: _gray700,
+                            ),
+                          ),
+                          Text(
+                            DateFormat('dd MMM yyyy').format(transaction.createdAt ?? DateTime.now()),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: _gray500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '৳${_formatBanglaAmount(transaction.amount ?? 0)}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: _teal600,
+                          ),
+                        ),
+                        if (transaction.balance != null)
+                          Text(
+                            'Balance: ৳${_formatBanglaAmount(transaction.balance!)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: _gray500,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
+        );
+      },
     );
   }
 }

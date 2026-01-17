@@ -7,6 +7,8 @@ import 'package:wavezly/screens/customers_page.dart';
 import 'package:wavezly/screens/settings_page.dart';
 import 'package:wavezly/screens/reports_page.dart';
 import 'package:wavezly/screens/inventory_screen_wrapper.dart';
+import 'package:wavezly/screens/purchase_book_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // ============================================================================
 // Stitch Design Colors - #26A69A primary, Yellow offer banner
@@ -59,60 +61,161 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     return number < 0 ? '-$formatted' : formatted;
   }
 
+  Future<void> _launchWhatsApp() async {
+    final phoneNumber = '8801707346634'; // Bangladesh number
+    final whatsappUrl = Uri.parse('https://wa.me/$phoneNumber');
+
+    try {
+      if (await canLaunchUrl(whatsappUrl)) {
+        await launchUrl(
+          whatsappUrl,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        // Show error if WhatsApp cannot be opened
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'WhatsApp খুলতে পারছে না। অনুগ্রহ করে নিশ্চিত করুন WhatsApp ইন্সটল করা আছে।',
+                style: GoogleFonts.hindSiliguri(),
+              ),
+              backgroundColor: ColorPalette.red500,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'একটি সমস্যা হয়েছে: $e',
+              style: GoogleFonts.hindSiliguri(),
+            ),
+            backgroundColor: ColorPalette.red500,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildAppBarTitle({String? subtitle}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'ShopStock ম্যানেজার',
+          style: GoogleFonts.hindSiliguri(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            style: GoogleFonts.hindSiliguri(
+              fontSize: 10,
+              fontWeight: FontWeight.w400,
+              color: Colors.white.withOpacity(0.8),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  List<Widget> _buildAppBarActions() {
+    return [
+      // Chat icon
+      IconButton(
+        icon: const Icon(Icons.chat, color: Colors.white),
+        onPressed: () {},
+      ),
+      // Notifications with badge
+      Stack(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.notifications, color: Colors.white),
+            onPressed: () {},
+          ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: ColorPalette.tealAccent,
+                  width: 1,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      // Settings icon
+      IconButton(
+        icon: const Icon(Icons.settings, color: Colors.white),
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => SettingsPage()),
+        ),
+      ),
+      const SizedBox(width: 8), // Right padding
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ColorPalette.gray100, // Stitch: #F3F4F6
-      body: Stack(
-        children: [
-          // Header background
-          _DashboardHeader(
-            onChatTap: () {},
-            onNotificationTap: () {},
-            onSettingsTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => SettingsPage()),
-            ),
-            onBackupTap: () {},
-          ),
-          // Main scrollable content
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 120),
-              child: Column(
-                children: [
-                  const SizedBox(height: 100),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      children: [
-                        // Summary card overlapping header
-                        Transform.translate(
-                          offset: const Offset(0, -10),
-                          child: _SummaryCard(
-                            summary: _summary,
-                            isLoading: _isLoading,
-                            isDayView: _isDayView,
-                            onToggleView: (isDay) {
-                              setState(() => _isDayView = isDay);
-                            },
-                            formatNumber: _formatBengaliNumber,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        // Yellow Offer banner (Stitch design)
-                        _OfferBanner(onTap: () {}),
-                        const SizedBox(height: 16),
-                        // Section: খাতা সমূহ
-                        _SectionCard(
-                          title: 'খাতা সমূহ',
-                          items: [
-                            _GridItemData(
+      appBar: AppBar(
+        backgroundColor: ColorPalette.tealAccent,
+        toolbarHeight: 72,
+        elevation: 4,
+        title: _buildAppBarTitle(
+          subtitle: _summary?.lastBackupTime ?? 'Last sync: Not configured',
+        ),
+        actions: _buildAppBarActions(),
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // Summary card (no overlap)
+              _SummaryCard(
+                summary: _summary,
+                isLoading: _isLoading,
+                isDayView: _isDayView,
+                onToggleView: (isDay) {
+                  setState(() => _isDayView = isDay);
+                },
+                formatNumber: _formatBengaliNumber,
+              ),
+              const SizedBox(height: 16),
+              // Yellow Offer banner (Stitch design)
+              _OfferBanner(onTap: () {}),
+              const SizedBox(height: 16),
+              // Section: খাতা সমূহ
+              _SectionCard(
+                title: 'খাতা সমূহ',
+                items: [
+                  _GridItemData(
                               icon: Icons.menu_book,
                               label: 'কেনা খাতা',
                               bgColor: ColorPalette.orange100,
                               iconColor: ColorPalette.orange600,
-                              onTap: () {},
+                              onTap: () => Navigator.push(context,
+                                MaterialPageRoute(builder: (_) => const PurchaseBookScreen())),
                             ),
                             _GridItemData(
                               icon: Icons.receipt_long,
@@ -187,6 +290,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                         _SectionCard(
                           title: 'অন্যান্য',
                           crossAxisCount: 4,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 24,
                           items: [
                             _GridItemData(
                               icon: Icons.point_of_sale,
@@ -246,188 +351,25 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        // Support card
-                        _SupportCard(onLiveChatTap: () {}),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+              const SizedBox(height: 16),
+              // Support card
+              _SupportCard(onLiveChatTap: _launchWhatsApp),
+              const SizedBox(height: 8),
+            ],
           ),
-          // Bottom navigation
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _BottomNavBar(
-              onPurchaseTap: () {
-                if (widget.onNavTap != null) widget.onNavTap!(0);
-              },
-              onHomeTap: () {
-                if (widget.onNavTap != null) widget.onNavTap!(1);
-              },
-              onSellTap: () {
-                if (widget.onNavTap != null) widget.onNavTap!(2);
-              },
-              currentIndex: 1,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// HEADER WIDGET - Stitch Primary #26A69A
-// ============================================================================
-
-class _DashboardHeader extends StatelessWidget {
-  final VoidCallback? onChatTap;
-  final VoidCallback? onNotificationTap;
-  final VoidCallback? onSettingsTap;
-  final VoidCallback? onBackupTap;
-
-  const _DashboardHeader({
-    this.onChatTap,
-    this.onNotificationTap,
-    this.onSettingsTap,
-    this.onBackupTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 12,
-        left: 16,
-        right: 16,
-        bottom: 56,
-      ),
-      decoration: BoxDecoration(
-        color: ColorPalette.tealPrimary, // Stitch: #26A69A
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(32),
-          bottomRight: Radius.circular(32),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            offset: const Offset(0, 4),
-            blurRadius: 12,
-          ),
-        ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Left: Title and backup button
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'ShopStock ম্যানেজার',
-                style: GoogleFonts.hindSiliguri(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Text(
-                    'সর্বশেষ ব্যাকআপ:',
-                    style: GoogleFonts.hindSiliguri(
-                      fontSize: 13,
-                      color: Colors.white.withOpacity(0.9),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  InkWell(
-                    onTap: onBackupTap,
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        'ডাটা ব্যাকআপ',
-                        style: GoogleFonts.hindSiliguri(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          // Right: Icon buttons
-          Row(
-            children: [
-              _HeaderIconButton(icon: Icons.chat, onTap: onChatTap),
-              const SizedBox(width: 8),
-              Stack(
-                children: [
-                  _HeaderIconButton(
-                    icon: Icons.notifications,
-                    onTap: onNotificationTap,
-                  ),
-                  // Red notification dot
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: ColorPalette.tealPrimary,
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 8),
-              _HeaderIconButton(icon: Icons.settings, onTap: onSettingsTap),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeaderIconButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  const _HeaderIconButton({required this.icon, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Icon(icon, color: Colors.white, size: 24),
+      bottomNavigationBar: _BottomNavBar(
+        onPurchaseTap: () {
+          if (widget.onNavTap != null) widget.onNavTap!(0);
+        },
+        onHomeTap: () {
+          if (widget.onNavTap != null) widget.onNavTap!(1);
+        },
+        onSellTap: () {
+          if (widget.onNavTap != null) widget.onNavTap!(2);
+        },
+        currentIndex: 1,
       ),
     );
   }
@@ -487,11 +429,11 @@ class _SummaryCard extends StatelessWidget {
                 // Today's Sales
                 Expanded(
                   child: _SummaryItem(
-                    label: 'আজকের বিক্রি',
+                    label: isDayView ? 'আজকের বিক্রি' : 'এই মাসের বিক্রি',
                     value: isLoading
                         ? '...'
                         : '${formatNumber(isDayView ? (summary?.todaySales ?? 0) : (summary?.monthSales ?? 0))} ৳',
-                    valueColor: ColorPalette.tealPrimary,
+                    valueColor: ColorPalette.tealAccent,
                     isLarge: true,
                   ),
                 ),
@@ -508,17 +450,19 @@ class _SummaryCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           Container(height: 1, color: ColorPalette.gray100),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           // Row 2: Expenses, Dues, Stock
           IntrinsicHeight(
             child: Row(
               children: [
                 Expanded(
                   child: _SummaryItem(
-                    label: 'আজকের ব্যয়',
-                    value: isLoading ? '...' : '${formatNumber(summary?.todayExpenses ?? 0)} ৳',
+                    label: isDayView ? 'আজকের ব্যয়' : 'এই মাসের ব্যয়',
+                    value: isLoading
+                        ? '...'
+                        : '${formatNumber(isDayView ? (summary?.todayExpenses ?? 0) : (summary?.monthExpenses ?? 0))} ৳',
                     valueColor: ColorPalette.red500,
                   ),
                 ),
@@ -569,7 +513,7 @@ class _SummaryItem extends StatelessWidget {
         Text(
           label,
           style: GoogleFonts.hindSiliguri(
-            fontSize: 11,
+            fontSize: 12,
             color: ColorPalette.slate500,
           ),
         ),
@@ -593,7 +537,7 @@ class _VerticalDivider extends StatelessWidget {
     return Container(
       width: 1,
       color: ColorPalette.gray100,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
+      margin: EdgeInsets.zero,
     );
   }
 }
@@ -650,9 +594,9 @@ class _ToggleButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
-          color: isActive ? ColorPalette.tealPrimary : Colors.transparent,
+          color: isActive ? ColorPalette.tealAccent : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
           boxShadow: isActive
               ? [
@@ -667,7 +611,7 @@ class _ToggleButton extends StatelessWidget {
         child: Text(
           label,
           style: GoogleFonts.hindSiliguri(
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
             color: isActive ? Colors.white : ColorPalette.slate500,
           ),
@@ -714,7 +658,7 @@ class _OfferBanner extends StatelessWidget {
             // Decorative celebration icon watermark
             Positioned(
               top: 0,
-              right: 8,
+              right: 0,
               child: Opacity(
                 opacity: 0.2,
                 child: Icon(
@@ -747,7 +691,7 @@ class _OfferBanner extends StatelessWidget {
                               child: Text(
                                 'OFFER',
                                 style: GoogleFonts.hindSiliguri(
-                                  fontSize: 9,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
@@ -757,7 +701,7 @@ class _OfferBanner extends StatelessWidget {
                             Text(
                               'নতুন বছর উপলক্ষে',
                               style: GoogleFonts.hindSiliguri(
-                                fontSize: 13,
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black87,
                               ),
@@ -781,7 +725,7 @@ class _OfferBanner extends StatelessWidget {
                             Text(
                               'ছাড়ে লাইফটাইম প্যাক',
                               style: GoogleFonts.hindSiliguri(
-                                fontSize: 13,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w500,
                                 color: Colors.black87,
                               ),
@@ -794,7 +738,7 @@ class _OfferBanner extends StatelessWidget {
                           child: Text(
                             'সাথে থাকছে নিশ্চিত উপহার',
                             style: GoogleFonts.hindSiliguri(
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color: Colors.black87,
                             ),
@@ -807,7 +751,7 @@ class _OfferBanner extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
-                      vertical: 10,
+                      vertical: 8,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -863,11 +807,15 @@ class _SectionCard extends StatelessWidget {
   final String title;
   final List<_GridItemData> items;
   final int crossAxisCount;
+  final double mainAxisSpacing;
+  final double crossAxisSpacing;
 
   const _SectionCard({
     required this.title,
     required this.items,
     this.crossAxisCount = 4,
+    this.mainAxisSpacing = 16.0,
+    this.crossAxisSpacing = 16.0,
   });
 
   @override
@@ -875,7 +823,7 @@ class _SectionCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: ColorPalette.gray100),
         boxShadow: [
           BoxShadow(
@@ -895,8 +843,8 @@ class _SectionCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: ColorPalette.gray50,
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
               ),
               border: Border(
                 bottom: BorderSide(color: ColorPalette.gray100),
@@ -919,8 +867,8 @@ class _SectionCard extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 16,
+                crossAxisSpacing: crossAxisSpacing,
+                mainAxisSpacing: mainAxisSpacing,
                 childAspectRatio: 0.85,
               ),
               itemCount: items.length,
@@ -966,13 +914,13 @@ class _GridItem extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: bgColor,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: iconColor, size: 22),
+            child: Icon(icon, color: iconColor, size: 20),
           ),
           const SizedBox(height: 6),
           Text(
@@ -1007,7 +955,7 @@ class _SupportCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: ColorPalette.gray100),
         boxShadow: [
           BoxShadow(
@@ -1042,14 +990,14 @@ class _SupportCard extends StatelessWidget {
                 Text(
                   'যেকোনো প্রয়োজনে',
                   style: GoogleFonts.hindSiliguri(
-                    fontSize: 11,
+                    fontSize: 12,
                     color: ColorPalette.slate500,
                   ),
                 ),
                 Text(
                   'এক্সপার্টের কাছ থেকে সহায়তা নিন',
                   style: GoogleFonts.hindSiliguri(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: ColorPalette.gray800,
                   ),
@@ -1061,9 +1009,9 @@ class _SupportCard extends StatelessWidget {
           ElevatedButton(
             onPressed: onLiveChatTap,
             style: ElevatedButton.styleFrom(
-              backgroundColor: ColorPalette.tealPrimary, // Stitch: #26A69A
+              backgroundColor: ColorPalette.tealAccent, // Stitch: #26A69A
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -1072,7 +1020,7 @@ class _SupportCard extends StatelessWidget {
             child: Text(
               'লাইভ চ্যাট',
               style: GoogleFonts.hindSiliguri(
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -1115,7 +1063,7 @@ class _BottomNavBar extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              height: 60,
+              height: 56,
               child: Row(
                 children: [
                   // Left: Purchase (কেনা)
@@ -1136,11 +1084,11 @@ class _BottomNavBar extends StatelessWidget {
                       children: [
                         // Floating circle button
                         Positioned(
-                          top: -28,
+                          top: -40,
                           child: GestureDetector(
                             onTap: onHomeTap,
                             child: Container(
-                              padding: const EdgeInsets.all(4),
+                              padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 shape: BoxShape.circle,
@@ -1157,15 +1105,15 @@ class _BottomNavBar extends StatelessWidget {
                                 ),
                               ),
                               child: Container(
-                                padding: const EdgeInsets.all(12),
+                                padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: ColorPalette.tealPrimary.withOpacity(0.1),
+                                  color: ColorPalette.tealAccent.withOpacity(0.1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
                                   Icons.home,
                                   size: 28,
-                                  color: ColorPalette.tealPrimary, // Stitch: #26A69A
+                                  color: ColorPalette.tealAccent, // Stitch: #26A69A
                                 ),
                               ),
                             ),
@@ -1179,7 +1127,7 @@ class _BottomNavBar extends StatelessWidget {
                             style: GoogleFonts.hindSiliguri(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: ColorPalette.tealPrimary,
+                              color: ColorPalette.tealAccent,
                             ),
                           ),
                         ),
@@ -1229,7 +1177,7 @@ class _NavItem extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 26),
+          Icon(icon, color: color, size: 24),
           const SizedBox(height: 4),
           Text(
             label,

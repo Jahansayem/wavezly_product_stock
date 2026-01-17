@@ -7,16 +7,20 @@ class DashboardSummary {
   final double todaySales;
   final double monthSales;
   final double todayExpenses;
+  final double monthExpenses;
   final double duesGiven;
   final int stockCount;
+  final String? lastBackupTime;
 
   DashboardSummary({
     required this.balance,
     required this.todaySales,
     required this.monthSales,
     required this.todayExpenses,
+    required this.monthExpenses,
     required this.duesGiven,
     required this.stockCount,
+    this.lastBackupTime,
   });
 }
 
@@ -44,13 +48,18 @@ class DashboardService {
     // Today's expenses (placeholder - can be expanded)
     final todayExpenses = await _getTodayExpenses();
 
+    // Monthly expenses (placeholder - can be expanded)
+    final monthExpenses = await _getMonthExpenses();
+
     return DashboardSummary(
       balance: balance,
       todaySales: todaySales,
       monthSales: monthSales,
       todayExpenses: todayExpenses,
+      monthExpenses: monthExpenses,
       duesGiven: duesGiven,
       stockCount: stockCount,
+      lastBackupTime: null,
     );
   }
 
@@ -99,6 +108,12 @@ class DashboardService {
   }
 
   Future<double> _getTodayExpenses() async {
+    // Placeholder for expense tracking
+    // Can be expanded when expense feature is implemented
+    return 0.0;
+  }
+
+  Future<double> _getMonthExpenses() async {
     // Placeholder for expense tracking
     // Can be expanded when expense feature is implemented
     return 0.0;
