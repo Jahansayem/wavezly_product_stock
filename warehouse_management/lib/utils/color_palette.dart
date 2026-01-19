@@ -65,6 +65,7 @@ mixin ColorPalette {
 
   // Emerald colors indicate TAKE transactions (money entering business)
   static const Color emerald50 = Color(0xFFF0FDF4);
+  static const Color emerald100 = Color(0xFFD1FAE5);
   static const Color emerald600 = Color(0xFF059669);
   static const Color emerald700 = Color(0xFF047857);
   static const Color emerald900 = Color(0xFF064E3B);
@@ -109,4 +110,10 @@ mixin ColorPalette {
   static const Color green500 = Color(0xFF22C55E);
   static const Color navOrange = Color(0xFFF97316);
   static const Color navBlue = Color(0xFF3B82F6);
+
+  // Expense Screen Colors (Stitch Design - Material 3)
+  static const Color expensePrimary = Color(0xFF009688);      // #009688
+  static const Color expensePrimaryDark = Color(0xFF00796B);  // #00796B
+  // Note: expenseBackgroundLight = gray100, expenseBorderLight = gray200,
+  //       expenseTextLight = gray800 (already defined above)
 }

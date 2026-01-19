@@ -1,6 +1,7 @@
 import 'package:wavezly/config/supabase_config.dart';
 import 'package:wavezly/services/product_service.dart';
 import 'package:wavezly/services/customer_service.dart';
+import 'package:wavezly/services/expense_service.dart';
 
 class DashboardSummary {
   final double balance;
@@ -108,14 +109,23 @@ class DashboardService {
   }
 
   Future<double> _getTodayExpenses() async {
-    // Placeholder for expense tracking
-    // Can be expanded when expense feature is implemented
-    return 0.0;
+    try {
+      final expenseService = ExpenseService();
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+      return await expenseService.getTotalExpenses(startOfDay, endOfDay);
+    } catch (e) {
+      return 0.0;
+    }
   }
 
   Future<double> _getMonthExpenses() async {
-    // Placeholder for expense tracking
-    // Can be expanded when expense feature is implemented
-    return 0.0;
+    try {
+      final expenseService = ExpenseService();
+      return await expenseService.getCurrentMonthTotal();
+    } catch (e) {
+      return 0.0;
+    }
   }
 }

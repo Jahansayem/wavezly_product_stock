@@ -8,6 +8,9 @@ import 'package:wavezly/screens/settings_page.dart';
 import 'package:wavezly/screens/reports_page.dart';
 import 'package:wavezly/screens/inventory_screen_wrapper.dart';
 import 'package:wavezly/screens/purchase_book_screen.dart';
+import 'package:wavezly/screens/stock_book_screen_v2.dart';
+import 'package:wavezly/screens/expense_management_screen_v3.dart';
+import 'package:wavezly/screens/cashbox_screen_v2.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // ============================================================================
@@ -238,7 +241,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                               label: 'খরচের খাতা',
                               bgColor: ColorPalette.teal100,
                               iconColor: ColorPalette.teal600,
-                              onTap: () {},
+                              onTap: () => Navigator.push(context,
+                                MaterialPageRoute(builder: (_) => const ExpenseManagementScreenV3())),
                             ),
                           ],
                         ),
@@ -271,9 +275,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                               bgColor: ColorPalette.lime100,
                               iconColor: ColorPalette.lime600,
                               onTap: () => Navigator.push(context,
-                                MaterialPageRoute(builder: (_) => InventoryScreenWrapper(
-                                  onTabSelected: (_) => Navigator.pop(context),
-                                ))),
+                                MaterialPageRoute(builder: (_) => const StockBookScreenV2())),
                             ),
                             _GridItemData(
                               icon: Icons.analytics,
@@ -298,7 +300,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                               label: 'ক্যাশবক্স',
                               bgColor: ColorPalette.emerald50,
                               iconColor: ColorPalette.emerald600,
-                              onTap: () {},
+                              onTap: () => Navigator.push(context,
+                                MaterialPageRoute(builder: (_) => const CashboxScreenV2())),
                             ),
                             _GridItemData(
                               icon: Icons.admin_panel_settings,
