@@ -87,10 +87,11 @@ COMMENT ON FUNCTION current_effective_owner IS 'Returns effective owner for curr
 CREATE OR REPLACE FUNCTION create_profile_for_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO profiles (id, name, role, owner_id, is_active)
+  INSERT INTO profiles (id, name, phone, role, owner_id, is_active)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'name', NEW.email, 'User'),
+    NEW.raw_user_meta_data->>'phone',  -- Extract phone from signup metadata
     'OWNER',  -- Default to OWNER, can be changed later
     NULL,
     true
@@ -107,7 +108,7 @@ CREATE TRIGGER create_profile_on_signup
   FOR EACH ROW
   EXECUTE FUNCTION create_profile_for_new_user();
 
-COMMENT ON FUNCTION create_profile_for_new_user IS 'Auto-creates OWNER profile for new auth.users';
+COMMENT ON FUNCTION create_profile_for_new_user IS 'Auto-creates OWNER profile with phone for new auth.users';
 
 -- =====================================================
 -- 4. RLS Policies for Profiles Table
@@ -744,10 +745,11 @@ END $$;
 -- Run this to migrate existing auth.users to profiles table
 -- This creates OWNER profiles for all existing users
 
-INSERT INTO profiles (id, name, role, owner_id, is_active)
+INSERT INTO profiles (id, name, phone, role, owner_id, is_active)
 SELECT
   id,
   COALESCE(raw_user_meta_data->>'name', email, 'User'),
+  raw_user_meta_data->>'phone',
   'OWNER',
   NULL,
   true

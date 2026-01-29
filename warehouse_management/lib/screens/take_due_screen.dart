@@ -5,6 +5,7 @@ import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/models/customer.dart';
 import 'package:wavezly/models/customer_transaction.dart';
 import 'package:wavezly/services/customer_service.dart';
+import 'package:wavezly/services/sms_service.dart';
 import 'package:wavezly/functions/toast.dart';
 
 enum DueTxnType { take, give }
@@ -42,6 +43,7 @@ class TakeDueScreen extends StatefulWidget {
 
 class _TakeDueScreenState extends State<TakeDueScreen> {
   final CustomerService _customerService = CustomerService();
+  final SmsService _smsService = SmsService();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
 
@@ -239,6 +241,16 @@ class _TakeDueScreenState extends State<TakeDueScreen> {
 
       await _customerService.addTransaction(transaction);
 
+      // Send SMS if enabled
+      if (_smsEnabled && _customer!.phone != null && _customer!.phone!.isNotEmpty) {
+        await _sendDueNotificationSms(
+          phone: _customer!.phone!,
+          customerName: _customer!.name ?? 'Customer',
+          amount: _enteredAmount.abs(),
+          transactionType: 'received',
+        );
+      }
+
       // Clear form
       _amountController.clear();
       _noteController.clear();
@@ -264,6 +276,35 @@ class _TakeDueScreenState extends State<TakeDueScreen> {
         showTextToast('Unexpected error adding transaction');
       }
       debugPrint('Transaction error: $e');
+    }
+  }
+
+  Future<void> _sendDueNotificationSms({
+    required String phone,
+    required String customerName,
+    required double amount,
+    required String transactionType,
+  }) async {
+    try {
+      final response = await _smsService.sendDueNotification(
+        phone: phone,
+        customerName: customerName,
+        amount: amount,
+        transactionType: transactionType,
+      );
+
+      if (!response.success) {
+        // Show error but don't block transaction
+        debugPrint('SMS failed: ${response.message}');
+        if (mounted) {
+          showTextToast('SMS পাঠানো যায়নি: ${response.message}');
+        }
+      } else {
+        debugPrint('SMS sent successfully to $phone');
+      }
+    } catch (e) {
+      debugPrint('SMS error: $e');
+      // Don't show toast for network errors to avoid confusion
     }
   }
 

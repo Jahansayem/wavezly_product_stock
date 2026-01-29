@@ -1,0 +1,541 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:wavezly/app/app_theme.dart';
+import 'package:wavezly/features/auth/widgets/primary_button.dart';
+import 'package:wavezly/features/auth/widgets/helpline_button.dart';
+import 'package:wavezly/features/auth/widgets/promo_card.dart';
+import 'package:wavezly/features/auth/widgets/otp_fields_row.dart';
+import 'package:wavezly/features/auth/widgets/bottom_toast.dart';
+import 'package:wavezly/config/supabase_config.dart';
+import 'package:wavezly/services/sms_service.dart';
+import 'package:wavezly/screens/main_navigation.dart';
+import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/features/onboarding/screens/business_info_screen.dart';
+import 'package:wavezly/features/auth/screens/pin_verification_screen.dart';
+
+/// OTP Verification Screen
+///
+/// Verifies the OTP code sent to the user's phone number
+/// Features:
+/// - 6-digit OTP input
+/// - Resend with 30s countdown
+/// - Phone number editing
+/// - Error handling
+class OtpVerificationScreen extends StatefulWidget {
+  final String phoneNumber;
+
+  const OtpVerificationScreen({
+    super.key,
+    required this.phoneNumber,
+  });
+
+  @override
+  State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
+}
+
+class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
+  final SmsService _smsService = SmsService();
+
+  String _currentOtp = '';
+  bool _isVerifying = false;
+  bool _isResending = false;
+  int _resendCountdown = 179; // 2:59
+  Timer? _resendTimer;
+  String? _errorMessage;
+  bool _showToast = true;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Debug verification logs
+    debugPrint('╔═══════════════════════════════════════════════════╗');
+    debugPrint('║ ✅ OPENED CORRECT OTP VERIFICATION SCREEN        ║');
+    debugPrint('║ Phone: ${widget.phoneNumber}                      ║');
+    debugPrint('║ Screen: OtpVerificationScreen                    ║');
+    debugPrint('║ File: otp_verification_screen.dart               ║');
+    debugPrint('╚═══════════════════════════════════════════════════╝');
+
+    _startResendTimer();
+
+    // Auto-hide toast after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() => _showToast = false);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _resendTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startResendTimer() {
+    _resendCountdown = 179;
+    _resendTimer?.cancel();
+
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_resendCountdown > 0) {
+        setState(() => _resendCountdown--);
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  Future<void> _handleResend() async {
+    setState(() {
+      _isResending = true;
+      _errorMessage = null;
+      _currentOtp = '';
+    });
+
+    try {
+      // Generate and send new OTP
+      final otp = _smsService.generateOTP();
+      final response = await _smsService.sendOTP(widget.phoneNumber, otp);
+
+      if (response.success) {
+        setState(() {
+          _showToast = true;
+        });
+
+        // Auto-hide toast after 3 seconds
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            setState(() => _showToast = false);
+          }
+        });
+
+        _startResendTimer();
+      } else {
+        setState(() {
+          _errorMessage = response.message;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'নতুন কোড পাঠাতে সমস্যা: $e';
+      });
+    } finally {
+      setState(() => _isResending = false);
+    }
+  }
+
+  Future<void> _handleVerify() async {
+    if (_currentOtp.length != 6) {
+      setState(() {
+        _errorMessage = '৬ ডিজিটের কোড দিন';
+      });
+      return;
+    }
+
+    setState(() {
+      _isVerifying = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final isValid = await _smsService.verifyOTP(widget.phoneNumber, _currentOtp);
+
+      if (isValid) {
+        // OTP verified successfully
+        // Create Supabase auth session
+        try {
+          final supabase = SupabaseConfig.client;
+
+          // Use synthetic email approach (Phone-prefixed for RFC compliance)
+          final email = 'Phone-${widget.phoneNumber}@halkhata.app';
+          final password = _generateSecurePassword(widget.phoneNumber, _currentOtp);
+
+          try {
+            // Try to sign in first (existing user)
+            await supabase.auth.signInWithPassword(
+              email: email,
+              password: password,
+            );
+            debugPrint('✅ Sign in successful with existing credentials');
+          } catch (signInError) {
+            debugPrint('⚠️ Sign in failed, attempting sign up: $signInError');
+
+            // Try to sign up (new user)
+            try {
+              await supabase.auth.signUp(
+                email: email,
+                password: password,
+                data: {
+                  'phone': widget.phoneNumber,
+                  'phone_verified': true,
+                },
+              );
+
+              // Sign in after sign up
+              await supabase.auth.signInWithPassword(
+                email: email,
+                password: password,
+              );
+              debugPrint('✅ New user signed up and signed in successfully');
+            } catch (signUpError) {
+              // Check if user already exists
+              if (signUpError is AuthApiException &&
+                  signUpError.code == 'user_already_exists') {
+                debugPrint('✅ User already exists, redirecting to PIN verification');
+
+                // Show message in Bengali
+                setState(() {
+                  _isVerifying = false;
+                  _errorMessage = 'আপনি ইতিমধ্যে নিবন্ধিত। পিন স্ক্রিনে যাচ্ছি...';
+                });
+
+                // Wait briefly for user to see message
+                await Future.delayed(const Duration(seconds: 1, milliseconds: 500));
+
+                if (mounted) {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (_) => PinVerificationScreen(
+                        phoneNumber: widget.phoneNumber,
+                      ),
+                    ),
+                  );
+                }
+                return; // Exit method early
+              } else {
+                // Other signup error - rethrow
+                throw signUpError;
+              }
+            }
+          }
+
+          // Verify session was created
+          final currentUser = supabase.auth.currentUser;
+          if (currentUser == null) {
+            throw Exception('Failed to create auth session');
+          }
+
+          debugPrint('✅ Auth session created for user: ${currentUser.id}');
+
+          // Check onboarding completion status
+          final onboardingResponse = await supabase
+              .from('user_business_profiles')
+              .select('onboarding_completed_at')
+              .eq('user_id', currentUser.id)
+              .maybeSingle();
+
+          final isOnboardingComplete = onboardingResponse != null &&
+              onboardingResponse['onboarding_completed_at'] != null;
+
+          debugPrint('📊 Onboarding status: ${isOnboardingComplete ? "Complete" : "Incomplete"}');
+
+          if (mounted) {
+            if (isOnboardingComplete) {
+              // Existing user with completed onboarding → PIN verification
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (_) => PinVerificationScreen(
+                    phoneNumber: widget.phoneNumber,
+                  ),
+                ),
+              );
+            } else {
+              // New user OR existing user with incomplete onboarding → Onboarding
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (_) => BusinessInfoScreen(
+                    phoneNumber: widget.phoneNumber,
+                  ),
+                ),
+              );
+            }
+          }
+        } catch (authError) {
+          debugPrint('❌ Auth session creation error: $authError');
+          setState(() {
+            _errorMessage = 'সেশন তৈরিতে ত্রুটি: ${authError.toString()}';
+          });
+        }
+      } else {
+        setState(() {
+          _errorMessage = 'ভুল বা মেয়াদ শেষ কোড';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'যাচাই ব্যর্থ: $e';
+      });
+    } finally {
+      setState(() => _isVerifying = false);
+    }
+  }
+
+  void _handleEditPhone() {
+    Navigator.of(context).pop();
+  }
+
+  void _handleHelpline() {
+    // TODO: Implement helpline functionality
+    Fluttertoast.showToast(
+      msg: 'হেল্পলাইন শীঘ্রই আসছে',
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isTablet = AppTheme.isTablet(constraints.maxWidth);
+
+            return Container(
+              decoration: isTablet
+                  ? const BoxDecoration(color: AppTheme.backgroundGray)
+                  : const BoxDecoration(color: Colors.white),
+              child: Center(
+                child: Container(
+                  constraints: isTablet
+                      ? const BoxConstraints(maxWidth: AppTheme.maxLoginWidth)
+                      : null,
+                  decoration: isTablet
+                      ? BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                          boxShadow: AppTheme.softShadow,
+                        )
+                      : null,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        // Scrollable body (expanded)
+                        Expanded(
+                          child: SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // Top row: Back button + Helpline button
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    // Yellow back button
+                                    GestureDetector(
+                                      onTap: () => Navigator.of(context).pop(),
+                                      child: Container(
+                                        width: 40,
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.primaryYellow,
+                                          shape: BoxShape.circle,
+                                          boxShadow: AppTheme.softShadow,
+                                        ),
+                                        child: const Icon(
+                                          Icons.arrow_back,
+                                          color: AppTheme.textPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                    // Helpline button
+                                    HelplineButton(onTap: _handleHelpline),
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
+
+                                // Promo/Testimonial card
+                                const PromoCard(
+                                  title: '"৪টি ব্যবসা, সব হিসাব একটি অ্যাপে হালখাতা"',
+                                  subtitle: '- মীর আবু সাইদ নোয়াখালী',
+                                  currentPage: 1,
+                                  totalPages: 5,
+                                ),
+                                const SizedBox(height: 24),
+
+                                // Heading
+                                Text(
+                                  'ওটিপি যাচাই করুন',
+                                  style: AppTheme.titleBold,
+                                ),
+                                const SizedBox(height: 12),
+
+                                // Info banner with bold phone number
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.yellow50,
+                                    border: Border.all(
+                                      color: const Color(0xFFFDE047), // yellow-300
+                                      width: 1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(
+                                        Icons.sms_outlined,
+                                        color: ColorPalette.gray600,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: RichText(
+                                          text: TextSpan(
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: AppTheme.textPrimary,
+                                              height: 1.5,
+                                              fontFamily: 'HindSiliguri',
+                                            ),
+                                            children: [
+                                              const TextSpan(text: 'আপনার '),
+                                              TextSpan(
+                                                text: _formatPhone(widget.phoneNumber),
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              const TextSpan(
+                                                text: ' নম্বরে একটি ৬ ডিজিটের ভেরিফিকেশন কোড পাঠানো হয়েছে',
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+
+                                // 6 OTP input boxes
+                                OtpFieldsRow(
+                                  onChanged: (otp) {
+                                    setState(() {
+                                      _currentOtp = otp;
+                                      _errorMessage = null;
+                                    });
+                                  },
+                                  onCompleted: (otp) {
+                                    // Optional: Auto-verify when all 6 digits entered
+                                    // _handleVerify();
+                                  },
+                                ),
+
+                                // Error message
+                                if (_errorMessage != null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _errorMessage!,
+                                    style: AppTheme.smallRegular.copyWith(
+                                      color: Colors.red,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                                const SizedBox(height: 24),
+
+                                // Timer + Change number link
+                                Column(
+                                  children: [
+                                    // Timer text with blue highlight
+                                    RichText(
+                                      text: TextSpan(
+                                        style: AppTheme.labelMedium,
+                                        children: [
+                                          const TextSpan(text: 'আরেকবার চেষ্টা করুন '),
+                                          TextSpan(
+                                            text: _formatTime(_resendCountdown),
+                                            style: const TextStyle(
+                                              color: AppTheme.secondaryBlue,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    // Change number link with dotted underline
+                                    TextButton(
+                                      onPressed: _handleEditPhone,
+                                      style: TextButton.styleFrom(
+                                        padding: EdgeInsets.zero,
+                                        minimumSize: const Size(0, 0),
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      child: const Text(
+                                        'মোবাইল নাম্বার পরিবর্তন করুন',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: AppTheme.textSecondary,
+                                          decoration: TextDecoration.underline,
+                                          decorationStyle: TextDecorationStyle.dotted,
+                                          fontFamily: 'HindSiliguri',
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
+
+                                // Bottom toast
+                                Center(
+                                  child: BottomToast(
+                                    message: 'Sent verification CODE at ${_formatPhone(widget.phoneNumber)}',
+                                    visible: _showToast,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // Fixed submit button (not in scroll)
+                        PrimaryButton(
+                          text: 'সাবমিট',
+                          enabled: _currentOtp.length == 6 && !_isVerifying,
+                          isLoading: _isVerifying,
+                          onPressed: _handleVerify,
+                        ),
+                      ],
+                    ),
+                  ), // Close Padding
+                ), // Close inner Container
+              ), // Close Center
+            ); // Close outer Container
+          },
+        ),
+      ),
+    );
+  }
+
+  String _formatTime(int seconds) {
+    final minutes = seconds ~/ 60;
+    final secs = seconds % 60;
+    return '${minutes}:${secs.toString().padLeft(2, '0')}';
+  }
+
+  String _formatPhone(String phone) {
+    // Format: 88017XXXXXXXX → 01707346633
+    if (phone.startsWith('88')) {
+      return phone.substring(2);
+    }
+    return phone;
+  }
+
+  String _generateSecurePassword(String phone, String otp) {
+    // Generate a deterministic but secure password
+    // Combine phone + OTP + app secret
+    final appSecret = 'wavezly_2026'; // Should be in env/config
+    final combined = '$phone$otp$appSecret';
+
+    // Simple hash (in production, use crypto library)
+    return combined.hashCode.toString().padLeft(16, '0');
+  }
+}

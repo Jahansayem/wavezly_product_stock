@@ -50,9 +50,11 @@ mixin ColorPalette {
   static const Color teal50 = Color(0xFFF0FDFA);
   static const Color teal100 = Color(0xFFCCFBF1);
   static const Color teal200 = Color(0xFF99F6E4);
+  static const Color teal500 = Color(0xFF14B8A6);  // Splash screen light bg
   static const Color teal600 = Color(0xFF14B8A6);
+  static const Color tealPrimaryBrand = Color(0xFF0D9488);  // Brand anchor
   static const Color teal700 = Color(0xFF0F766E);
-  static const Color teal800 = Color(0xFF115E59);
+  static const Color teal800 = Color(0xFF115E59);  // Splash screen dark bg
   static const Color teal900 = Color(0xFF134E4A);
 
   // Semantic colors for due transactions (CRITICAL: Keep separate from brand)
@@ -105,8 +107,10 @@ mixin ColorPalette {
   static const Color fuchsia600 = Color(0xFFC026D3);
   static const Color cyan100 = Color(0xFFCFFAFE);
   static const Color cyan600 = Color(0xFF0891B2);
+  static const Color yellow50 = Color(0xFFFFFBEB);   // Info banner background
   static const Color yellow100 = Color(0xFFFEF9C3);
   static const Color yellow600 = Color(0xFFCA8A04);
+  static const Color primaryYellow = Color(0xFFFACC15);  // Primary yellow for login screen
   static const Color green500 = Color(0xFF22C55E);
   static const Color navOrange = Color(0xFFF97316);
   static const Color navBlue = Color(0xFF3B82F6);

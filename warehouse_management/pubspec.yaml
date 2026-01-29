@@ -10,25 +10,26 @@ environment:
 
 dependencies:
   cached_network_image: ^3.4.1
+  connectivity_plus: ^5.0.2
+  crypto: ^3.0.3  # For PIN hashing (SHA-256)
   double_back_to_close_app: ^2.1.0
   flutter:
     sdk: flutter
   flutter_svg: ^2.0.10
   fluttertoast: ^8.2.8
   google_fonts: ^6.1.0
+  http: ^1.1.0  # HTTP client for SMS API calls
   image_picker: ^1.0.7
   intl: ^0.19.0
   math_expressions: ^2.4.0
   mobile_scanner: ^5.2.3
   path: ^1.9.0
   permission_handler: ^11.3.0
-  supabase_flutter: ^2.5.10
-  # Offline SQLite caching
-  sqflite: ^2.3.0
-  connectivity_plus: ^5.0.2
-  uuid: ^4.0.0
   shared_preferences: ^2.2.0
+  sqflite: ^2.3.0  # Offline SQLite caching
+  supabase_flutter: ^2.5.10
   url_launcher: ^6.3.1  # For opening external URLs and deep links
+  uuid: ^4.0.0
 
 
 dev_dependencies:

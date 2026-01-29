@@ -10,7 +10,7 @@ import 'supabase_config.dart';
 class DatabaseConfig {
   static Database? _database;
   static const String _databaseName = 'wavezly.db';
-  static const int _databaseVersion = 5;
+  static const int _databaseVersion = 6;
 
   static Future<void> initialize() async {
     if (_database != null) return;
@@ -92,6 +92,25 @@ class DatabaseConfig {
       await db.execute('ALTER TABLE customer_transactions ADD COLUMN transaction_date TEXT');
       print('Database migrated to version 5: Added transaction_date column to customer_transactions');
     }
+
+    if (oldVersion < 6) {
+      // Add missing columns for complete Supabase sync compatibility
+      // Products table: Bengali name and icon
+      await db.execute('ALTER TABLE products ADD COLUMN name_bn TEXT');
+      await db.execute('ALTER TABLE products ADD COLUMN icon_name TEXT');
+
+      // Customer transactions table: extended fields
+      await db.execute('ALTER TABLE customer_transactions ADD COLUMN note TEXT');
+      await db.execute('ALTER TABLE customer_transactions ADD COLUMN balance REAL DEFAULT 0');
+      await db.execute('ALTER TABLE customer_transactions ADD COLUMN sms_enabled INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE customer_transactions ADD COLUMN image_url TEXT');
+      await db.execute('ALTER TABLE customer_transactions ADD COLUMN transaction_subtype TEXT');
+      await db.execute('ALTER TABLE customer_transactions ADD COLUMN attachment_url TEXT');
+      await db.execute('ALTER TABLE customer_transactions ADD COLUMN sms_cost REAL');
+      await db.execute('ALTER TABLE customer_transactions ADD COLUMN reference_id TEXT');
+
+      print('Database migrated to version 6: Added name_bn, icon_name to products; note, balance, sms_enabled, image_url, transaction_subtype, attachment_url, sms_cost, reference_id to customer_transactions');
+    }
   }
 
   static Future<void> _createSchema(Database db) async {
@@ -100,6 +119,7 @@ class DatabaseConfig {
       CREATE TABLE IF NOT EXISTS products (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
+        name_bn TEXT,
         cost REAL,
         sale_price REAL,
         quantity INTEGER DEFAULT 0,
@@ -129,6 +149,7 @@ class DatabaseConfig {
         discount_type TEXT,
         details TEXT,
         images TEXT,
+        icon_name TEXT,
         is_synced INTEGER DEFAULT 0,
         last_synced_at TEXT
       )
@@ -208,9 +229,17 @@ class DatabaseConfig {
         transaction_type TEXT NOT NULL,
         amount REAL NOT NULL,
         description TEXT,
+        note TEXT,
+        balance REAL DEFAULT 0,
         sale_id TEXT,
         created_at TEXT NOT NULL,
         transaction_date TEXT,
+        sms_enabled INTEGER DEFAULT 0,
+        image_url TEXT,
+        transaction_subtype TEXT,
+        attachment_url TEXT,
+        sms_cost REAL,
+        reference_id TEXT,
         is_synced INTEGER DEFAULT 0,
         last_synced_at TEXT,
         FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE

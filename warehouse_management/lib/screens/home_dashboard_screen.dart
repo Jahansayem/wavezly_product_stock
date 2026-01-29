@@ -11,6 +11,7 @@ import 'package:wavezly/screens/purchase_book_screen.dart';
 import 'package:wavezly/screens/stock_book_screen_v2.dart';
 import 'package:wavezly/screens/expense_management_screen_v3.dart';
 import 'package:wavezly/screens/cashbox_screen_v2.dart';
+import 'package:wavezly/screens/user_list_screen_v1.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // ============================================================================
@@ -110,7 +111,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          'ShopStock ম্যানেজার',
+          'হালখাতা ম্যানেজার',
           style: GoogleFonts.hindSiliguri(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -308,7 +309,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                               label: 'অ্যাপ অ্যাক্সেস',
                               bgColor: ColorPalette.purple100,
                               iconColor: ColorPalette.purple600,
-                              onTap: () {},
+                              onTap: () => Navigator.push(context,
+                                MaterialPageRoute(builder: (_) => const UserListScreenV1())),
                             ),
                             _GridItemData(
                               icon: Icons.campaign,

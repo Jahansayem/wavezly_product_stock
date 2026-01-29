@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:wavezly/models/customer.dart';
 import 'package:wavezly/models/customer_transaction.dart';
 import 'package:wavezly/services/customer_service.dart';
+import 'package:wavezly/services/sms_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/functions/toast.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -25,6 +26,7 @@ class DynamicDueDetailsScreen extends StatefulWidget {
 
 class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
   final CustomerService _customerService = CustomerService();
+  final SmsService _smsService = SmsService();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
   
@@ -204,6 +206,16 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
 
       await _customerService.addTransaction(transaction);
 
+      // Send SMS if enabled
+      if (result.smsEnabled && widget.customer.phone != null && widget.customer.phone!.isNotEmpty) {
+        await _sendDueNotificationSms(
+          phone: widget.customer.phone!,
+          customerName: widget.customer.name ?? 'Customer',
+          amount: positiveAmount,
+          transactionType: result.type == DueTxnType.give ? 'given' : 'received',
+        );
+      }
+
       if (mounted) {
         showTextToast('Transaction added successfully');
         // Refresh customer details to show updated balance
@@ -218,6 +230,35 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
         showTextToast('Unexpected error adding transaction');
       }
       debugPrint('Transaction error: $e');
+    }
+  }
+
+  Future<void> _sendDueNotificationSms({
+    required String phone,
+    required String customerName,
+    required double amount,
+    required String transactionType,
+  }) async {
+    try {
+      final response = await _smsService.sendDueNotification(
+        phone: phone,
+        customerName: customerName,
+        amount: amount,
+        transactionType: transactionType,
+      );
+
+      if (!response.success) {
+        // Show error but don't block transaction
+        debugPrint('SMS failed: ${response.message}');
+        if (mounted) {
+          showTextToast('SMS পাঠানো যায়নি: ${response.message}');
+        }
+      } else {
+        debugPrint('SMS sent successfully to $phone');
+      }
+    } catch (e) {
+      debugPrint('SMS error: $e');
+      // Don't show toast for network errors to avoid confusion
     }
   }
 
@@ -573,9 +614,29 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
 
   Widget _buildSendReminderButton(bool isDark) {
     return GestureDetector(
-      onTap: () {
-        // TODO: Send reminder SMS
-        showTextToast('SMS reminder feature coming soon!');
+      onTap: () async {
+        if (widget.customer.phone == null || widget.customer.phone!.isEmpty) {
+          showTextToast('এই গ্রাহকের ফোন নম্বর নেই');
+          return;
+        }
+
+        // Send reminder about current due balance
+        try {
+          final response = await _smsService.sendDueNotification(
+            phone: widget.customer.phone!,
+            customerName: widget.customer.name ?? 'Customer',
+            amount: widget.customer.totalDue.abs(),
+            transactionType: widget.customer.hasReceivable ? 'reminder' : 'paid',
+          );
+
+          if (response.success) {
+            showTextToast('Reminder SMS পাঠানো হয়েছে');
+          } else {
+            showTextToast('SMS পাঠাতে সমস্যা: ${response.message}');
+          }
+        } catch (e) {
+          showTextToast('Error: $e');
+        }
       },
       child: Container(
         padding: const EdgeInsets.all(12),
