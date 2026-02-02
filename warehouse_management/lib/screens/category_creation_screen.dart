@@ -73,7 +73,7 @@ class _CategoryCreationScreenState extends State<CategoryCreationScreen> {
           SnackBar(
             content: Text(
               'নতুন খাত সফলভাবে তৈরি হয়েছে',
-              style: GoogleFonts.hindSiliguri(),
+              style: GoogleFonts.anekBangla(),
             ),
             backgroundColor: ColorPalette.green600,
           ),
@@ -86,7 +86,7 @@ class _CategoryCreationScreenState extends State<CategoryCreationScreen> {
           SnackBar(
             content: Text(
               'সংরক্ষণ করতে সমস্যা হয়েছে: $e',
-              style: GoogleFonts.hindSiliguri(),
+              style: GoogleFonts.anekBangla(),
             ),
             backgroundColor: ColorPalette.red500,
           ),
@@ -162,7 +162,7 @@ class _CategoryCreationScreenState extends State<CategoryCreationScreen> {
         elevation: 2,
         title: Text(
           'নতুন খাত তৈরি করুন',
-          style: GoogleFonts.hindSiliguri(
+          style: GoogleFonts.anekBangla(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -209,7 +209,7 @@ class _CategoryCreationScreenState extends State<CategoryCreationScreen> {
                             _nameBengaliController.text.isEmpty
                                 ? 'খাতের নাম'
                                 : _nameBengaliController.text,
-                            style: GoogleFonts.hindSiliguri(
+                            style: GoogleFonts.anekBangla(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -217,7 +217,7 @@ class _CategoryCreationScreenState extends State<CategoryCreationScreen> {
                           if (_descriptionBengaliController.text.isNotEmpty)
                             Text(
                               _descriptionBengaliController.text,
-                              style: GoogleFonts.hindSiliguri(
+                              style: GoogleFonts.anekBangla(
                                 fontSize: 12,
                                 color: ColorPalette.gray500,
                               ),
@@ -235,7 +235,7 @@ class _CategoryCreationScreenState extends State<CategoryCreationScreen> {
               // Name field
               Text(
                 'খাতের নাম *',
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: ColorPalette.gray700,
@@ -244,13 +244,13 @@ class _CategoryCreationScreenState extends State<CategoryCreationScreen> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _nameBengaliController,
-                style: GoogleFonts.hindSiliguri(fontSize: 16),
+                style: GoogleFonts.anekBangla(fontSize: 16),
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.white,
                   hintText: 'যেমন: অফিস খরচ',
-                  hintStyle: GoogleFonts.hindSiliguri(color: ColorPalette.gray400),
+                  hintStyle: GoogleFonts.anekBangla(color: ColorPalette.gray400),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: ColorPalette.gray200),
@@ -276,7 +276,7 @@ class _CategoryCreationScreenState extends State<CategoryCreationScreen> {
               // Description field
               Text(
                 'বিবরণ (ঐচ্ছিক)',
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: ColorPalette.gray700,
@@ -286,13 +286,13 @@ class _CategoryCreationScreenState extends State<CategoryCreationScreen> {
               TextFormField(
                 controller: _descriptionBengaliController,
                 maxLines: 2,
-                style: GoogleFonts.hindSiliguri(fontSize: 16),
+                style: GoogleFonts.anekBangla(fontSize: 16),
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.white,
                   hintText: 'খাতের বিস্তারিত...',
-                  hintStyle: GoogleFonts.hindSiliguri(color: ColorPalette.gray400),
+                  hintStyle: GoogleFonts.anekBangla(color: ColorPalette.gray400),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: ColorPalette.gray200),
@@ -312,7 +312,7 @@ class _CategoryCreationScreenState extends State<CategoryCreationScreen> {
               // Icon picker
               Text(
                 'আইকন নির্বাচন করুন',
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: ColorPalette.gray700,
@@ -366,7 +366,7 @@ class _CategoryCreationScreenState extends State<CategoryCreationScreen> {
               // Color picker
               Text(
                 'রং নির্বাচন করুন',
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: ColorPalette.gray700,
@@ -416,7 +416,7 @@ class _CategoryCreationScreenState extends State<CategoryCreationScreen> {
                             const SizedBox(height: 4),
                             Text(
                               pair['name']!,
-                              style: GoogleFonts.hindSiliguri(
+                              style: GoogleFonts.anekBangla(
                                 fontSize: 10,
                                 color: _getColorFromName(pair['icon']!),
                               ),
@@ -453,7 +453,7 @@ class _CategoryCreationScreenState extends State<CategoryCreationScreen> {
                       )
                     : Text(
                         'সংরক্ষণ করুন',
-                        style: GoogleFonts.hindSiliguri(
+                        style: GoogleFonts.anekBangla(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),

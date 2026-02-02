@@ -65,7 +65,7 @@ class PurchaseDateTotalCard extends StatelessWidget {
                 // Date range text
                 Text(
                   dateRange,
-                  style: GoogleFonts.hindSiliguri(
+                  style: GoogleFonts.anekBangla(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                     color: ColorPalette.gray500,
@@ -105,7 +105,7 @@ class PurchaseDateTotalCard extends StatelessWidget {
                           // "মোট কেনা" label
                           Text(
                             'মোট কেনা',
-                            style: GoogleFonts.hindSiliguri(
+                            style: GoogleFonts.anekBangla(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFF009688),
@@ -120,7 +120,7 @@ class PurchaseDateTotalCard extends StatelessWidget {
                           // Total amount in Bengali
                           Text(
                             '${NumberFormatter.formatToBengali(total, decimals: 1)} ৳',
-                            style: GoogleFonts.hindSiliguri(
+                            style: GoogleFonts.anekBangla(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                               color: ColorPalette.gray900,

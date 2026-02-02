@@ -112,7 +112,7 @@ class _StockBookScreenState extends State<StockBookScreen> {
                   const Icon(Icons.error_outline, size: 48, color: Color(0xFFEF4444)),
                   const SizedBox(height: 16),
                   Text('Error loading stock data',
-                    style: GoogleFonts.hindSiliguri(fontSize: 16)),
+                    style: GoogleFonts.anekBangla(fontSize: 16)),
                 ],
               ),
             );
@@ -133,7 +133,7 @@ class _StockBookScreenState extends State<StockBookScreen> {
                   const Icon(Icons.inventory_2_outlined, size: 64, color: Color(0xFF94A3B8)),
                   const SizedBox(height: 16),
                   Text('কোনো পণ্য নেই',
-                    style: GoogleFonts.hindSiliguri(
+                    style: GoogleFonts.anekBangla(
                       fontSize: 18,
                       color: const Color(0xFF64748B),
                     ),
@@ -204,7 +204,7 @@ class _StockBookScreenState extends State<StockBookScreen> {
       ),
       title: Text(
         'স্টকের হিসাব',
-        style: GoogleFonts.hindSiliguri(
+        style: GoogleFonts.anekBangla(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: Colors.white,
@@ -224,7 +224,7 @@ class _StockBookScreenState extends State<StockBookScreen> {
               const SizedBox(width: 6),
               Text(
                 'স্টকের ইতিহাস',
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -275,10 +275,10 @@ class _StockBookScreenState extends State<StockBookScreen> {
             ),
             child: TextField(
               controller: _searchController,
-              style: GoogleFonts.hindSiliguri(fontSize: 14),
+              style: GoogleFonts.anekBangla(fontSize: 14),
               decoration: InputDecoration(
                 hintText: 'পণ্য খোঁজ করুন',
-                hintStyle: GoogleFonts.hindSiliguri(
+                hintStyle: GoogleFonts.anekBangla(
                   fontSize: 14,
                   color: const Color(0xFF94A3B8),
                 ),
@@ -308,7 +308,7 @@ class _StockBookScreenState extends State<StockBookScreen> {
                 const SizedBox(width: 6),
                 Text(
                   'ফিল্টার',
-                  style: GoogleFonts.hindSiliguri(
+                  style: GoogleFonts.anekBangla(
                     fontSize: 14,
                     color: const Color(0xFF64748B),
                   ),
@@ -343,7 +343,7 @@ class _StockBookScreenState extends State<StockBookScreen> {
                 ),
               ),
               child: Text('পণ্য সংখ্যা আপডেট করুন',
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF0D9488),
@@ -367,7 +367,7 @@ class _StockBookScreenState extends State<StockBookScreen> {
                 ),
               ),
               child: Text('প্রোডাক্ট যুক্ত করুন',
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
@@ -411,14 +411,14 @@ class _SummaryCard extends StatelessWidget {
       child: Column(
         children: [
           Text(label,
-            style: GoogleFonts.hindSiliguri(
+            style: GoogleFonts.anekBangla(
               fontSize: 12,
               color: const Color(0xFF64748B),
             ),
           ),
           const SizedBox(height: 4),
           Text(value,
-            style: GoogleFonts.hindSiliguri(
+            style: GoogleFonts.anekBangla(
               fontSize: 24,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0D9488),
@@ -485,14 +485,14 @@ class _StockTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(displayName,
-                  style: GoogleFonts.hindSiliguri(
+                  style: GoogleFonts.anekBangla(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text('স্টক সংখ্যা ${toBengaliNumber(stockCount.toDouble())}',
-                  style: GoogleFonts.hindSiliguri(
+                  style: GoogleFonts.anekBangla(
                     fontSize: 12,
                     color: const Color(0xFF64748B),
                   ),
@@ -502,7 +502,7 @@ class _StockTile extends StatelessWidget {
           ),
           // Price
           Text('${toBengaliNumber(totalPrice)} ৳',
-            style: GoogleFonts.hindSiliguri(
+            style: GoogleFonts.anekBangla(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0D9488),

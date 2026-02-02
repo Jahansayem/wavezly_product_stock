@@ -66,7 +66,7 @@ class _ExpenseManagementScreenV3State
           SnackBar(
             content: Text(
               'ডেটা লোড করতে সমস্যা হয়েছে: $e',
-              style: GoogleFonts.hindSiliguri(),
+              style: GoogleFonts.anekBangla(),
             ),
             backgroundColor: ColorPalette.red500,
           ),
@@ -196,7 +196,7 @@ class _ExpenseManagementScreenV3State
         ),
         title: Text(
           'খরচ',
-          style: GoogleFonts.hindSiliguri(
+          style: GoogleFonts.anekBangla(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.2,
@@ -243,7 +243,7 @@ class _ExpenseManagementScreenV3State
               children: [
                 Text(
                   'নতুন খরচ',
-                  style: GoogleFonts.hindSiliguri(
+                  style: GoogleFonts.anekBangla(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: ColorPalette.gray800,
@@ -254,7 +254,7 @@ class _ExpenseManagementScreenV3State
                   borderRadius: BorderRadius.circular(4),
                   child: Text(
                     '+ নতুন খাত',
-                    style: GoogleFonts.hindSiliguri(
+                    style: GoogleFonts.anekBangla(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                       color: ColorPalette.expensePrimary,
@@ -285,10 +285,10 @@ class _ExpenseManagementScreenV3State
                     ),
                     child: TextField(
                       controller: _searchController,
-                      style: GoogleFonts.hindSiliguri(fontSize: 14),
+                      style: GoogleFonts.anekBangla(fontSize: 14),
                       decoration: InputDecoration(
                         hintText: 'খরচ খুঁজুন',
-                        hintStyle: GoogleFonts.hindSiliguri(
+                        hintStyle: GoogleFonts.anekBangla(
                           color: ColorPalette.gray400,
                         ),
                         prefixIcon: Icon(
@@ -433,7 +433,7 @@ class _SummaryCard extends StatelessWidget {
                         children: [
                           Text(
                             'মোট খরচ ($monthName)',
-                            style: GoogleFonts.hindSiliguri(
+                            style: GoogleFonts.anekBangla(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                               color: ColorPalette.gray500,
@@ -442,7 +442,7 @@ class _SummaryCard extends StatelessWidget {
                           const SizedBox(height: 8),
                           Text(
                             '৳ ${formatNumber(currentTotal)}',
-                            style: GoogleFonts.hindSiliguri(
+                            style: GoogleFonts.anekBangla(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
                               color: ColorPalette.expensePrimary,
@@ -473,7 +473,7 @@ class _SummaryCard extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             'ব্যয়ের তালিকা',
-                            style: GoogleFonts.hindSiliguri(
+                            style: GoogleFonts.anekBangla(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color: ColorPalette.expensePrimary,
@@ -501,7 +501,7 @@ class _SummaryCard extends StatelessWidget {
                   children: [
                     Text(
                       'গত মাসের তুলনা',
-                      style: GoogleFonts.hindSiliguri(
+                      style: GoogleFonts.anekBangla(
                         fontSize: 12,
                         color: ColorPalette.gray500,
                       ),
@@ -518,7 +518,7 @@ class _SummaryCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           '${formatNumber(percentageChange.abs())}% ${isDecrease ? "কম" : "বেশি"}',
-                          style: GoogleFonts.hindSiliguri(
+                          style: GoogleFonts.anekBangla(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                             color: isDecrease
@@ -598,7 +598,7 @@ class _CategoryTile extends StatelessWidget {
                   children: [
                     Text(
                       category.nameBengali,
-                      style: GoogleFonts.hindSiliguri(
+                      style: GoogleFonts.anekBangla(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: ColorPalette.gray800,
@@ -608,7 +608,7 @@ class _CategoryTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         category.descriptionBengali!,
-                        style: GoogleFonts.hindSiliguri(
+                        style: GoogleFonts.anekBangla(
                           fontSize: 12,
                           color: ColorPalette.gray500,
                         ),
@@ -704,7 +704,7 @@ class _BottomAddButton extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 'খরচ যোগ করুন',
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,

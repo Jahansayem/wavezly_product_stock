@@ -70,7 +70,7 @@ class _ShopStockSplashState extends State<ShopStockSplash> {
             // Bangla tagline
             Text(
               'ব্যাবসা সামলান সহজেই',
-              style: GoogleFonts.hindSiliguri(
+              style: GoogleFonts.anekBangla(
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
                 color: ColorPalette.gray900,

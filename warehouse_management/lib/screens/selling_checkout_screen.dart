@@ -142,7 +142,7 @@ class _SellingCheckoutScreenState extends State<SellingCheckoutScreen> {
                 ),
                 Text(
                   '৳ ${item.totalPrice.toStringAsFixed(0)}',
-                  style: GoogleFonts.hindSiliguri(
+                  style: GoogleFonts.anekBangla(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: ColorPalette.gray900,
@@ -165,7 +165,7 @@ class _SellingCheckoutScreenState extends State<SellingCheckoutScreen> {
               ),
               Text(
                 '৳ ${widget.totalAmount.toStringAsFixed(0)}',
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: ColorPalette.tealAccent,

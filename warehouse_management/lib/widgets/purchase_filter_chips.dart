@@ -95,7 +95,7 @@ class PurchaseFilterChips extends StatelessWidget {
               ],
               Text(
                 label,
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 14,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                   color: isSelected

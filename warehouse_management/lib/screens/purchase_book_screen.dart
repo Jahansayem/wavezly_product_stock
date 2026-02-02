@@ -7,6 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wavezly/functions/toast.dart';
 import 'package:wavezly/models/purchase.dart';
+import 'package:wavezly/screens/purchase_details_screen.dart';
+import 'package:wavezly/screens/sales_screen.dart';
+import 'package:wavezly/screens/select_product_buying_screen.dart';
 import 'package:wavezly/services/purchase_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/utils/date_formatter.dart';
@@ -256,21 +259,21 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
       builder: (context) => AlertDialog(
         title: Text(
           'সাহায্য',
-          style: GoogleFonts.hindSiliguri(fontWeight: FontWeight.bold),
+          style: GoogleFonts.anekBangla(fontWeight: FontWeight.bold),
         ),
         content: Text(
           '• তারিখ নির্বাচন করুন ফিল্টার চিপস ব্যবহার করে\n'
           '• পূর্ববর্তী/পরবর্তী সময়কাল দেখতে তীর ব্যবহার করুন\n'
           '• বিক্রেতা বা রিসিপ্ট নম্বর দিয়ে অনুসন্ধান করুন\n'
           '• নতুন কেনাকাটা যোগ করতে + বাটন চাপুন',
-          style: GoogleFonts.hindSiliguri(fontSize: 14),
+          style: GoogleFonts.anekBangla(fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
               'বুঝেছি',
-              style: GoogleFonts.hindSiliguri(
+              style: GoogleFonts.anekBangla(
                 color: const Color(0xFF009688),
                 fontWeight: FontWeight.bold,
               ),
@@ -285,7 +288,7 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
   Widget build(BuildContext context) {
     return Theme(
       data: Theme.of(context).copyWith(
-        textTheme: GoogleFonts.hindSiliguriTextTheme(
+        textTheme: GoogleFonts.anekBanglaTextTheme(
           Theme.of(context).textTheme,
         ),
       ),
@@ -300,7 +303,7 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
           ),
           title: Text(
             'কেনা খাতা',
-            style: GoogleFonts.hindSiliguri(
+            style: GoogleFonts.anekBangla(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: ColorPalette.white,
@@ -370,13 +373,13 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
                             ),
                             child: TextField(
                               controller: _searchController,
-                              style: GoogleFonts.hindSiliguri(
+                              style: GoogleFonts.anekBangla(
                                 fontSize: 14,
                                 color: ColorPalette.gray900,
                               ),
                               decoration: InputDecoration(
                                 hintText: 'অনুসন্ধান করুন (নাম, মোবাইল, রিসিপ্ট)',
-                                hintStyle: GoogleFonts.hindSiliguri(
+                                hintStyle: GoogleFonts.anekBangla(
                                   fontSize: 14,
                                   color: ColorPalette.gray500,
                                 ),
@@ -411,7 +414,7 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
                                         const SizedBox(height: 16),
                                         Text(
                                           'কোন কেনা পাওয়া যায়নি',
-                                          style: GoogleFonts.hindSiliguri(
+                                          style: GoogleFonts.anekBangla(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w500,
                                             color: ColorPalette.gray500,
@@ -426,7 +429,12 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
                                       .map((purchase) => PurchaseCard(
                                             purchase: purchase,
                                             onTap: () {
-                                              // TODO: Navigate to purchase details
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) => PurchaseDetailsScreen(purchase: purchase),
+                                                ),
+                                              );
                                             },
                                           ))
                                       .toList(),
@@ -475,16 +483,26 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
                 label: 'বেচা',
                 isActive: false,
                 onTap: () {
-                  // TODO: Navigate to sales screen
-                  showTextToast('বিক্রয় স্ক্রীন শীঘ্রই আসছে!');
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SalesScreen()),
+                  );
                 },
               ),
             ],
           ),
         ),
         floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            showTextToast('নতুন কেনাকাটা যোগ করুন শীঘ্রই আসছে!');
+          onPressed: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const SelectProductBuyingScreen(),
+              ),
+            );
+            if (result == true) {
+              _loadPurchases(); // Refresh list after purchase
+            }
           },
           backgroundColor: const Color(0xFF009688),
           child: const Icon(Icons.add, color: ColorPalette.white),
@@ -517,7 +535,7 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
               const SizedBox(height: 4),
               Text(
                 label,
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 12,
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                   color: isActive

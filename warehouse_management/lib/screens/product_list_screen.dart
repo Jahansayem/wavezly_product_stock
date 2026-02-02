@@ -4,6 +4,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/product.dart';
 import '../services/product_service.dart';
+import 'product_details_screen.dart';
+import 'add_product_screen.dart';
+import 'barcode_scanner_screen.dart';
 
 class ProductListScreen extends StatefulWidget {
   const ProductListScreen({Key? key}) : super(key: key);
@@ -50,10 +53,67 @@ class _ProductListScreenState extends State<ProductListScreen> {
     } else {
       final queryLower = _searchQuery.toLowerCase();
       _filteredProducts = _products.where((product) {
-        final displayName = product.nameBn ?? product.name ?? '';
+        final displayName = product.name ?? '';
         return displayName.toLowerCase().contains(queryLower);
       }).toList();
     }
+  }
+
+  void _showProductOptions(BuildContext context, Product product) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit, color: Color(0xFF0D9488)),
+              title: Text('সম্পাদনা করুন', style: GoogleFonts.anekBangla()),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AddProductScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Color(0xFFEF4444)),
+              title: Text('মুছে ফেলুন', style: GoogleFonts.anekBangla()),
+              onTap: () async {
+                Navigator.pop(context);
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text('নিশ্চিত করুন', style: GoogleFonts.anekBangla()),
+                    content: Text('এই পণ্যটি মুছে ফেলতে চান?', style: GoogleFonts.anekBangla()),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: Text('না', style: GoogleFonts.anekBangla()),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: Text('হ্যাঁ', style: GoogleFonts.anekBangla()),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true && product.id != null) {
+                  await _productService.deleteProduct(product.id!);
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   String _toBengaliNumber(double number) {
@@ -104,7 +164,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
           Expanded(
             child: Text(
               'পণ্যের তালিকা',
-              style: GoogleFonts.hindSiliguri(
+              style: GoogleFonts.anekBangla(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
@@ -151,7 +211,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: 'অনুসন্ধান করুন...',
-                  hintStyle: GoogleFonts.hindSiliguri(
+                  hintStyle: GoogleFonts.anekBangla(
                     fontSize: 14,
                     color: const Color(0xFF94A3B8),
                   ),
@@ -165,7 +225,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     vertical: 12,
                   ),
                 ),
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 14,
                   color: const Color(0xFF1E293B),
                 ),
@@ -212,7 +272,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
             child: IconButton(
               icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
               onPressed: () {
-                print('TODO: Open QR scanner');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
+                );
               },
             ),
           ),
@@ -232,7 +295,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
             alignment: Alignment.centerLeft,
             child: Text(
               'মোট পণ্য আছে: ${_toBengaliNumber(count.toDouble())}',
-              style: GoogleFonts.hindSiliguri(
+              style: GoogleFonts.anekBangla(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF0D9488),
@@ -269,7 +332,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'পণ্য লোড করতে ত্রুটি হয়েছে',
-                  style: GoogleFonts.hindSiliguri(
+                  style: GoogleFonts.anekBangla(
                     fontSize: 16,
                     color: const Color(0xFF64748B),
                   ),
@@ -293,7 +356,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'কোন পণ্য নেই',
-                  style: GoogleFonts.hindSiliguri(
+                  style: GoogleFonts.anekBangla(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF64748B),
@@ -302,7 +365,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 const SizedBox(height: 8),
                 Text(
                   'নতুন পণ্য যুক্ত করতে + বাটনে ক্লিক করুন',
-                  style: GoogleFonts.hindSiliguri(
+                  style: GoogleFonts.anekBangla(
                     fontSize: 14,
                     color: const Color(0xFF94A3B8),
                   ),
@@ -328,7 +391,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'কোন পণ্য পাওয়া যায়নি',
-                  style: GoogleFonts.hindSiliguri(
+                  style: GoogleFonts.anekBangla(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF64748B),
@@ -337,7 +400,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 const SizedBox(height: 8),
                 Text(
                   'অন্য শব্দ দিয়ে খুঁজে দেখুন',
-                  style: GoogleFonts.hindSiliguri(
+                  style: GoogleFonts.anekBangla(
                     fontSize: 14,
                     color: const Color(0xFF94A3B8),
                   ),
@@ -353,11 +416,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
           itemBuilder: (context, index) => _ProductTile(
             product: _filteredProducts[index],
             onTap: () {
-              print('TODO: Navigate to product details');
+              // TODO: Navigate to ProductDetailsScreen with all required parameters
+              _showProductOptions(context, _filteredProducts[index]);
             },
-            onMoreTap: () {
-              print('TODO: Show more menu');
-            },
+            onMoreTap: () => _showProductOptions(context, _filteredProducts[index]),
           ),
         );
       },
@@ -383,7 +445,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            print('TODO: Navigate to add product screen');
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddProductScreen()),
+            );
           },
           borderRadius: BorderRadius.circular(28),
           child: Row(
@@ -397,7 +462,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
               const SizedBox(width: 8),
               Text(
                 'প্রোডাক্ত যুক্ত করুন',
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
@@ -443,7 +508,7 @@ class _ProductTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = product.nameBn ?? product.name ?? '';
+    final displayName = product.name ?? '';
     final isPriceRed = _shouldPriceBeRed(product);
     final priceColor = isPriceRed ? const Color(0xFFEF4444) : const Color(0xFF14B8A6);
 
@@ -503,7 +568,7 @@ class _ProductTile extends StatelessWidget {
                 children: [
                   Text(
                     displayName,
-                    style: GoogleFonts.hindSiliguri(
+                    style: GoogleFonts.anekBangla(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF1E293B),
@@ -512,7 +577,7 @@ class _ProductTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '${_toBengaliNumber(product.cost ?? 0)} ৳',
-                    style: GoogleFonts.hindSiliguri(
+                    style: GoogleFonts.anekBangla(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: priceColor,

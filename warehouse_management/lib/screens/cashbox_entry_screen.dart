@@ -110,7 +110,7 @@ class _CashboxEntryScreenState extends State<CashboxEntryScreen> {
               widget.transactionType == TransactionType.cashIn
                   ? 'ক্যাশ ইন যোগ করা হয়েছে'
                   : 'ক্যাশ আউট যোগ করা হয়েছে',
-              style: GoogleFonts.hindSiliguri(),
+              style: GoogleFonts.anekBangla(),
             ),
             backgroundColor: ColorPalette.green500,
           ),
@@ -124,7 +124,7 @@ class _CashboxEntryScreenState extends State<CashboxEntryScreen> {
           SnackBar(
             content: Text(
               'একটি সমস্যা হয়েছে: $e',
-              style: GoogleFonts.hindSiliguri(),
+              style: GoogleFonts.anekBangla(),
             ),
             backgroundColor: ColorPalette.red500,
           ),
@@ -168,7 +168,7 @@ class _CashboxEntryScreenState extends State<CashboxEntryScreen> {
         ),
         title: Text(
           title,
-          style: GoogleFonts.hindSiliguri(
+          style: GoogleFonts.anekBangla(
             fontSize: 20,
             fontWeight: FontWeight.w600,
             letterSpacing: 1.2,
@@ -203,7 +203,7 @@ class _CashboxEntryScreenState extends State<CashboxEntryScreen> {
                       const SizedBox(width: 8),
                       Text(
                         isCashIn ? 'ক্যাশ ইন (আয়)' : 'ক্যাশ আউট (ব্যয়)',
-                        style: GoogleFonts.hindSiliguri(
+                        style: GoogleFonts.anekBangla(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: primaryColor,
@@ -223,14 +223,14 @@ class _CashboxEntryScreenState extends State<CashboxEntryScreen> {
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
                     ],
-                    style: GoogleFonts.hindSiliguri(
+                    style: GoogleFonts.anekBangla(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: primaryColor,
                     ),
                     decoration: InputDecoration(
                       hintText: '০',
-                      hintStyle: GoogleFonts.hindSiliguri(
+                      hintStyle: GoogleFonts.anekBangla(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: ColorPalette.gray400,
@@ -265,11 +265,11 @@ class _CashboxEntryScreenState extends State<CashboxEntryScreen> {
                   label: 'বিবরণ *',
                   child: TextFormField(
                     controller: _descriptionController,
-                    style: GoogleFonts.hindSiliguri(fontSize: 16),
+                    style: GoogleFonts.anekBangla(fontSize: 16),
                     maxLines: 3,
                     decoration: InputDecoration(
                       hintText: 'লেনদেনের বিবরণ লিখুন',
-                      hintStyle: GoogleFonts.hindSiliguri(
+                      hintStyle: GoogleFonts.anekBangla(
                         color: ColorPalette.gray400,
                       ),
                       prefixIcon: Icon(
@@ -297,10 +297,10 @@ class _CashboxEntryScreenState extends State<CashboxEntryScreen> {
                   label: 'ক্যাটাগরি (ঐচ্ছিক)',
                   child: TextFormField(
                     controller: _categoryController,
-                    style: GoogleFonts.hindSiliguri(fontSize: 16),
+                    style: GoogleFonts.anekBangla(fontSize: 16),
                     decoration: InputDecoration(
                       hintText: 'যেমন: বিক্রয়, পেমেন্ট, উত্তোলন',
-                      hintStyle: GoogleFonts.hindSiliguri(
+                      hintStyle: GoogleFonts.anekBangla(
                         color: ColorPalette.gray400,
                       ),
                       prefixIcon: Icon(
@@ -335,7 +335,7 @@ class _CashboxEntryScreenState extends State<CashboxEntryScreen> {
                           Expanded(
                             child: Text(
                               _formatBengaliDate(_selectedDate),
-                              style: GoogleFonts.hindSiliguri(
+                              style: GoogleFonts.anekBangla(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
                                 color: ColorPalette.gray800,
@@ -382,7 +382,7 @@ class _CashboxEntryScreenState extends State<CashboxEntryScreen> {
                               const SizedBox(width: 8),
                               Text(
                                 'সংরক্ষণ করুন',
-                                style: GoogleFonts.hindSiliguri(
+                                style: GoogleFonts.anekBangla(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -410,7 +410,7 @@ class _CashboxEntryScreenState extends State<CashboxEntryScreen> {
           padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
             label,
-            style: GoogleFonts.hindSiliguri(
+            style: GoogleFonts.anekBangla(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: ColorPalette.gray700,

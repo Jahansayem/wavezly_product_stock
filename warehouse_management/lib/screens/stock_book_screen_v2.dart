@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/product_service.dart';
+import '../models/product.dart';
+import '../utils/number_formatter.dart';
 
 class StockBookScreenV2 extends StatefulWidget {
   const StockBookScreenV2({super.key});
@@ -10,59 +13,34 @@ class StockBookScreenV2 extends StatefulWidget {
 
 class _StockBookScreenV2State extends State<StockBookScreenV2> {
   final TextEditingController _searchController = TextEditingController();
-  List<StockItem> _filteredItems = [];
+  final ProductService _productService = ProductService();
+  String _searchQuery = '';
   bool _isDarkMode = false;
 
-  final List<StockItem> _allItems = [
-    StockItem(
-      name: 'Kinley 2L',
-      stock: 12,
-      price: '৩১২ ৳',
-      icon: Icons.inventory_2,
-    ),
-    StockItem(
-      name: 'kinley 500mili',
-      stock: 24,
-      price: '২৮৮ ৳',
-      icon: Icons.water_drop,
-    ),
-    StockItem(
-      name: 'আঙ্গুর',
-      stock: 43,
-      price: '১১,০২৪.৪ ৳',
-      icon: Icons.eco, // Using eco as closest to grape
-    ),
-    StockItem(
-      name: 'আপেল',
-      stock: 11,
-      price: '১,৩৯৯.২ ৳',
-      icon: Icons.apple,
-    ),
-    StockItem(
-      name: 'আম',
-      stock: 14,
-      price: '৪,০৯৮.৮ ৳',
-      icon: Icons.spa,
-    ),
-    StockItem(
-      name: 'বিস্কুট (প্যাকেট)',
-      stock: 56,
-      price: '১,১২০ ৳',
-      icon: Icons.fastfood,
-    ),
-    StockItem(
-      name: 'প্যারাসিটামল ৫০০মিগ্রা',
-      stock: 200,
-      price: '৪০০ ৳',
-      icon: Icons.medication,
-    ),
-  ];
+  // Helper methods
+  int _calculateTotalQuantity(List<Product> products) {
+    return products.fold<int>(0, (sum, p) => sum + (p.quantity ?? 0));
+  }
+
+  double _calculateTotalValue(List<Product> products) {
+    return products.fold<double>(
+      0,
+      (sum, p) => sum + ((p.quantity ?? 0) * (p.cost ?? 0.0))
+    );
+  }
+
+  String _formatBengaliNumber(double number) {
+    return NumberFormatter.formatToBengali(number);
+  }
+
+  String _formatPrice(double price) {
+    return '${NumberFormatter.formatToBengali(price, decimals: 1)} ৳';
+  }
 
   @override
   void initState() {
     super.initState();
-    _filteredItems = _allItems;
-    _searchController.addListener(_filterItems);
+    _searchController.addListener(_updateSearchQuery);
   }
 
   @override
@@ -71,16 +49,9 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
     super.dispose();
   }
 
-  void _filterItems() {
-    final query = _searchController.text.toLowerCase();
+  void _updateSearchQuery() {
     setState(() {
-      if (query.isEmpty) {
-        _filteredItems = _allItems;
-      } else {
-        _filteredItems = _allItems
-            .where((item) => item.name.toLowerCase().contains(query))
-            .toList();
-      }
+      _searchQuery = _searchController.text;
     });
   }
 
@@ -103,7 +74,7 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
 
     return Theme(
       data: ThemeData(
-        textTheme: GoogleFonts.hindSiliguriTextTheme(),
+        textTheme: GoogleFonts.anekBanglaTextTheme(),
         scaffoldBackgroundColor: backgroundColor,
       ),
       child: Scaffold(
@@ -152,7 +123,7 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
                             const SizedBox(width: 12),
                             Text(
                               'স্টকের হিসাব',
-                              style: GoogleFonts.hindSiliguri(
+                              style: GoogleFonts.anekBangla(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
@@ -186,7 +157,7 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
                               const SizedBox(width: 4),
                               Text(
                                 'স্টকের ইতিহাস',
-                                style: GoogleFonts.hindSiliguri(
+                                style: GoogleFonts.anekBangla(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
@@ -212,131 +183,197 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
                     ],
                   ),
                 ),
-                // Scrollable content
+                // Scrollable content with StreamBuilder
                 Expanded(
-                  child: ScrollConfiguration(
-                    behavior: _NoGlowScrollBehavior(),
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-                      children: [
-                        // Summary cards
-                        Row(
-                          children: [
-                            Expanded(
-                              child: SummaryCard(
-                                label: 'মোট মজুদ',
-                                value: '১,৪২৪',
-                                primaryColor: primaryColor,
-                                cardColor: cardColor,
-                                mutedColor: mutedColor,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: SummaryCard(
-                                label: 'মজুদ মূল্য',
-                                value: '১,৭৮,৩৪৪.৭ ৳',
-                                primaryColor: primaryColor,
-                                cardColor: cardColor,
-                                mutedColor: mutedColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        // Search and filter
-                        Row(
-                          children: [
-                            // Search field
-                            Expanded(
-                              child: Container(
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: cardColor,
-                                  border: Border.all(color: borderColor),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: TextField(
-                                  controller: _searchController,
-                                  style: GoogleFonts.hindSiliguri(
-                                    fontSize: 14,
-                                    color: textColor,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: 'পণ্য খোঁজ করুন',
-                                    hintStyle: GoogleFonts.hindSiliguri(
-                                      fontSize: 14,
-                                      color: mutedColor,
-                                    ),
-                                    prefixIcon: Icon(
-                                      Icons.search,
-                                      color: mutedColor,
-                                      size: 20,
-                                    ),
-                                    border: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 10,
-                                    ),
-                                  ),
+                  child: StreamBuilder<List<Product>>(
+                    stream: _productService.getAllProducts(),
+                    builder: (context, snapshot) {
+                      // Loading state
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                          ),
+                        );
+                      }
+
+                      // Error state
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                              const SizedBox(height: 16),
+                              Text(
+                                'ত্রুটি: ${snapshot.error}',
+                                style: GoogleFonts.anekBangla(
+                                  fontSize: 16,
+                                  color: textColor,
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            // Filter button
-                            Container(
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: cardColor,
-                                border: Border.all(color: borderColor),
-                                borderRadius: BorderRadius.circular(12),
+                            ],
+                          ),
+                        );
+                      }
+
+                      // Get products and calculate totals
+                      final allProducts = snapshot.data ?? [];
+                      final filteredProducts = _searchQuery.isEmpty
+                          ? allProducts
+                          : allProducts.where((p) =>
+                              p.name?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false
+                            ).toList();
+
+                      final totalQty = _calculateTotalQuantity(filteredProducts);
+                      final totalValue = _calculateTotalValue(filteredProducts);
+
+                      // Empty state
+                      if (filteredProducts.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.inventory_2_outlined, size: 64, color: mutedColor),
+                              const SizedBox(height: 16),
+                              Text(
+                                _searchQuery.isEmpty ? 'কোনো পণ্য নেই' : 'কোনো পণ্য পাওয়া যায়নি',
+                                style: GoogleFonts.anekBangla(
+                                  fontSize: 16,
+                                  color: mutedColor,
+                                ),
                               ),
-                              child: InkWell(
-                                onTap: () {
-                                  // TODO: Show filter options
-                                },
-                                borderRadius: BorderRadius.circular(12),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.filter_alt,
-                                        size: 20,
-                                        color: textColor.withOpacity(0.7),
+                            ],
+                          ),
+                        );
+                      }
+
+                      // Build content with dynamic data
+                      return ScrollConfiguration(
+                        behavior: _NoGlowScrollBehavior(),
+                        child: ListView(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                          children: [
+                            // Summary cards
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: SummaryCard(
+                                    label: 'মোট মজুদ',
+                                    value: _formatBengaliNumber(totalQty.toDouble()),
+                                    primaryColor: primaryColor,
+                                    cardColor: cardColor,
+                                    mutedColor: mutedColor,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: SummaryCard(
+                                    label: 'মজুদ মূল্য',
+                                    value: _formatPrice(totalValue),
+                                    primaryColor: primaryColor,
+                                    cardColor: cardColor,
+                                    mutedColor: mutedColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            // Search and filter
+                            Row(
+                              children: [
+                                // Search field
+                                Expanded(
+                                  child: Container(
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: cardColor,
+                                      border: Border.all(color: borderColor),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: TextField(
+                                      controller: _searchController,
+                                      style: GoogleFonts.anekBangla(
+                                        fontSize: 14,
+                                        color: textColor,
                                       ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'ফিল্টার',
-                                        style: GoogleFonts.hindSiliguri(
+                                      decoration: InputDecoration(
+                                        hintText: 'পণ্য খোঁজ করুন',
+                                        hintStyle: GoogleFonts.anekBangla(
                                           fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          color: textColor.withOpacity(0.7),
+                                          color: mutedColor,
+                                        ),
+                                        prefixIcon: Icon(
+                                          Icons.search,
+                                          color: mutedColor,
+                                          size: 20,
+                                        ),
+                                        border: InputBorder.none,
+                                        contentPadding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 10,
                                         ),
                                       ),
-                                    ],
+                                    ),
                                   ),
                                 ),
-                              ),
+                                const SizedBox(width: 8),
+                                // Filter button
+                                Container(
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: cardColor,
+                                    border: Border.all(color: borderColor),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: InkWell(
+                                    onTap: () {
+                                      // TODO: Show filter options
+                                    },
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.filter_alt,
+                                            size: 20,
+                                            color: textColor.withOpacity(0.7),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'ফিল্টার',
+                                            style: GoogleFonts.anekBangla(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                              color: textColor.withOpacity(0.7),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
+                            const SizedBox(height: 16),
+                            // Product list
+                            ...filteredProducts.map((product) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: ProductStockTile(
+                                    product: product,
+                                    primaryColor: primaryColor,
+                                    cardColor: cardColor,
+                                    textColor: textColor,
+                                    mutedColor: mutedColor,
+                                    borderColor: borderColor,
+                                  ),
+                                )),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        // Stock list
-                        ..._filteredItems.map((item) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: StockTile(
-                                item: item,
-                                primaryColor: primaryColor,
-                                cardColor: cardColor,
-                                textColor: textColor,
-                                mutedColor: mutedColor,
-                                borderColor: borderColor,
-                              ),
-                            )),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ),
               ],
@@ -427,7 +464,7 @@ class SummaryCard extends StatelessWidget {
         children: [
           Text(
             label,
-            style: GoogleFonts.hindSiliguri(
+            style: GoogleFonts.anekBangla(
               fontSize: 12,
               color: mutedColor,
             ),
@@ -435,7 +472,7 @@ class SummaryCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             value,
-            style: GoogleFonts.hindSiliguri(
+            style: GoogleFonts.anekBangla(
               fontSize: 24,
               fontWeight: FontWeight.w700,
               color: primaryColor,
@@ -448,18 +485,18 @@ class SummaryCard extends StatelessWidget {
   }
 }
 
-// Helper widget: Stock Tile
-class StockTile extends StatelessWidget {
-  final StockItem item;
+// Helper widget: Product Stock Tile
+class ProductStockTile extends StatelessWidget {
+  final Product product;
   final Color primaryColor;
   final Color cardColor;
   final Color textColor;
   final Color mutedColor;
   final Color borderColor;
 
-  const StockTile({
+  const ProductStockTile({
     super.key,
-    required this.item,
+    required this.product,
     required this.primaryColor,
     required this.cardColor,
     required this.textColor,
@@ -499,7 +536,7 @@ class StockTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
-                item.icon,
+                Icons.inventory_2,
                 color: primaryColor,
                 size: 20,
               ),
@@ -511,8 +548,8 @@ class StockTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item.name,
-                    style: GoogleFonts.hindSiliguri(
+                    product.name ?? 'Unknown',
+                    style: GoogleFonts.anekBangla(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: textColor,
@@ -520,8 +557,8 @@ class StockTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'স্টক সংখ্যা ${_convertToBengaliNumber(item.stock)}',
-                    style: GoogleFonts.hindSiliguri(
+                    'স্টক সংখ্যা ${NumberFormatter.formatIntToBengali(product.quantity ?? 0)}',
+                    style: GoogleFonts.anekBangla(
                       fontSize: 12,
                       color: mutedColor,
                     ),
@@ -531,8 +568,8 @@ class StockTile extends StatelessWidget {
             ),
             // Price
             Text(
-              item.price,
-              style: GoogleFonts.hindSiliguri(
+              '${NumberFormatter.formatToBengali(product.cost ?? 0, decimals: 1)} ৳',
+              style: GoogleFonts.anekBangla(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: primaryColor,
@@ -542,15 +579,6 @@ class StockTile extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _convertToBengaliNumber(int number) {
-    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-    return number
-        .toString()
-        .split('')
-        .map((digit) => bengaliDigits[int.parse(digit)])
-        .join('');
   }
 }
 
@@ -595,7 +623,7 @@ class BottomActionBar extends StatelessWidget {
               ),
               child: Text(
                 'পণ্য সংখ্যা আপডেট করুন',
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
@@ -621,7 +649,7 @@ class BottomActionBar extends StatelessWidget {
               ),
               child: Text(
                 'প্রোডাক্ট যুক্ত করুন',
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
@@ -632,21 +660,6 @@ class BottomActionBar extends StatelessWidget {
       ),
     );
   }
-}
-
-// Data model
-class StockItem {
-  final String name;
-  final int stock;
-  final String price;
-  final IconData icon;
-
-  StockItem({
-    required this.name,
-    required this.stock,
-    required this.price,
-    required this.icon,
-  });
 }
 
 // No glow scroll behavior

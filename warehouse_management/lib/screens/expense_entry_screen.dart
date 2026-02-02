@@ -167,7 +167,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: GoogleFonts.hindSiliguri()),
+        content: Text(message, style: GoogleFonts.anekBangla()),
         backgroundColor: ColorPalette.red500,
       ),
     );
@@ -177,7 +177,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: GoogleFonts.hindSiliguri()),
+        content: Text(message, style: GoogleFonts.anekBangla()),
         backgroundColor: ColorPalette.green600,
       ),
     );
@@ -219,7 +219,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
         elevation: 2,
         title: Text(
           isEditing ? 'খরচ সম্পাদনা করুন' : 'খরচ যোগ করুন',
-          style: GoogleFonts.hindSiliguri(
+          style: GoogleFonts.anekBangla(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -245,17 +245,17 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
                       ],
-                      style: GoogleFonts.hindSiliguri(fontSize: 16),
+                      style: GoogleFonts.anekBangla(fontSize: 16),
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
                         prefixText: '৳ ',
-                        prefixStyle: GoogleFonts.hindSiliguri(
+                        prefixStyle: GoogleFonts.anekBangla(
                           fontSize: 16,
                           color: ColorPalette.gray700,
                         ),
                         hintText: '০',
-                        hintStyle: GoogleFonts.hindSiliguri(color: ColorPalette.gray400),
+                        hintStyle: GoogleFonts.anekBangla(color: ColorPalette.gray400),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: ColorPalette.gray200),
@@ -316,7 +316,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                               Expanded(
                                 child: Text(
                                   _selectedCategory!.nameBengali,
-                                  style: GoogleFonts.hindSiliguri(
+                                  style: GoogleFonts.anekBangla(
                                     fontSize: 16,
                                     color: ColorPalette.gray800,
                                   ),
@@ -326,7 +326,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                               Expanded(
                                 child: Text(
                                   'ক্যাটাগরি নির্বাচন করুন',
-                                  style: GoogleFonts.hindSiliguri(
+                                  style: GoogleFonts.anekBangla(
                                     fontSize: 16,
                                     color: ColorPalette.gray400,
                                   ),
@@ -359,7 +359,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                             Expanded(
                               child: Text(
                                 _formatBengaliDate(_selectedDate),
-                                style: GoogleFonts.hindSiliguri(
+                                style: GoogleFonts.anekBangla(
                                   fontSize: 16,
                                   color: ColorPalette.gray800,
                                 ),
@@ -377,12 +377,12 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                     TextFormField(
                       controller: _descriptionController,
                       maxLines: 4,
-                      style: GoogleFonts.hindSiliguri(fontSize: 16),
+                      style: GoogleFonts.anekBangla(fontSize: 16),
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
                         hintText: 'খরচের বিস্তারিত লিখুন...',
-                        hintStyle: GoogleFonts.hindSiliguri(color: ColorPalette.gray400),
+                        hintStyle: GoogleFonts.anekBangla(color: ColorPalette.gray400),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: ColorPalette.gray200),
@@ -423,7 +423,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                             )
                           : Text(
                               isEditing ? 'আপডেট করুন' : 'সংরক্ষণ করুন',
-                              style: GoogleFonts.hindSiliguri(
+                              style: GoogleFonts.anekBangla(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -439,7 +439,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   Widget _buildFieldLabel(String label) {
     return Text(
       label,
-      style: GoogleFonts.hindSiliguri(
+      style: GoogleFonts.anekBangla(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: ColorPalette.gray700,
@@ -474,7 +474,7 @@ class _CategorySelectorBottomSheet extends StatelessWidget {
               children: [
                 Text(
                   'ক্যাটাগরি নির্বাচন করুন',
-                  style: GoogleFonts.hindSiliguri(
+                  style: GoogleFonts.anekBangla(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -513,14 +513,14 @@ class _CategorySelectorBottomSheet extends StatelessWidget {
                   ),
                   title: Text(
                     category.nameBengali,
-                    style: GoogleFonts.hindSiliguri(
+                    style: GoogleFonts.anekBangla(
                       fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
                   subtitle: category.descriptionBengali != null
                       ? Text(
                           category.descriptionBengali!,
-                          style: GoogleFonts.hindSiliguri(fontSize: 12),
+                          style: GoogleFonts.anekBangla(fontSize: 12),
                         )
                       : null,
                   trailing: isSelected

@@ -7,6 +7,7 @@ import 'package:wavezly/screens/customers_page.dart';
 import 'package:wavezly/screens/settings_page.dart';
 import 'package:wavezly/screens/reports_page.dart';
 import 'package:wavezly/screens/inventory_screen_wrapper.dart';
+import 'package:wavezly/screens/product_list_screen.dart';
 import 'package:wavezly/screens/purchase_book_screen.dart';
 import 'package:wavezly/screens/stock_book_screen_v2.dart';
 import 'package:wavezly/screens/expense_management_screen_v3.dart';
@@ -82,7 +83,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             SnackBar(
               content: Text(
                 'WhatsApp খুলতে পারছে না। অনুগ্রহ করে নিশ্চিত করুন WhatsApp ইন্সটল করা আছে।',
-                style: GoogleFonts.hindSiliguri(),
+                style: GoogleFonts.anekBangla(),
               ),
               backgroundColor: ColorPalette.red500,
             ),
@@ -96,7 +97,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           SnackBar(
             content: Text(
               'একটি সমস্যা হয়েছে: $e',
-              style: GoogleFonts.hindSiliguri(),
+              style: GoogleFonts.anekBangla(),
             ),
             backgroundColor: ColorPalette.red500,
           ),
@@ -111,8 +112,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          'হালখাতা ম্যানেজার',
-          style: GoogleFonts.hindSiliguri(
+          _summary?.shopName ?? 'হালখাতা ম্যানেজার',
+          style: GoogleFonts.anekBangla(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -122,7 +123,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           const SizedBox(height: 2),
           Text(
             subtitle,
-            style: GoogleFonts.hindSiliguri(
+            style: GoogleFonts.anekBangla(
               fontSize: 10,
               fontWeight: FontWeight.w400,
               color: Colors.white.withOpacity(0.8),
@@ -266,9 +267,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                               bgColor: ColorPalette.amber100,
                               iconColor: ColorPalette.amber600,
                               onTap: () => Navigator.push(context,
-                                MaterialPageRoute(builder: (_) => InventoryScreenWrapper(
-                                  onTabSelected: (_) => Navigator.pop(context),
-                                ))),
+                                MaterialPageRoute(builder: (_) => const ProductListScreen())),
                             ),
                             _GridItemData(
                               icon: Icons.warehouse,
@@ -517,7 +516,7 @@ class _SummaryItem extends StatelessWidget {
       children: [
         Text(
           label,
-          style: GoogleFonts.hindSiliguri(
+          style: GoogleFonts.anekBangla(
             fontSize: 12,
             color: ColorPalette.slate500,
           ),
@@ -525,7 +524,7 @@ class _SummaryItem extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           value,
-          style: GoogleFonts.hindSiliguri(
+          style: GoogleFonts.anekBangla(
             fontSize: isLarge ? 18 : 15,
             fontWeight: FontWeight.bold,
             color: valueColor,
@@ -615,7 +614,7 @@ class _ToggleButton extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: GoogleFonts.hindSiliguri(
+          style: GoogleFonts.anekBangla(
             fontSize: 14,
             fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
             color: isActive ? Colors.white : ColorPalette.slate500,
@@ -695,7 +694,7 @@ class _OfferBanner extends StatelessWidget {
                               ),
                               child: Text(
                                 'OFFER',
-                                style: GoogleFonts.hindSiliguri(
+                                style: GoogleFonts.anekBangla(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
@@ -705,7 +704,7 @@ class _OfferBanner extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               'নতুন বছর উপলক্ষে',
-                              style: GoogleFonts.hindSiliguri(
+                              style: GoogleFonts.anekBangla(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black87,
@@ -720,7 +719,7 @@ class _OfferBanner extends StatelessWidget {
                           children: [
                             Text(
                               '২০২৫৳',
-                              style: GoogleFonts.hindSiliguri(
+                              style: GoogleFonts.anekBangla(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black,
@@ -729,7 +728,7 @@ class _OfferBanner extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               'ছাড়ে লাইফটাইম প্যাক',
-                              style: GoogleFonts.hindSiliguri(
+                              style: GoogleFonts.anekBangla(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                                 color: Colors.black87,
@@ -742,7 +741,7 @@ class _OfferBanner extends StatelessWidget {
                           opacity: 0.8,
                           child: Text(
                             'সাথে থাকছে নিশ্চিত উপহার',
-                            style: GoogleFonts.hindSiliguri(
+                            style: GoogleFonts.anekBangla(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color: Colors.black87,
@@ -771,7 +770,7 @@ class _OfferBanner extends StatelessWidget {
                     ),
                     child: Text(
                       'ট্যাপ করুন',
-                      style: GoogleFonts.hindSiliguri(
+                      style: GoogleFonts.anekBangla(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
@@ -857,7 +856,7 @@ class _SectionCard extends StatelessWidget {
             ),
             child: Text(
               title,
-              style: GoogleFonts.hindSiliguri(
+              style: GoogleFonts.anekBangla(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: ColorPalette.gray700,
@@ -933,7 +932,7 @@ class _GridItem extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.hindSiliguri(
+            style: GoogleFonts.anekBangla(
               fontSize: 10,
               fontWeight: FontWeight.w500,
               color: ColorPalette.gray600,
@@ -994,14 +993,14 @@ class _SupportCard extends StatelessWidget {
               children: [
                 Text(
                   'যেকোনো প্রয়োজনে',
-                  style: GoogleFonts.hindSiliguri(
+                  style: GoogleFonts.anekBangla(
                     fontSize: 12,
                     color: ColorPalette.slate500,
                   ),
                 ),
                 Text(
                   'এক্সপার্টের কাছ থেকে সহায়তা নিন',
-                  style: GoogleFonts.hindSiliguri(
+                  style: GoogleFonts.anekBangla(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: ColorPalette.gray800,
@@ -1024,7 +1023,7 @@ class _SupportCard extends StatelessWidget {
             ),
             child: Text(
               'লাইভ চ্যাট',
-              style: GoogleFonts.hindSiliguri(
+              style: GoogleFonts.anekBangla(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
@@ -1129,7 +1128,7 @@ class _BottomNavBar extends StatelessWidget {
                           bottom: 8,
                           child: Text(
                             'হোম',
-                            style: GoogleFonts.hindSiliguri(
+                            style: GoogleFonts.anekBangla(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               color: ColorPalette.tealAccent,
@@ -1186,7 +1185,7 @@ class _NavItem extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             label,
-            style: GoogleFonts.hindSiliguri(
+            style: GoogleFonts.anekBangla(
               fontSize: 10,
               fontWeight: FontWeight.w500,
               color: color,

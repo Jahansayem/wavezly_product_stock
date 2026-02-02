@@ -26,7 +26,7 @@ class PaymentStatusChip extends StatelessWidget {
       ),
       child: Text(
         config.label,
-        style: GoogleFonts.hindSiliguri(
+        style: GoogleFonts.anekBangla(
           fontSize: 12,
           fontWeight: FontWeight.w600,
           color: config.textColor,

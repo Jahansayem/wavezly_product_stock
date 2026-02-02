@@ -80,7 +80,7 @@ class PurchaseCard extends StatelessWidget {
                           // Supplier name
                           Text(
                             purchase.supplierName ?? 'অজানা সরবরাহকারী',
-                            style: GoogleFonts.hindSiliguri(
+                            style: GoogleFonts.anekBangla(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: ColorPalette.gray800,
@@ -95,7 +95,7 @@ class PurchaseCard extends StatelessWidget {
                               padding: const EdgeInsets.only(top: 2),
                               child: Text(
                                 purchase.comment!,
-                                style: GoogleFonts.hindSiliguri(
+                                style: GoogleFonts.anekBangla(
                                   fontSize: 12,
                                   color: ColorPalette.gray500,
                                 ),
@@ -116,7 +116,7 @@ class PurchaseCard extends StatelessWidget {
                         // Amount in Bengali
                         Text(
                           '${NumberFormatter.formatToBengali(purchase.totalAmount, decimals: 1)} ৳',
-                          style: GoogleFonts.hindSiliguri(
+                          style: GoogleFonts.anekBangla(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: ColorPalette.gray900,
@@ -154,7 +154,7 @@ class PurchaseCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           DateFormat('yyyy-MM-dd').format(purchase.purchaseDate),
-                          style: GoogleFonts.hindSiliguri(
+                          style: GoogleFonts.anekBangla(
                             fontSize: 12,
                             color: ColorPalette.gray500,
                           ),
@@ -168,7 +168,7 @@ class PurchaseCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           DateFormat('HH:mm:ss').format(purchase.purchaseDate),
-                          style: GoogleFonts.hindSiliguri(
+                          style: GoogleFonts.anekBangla(
                             fontSize: 12,
                             color: ColorPalette.gray500,
                           ),
@@ -179,7 +179,7 @@ class PurchaseCard extends StatelessWidget {
                     // Right: Formatted display date
                     Text(
                       DateFormat('dd-MMM-yyyy HH:mm').format(purchase.purchaseDate),
-                      style: GoogleFonts.hindSiliguri(
+                      style: GoogleFonts.anekBangla(
                         fontSize: 12,
                         color: ColorPalette.gray500,
                       ),

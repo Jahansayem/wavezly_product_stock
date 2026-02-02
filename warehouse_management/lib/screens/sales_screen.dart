@@ -21,7 +21,9 @@ import 'package:wavezly/utils/number_formatter.dart';
 /// Unified Sales Screen with tab-based view switching
 /// Contains Quick Sell and Product List views with state preservation
 class SalesScreen extends StatefulWidget {
-  const SalesScreen({Key? key}) : super(key: key);
+  final VoidCallback? onBackPressed;
+
+  const SalesScreen({Key? key, this.onBackPressed}) : super(key: key);
 
   @override
   _SalesScreenState createState() => _SalesScreenState();
@@ -35,11 +37,24 @@ class _SalesScreenState extends State<SalesScreen> {
   static const Color primary = ColorPalette.tealAccent;
   static const Color background = ColorPalette.slate50;
 
+  void _handleBack() {
+    if (Navigator.of(context).canPop()) {
+      // Context: Pushed as route (e.g., from HomeDashboardScreen)
+      Navigator.pop(context);
+    } else if (widget.onBackPressed != null) {
+      // Context: In tab - switch to Home tab
+      widget.onBackPressed!();
+    } else {
+      // Fallback: maintain compatibility
+      Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Theme(
       data: Theme.of(context).copyWith(
-        textTheme: GoogleFonts.hindSiliguriTextTheme(
+        textTheme: GoogleFonts.anekBanglaTextTheme(
           Theme.of(context).textTheme,
         ),
       ),
@@ -94,14 +109,14 @@ class _SalesScreenState extends State<SalesScreen> {
             children: [
               IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
-                onPressed: () => Navigator.pop(context),
+                onPressed: _handleBack,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
               const SizedBox(width: 12),
               Text(
                 'বিক্রি করুন',
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -490,7 +505,7 @@ class _QuickSellViewState extends State<_QuickSellView> {
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 0),
+            padding: const EdgeInsets.only(bottom: 24),
             child: Column(
               children: [
                 _buildActionRow(),
@@ -1126,19 +1141,22 @@ class _QuickSellViewState extends State<_QuickSellView> {
                   color: ColorPalette.gray600,
                 ),
               ),
-              Transform.scale(
-                scale: 0.8,
-                child: Switch(
-                  value: _receiptSmsEnabled,
-                  onChanged: (value) {
-                    setState(() {
-                      _receiptSmsEnabled = value;
-                    });
-                  },
-                  activeColor: primary,
-                  activeTrackColor: primary.withOpacity(0.5),
-                  inactiveThumbColor: Colors.white,
-                  inactiveTrackColor: ColorPalette.gray200,
+              SizedBox(
+                height: 32,
+                child: Transform.scale(
+                  scale: 0.8,
+                  child: Switch(
+                    value: _receiptSmsEnabled,
+                    onChanged: (value) {
+                      setState(() {
+                        _receiptSmsEnabled = value;
+                      });
+                    },
+                    activeColor: primary,
+                    activeTrackColor: primary.withOpacity(0.5),
+                    inactiveThumbColor: Colors.white,
+                    inactiveTrackColor: ColorPalette.gray200,
+                  ),
                 ),
               ),
             ],
@@ -1619,7 +1637,7 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
                     controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'পণ্য খোজ করুন',
-                      hintStyle: GoogleFonts.hindSiliguri(
+                      hintStyle: GoogleFonts.anekBangla(
                         fontSize: 14,
                         color: slate400,
                       ),
@@ -1627,7 +1645,7 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
                       contentPadding:
                           const EdgeInsets.symmetric(horizontal: 0, vertical: 10),
                     ),
-                    style: GoogleFonts.hindSiliguri(
+                    style: GoogleFonts.anekBangla(
                       fontSize: 14,
                       color: slate800,
                     ),
@@ -1649,7 +1667,7 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
                         const SizedBox(width: 4),
                         Text(
                           'ফিল্টার',
-                          style: GoogleFonts.hindSiliguri(
+                          style: GoogleFonts.anekBangla(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                             color: slate600,
@@ -1718,7 +1736,7 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
             const SizedBox(height: 16),
             Text(
               'কোনো পণ্য পাওয়া যায়নি',
-              style: GoogleFonts.hindSiliguri(
+              style: GoogleFonts.anekBangla(
                 fontSize: 16,
                 color: slate500,
               ),
@@ -1793,7 +1811,7 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
                         Expanded(
                           child: Text(
                             product.name ?? '',
-                            style: GoogleFonts.hindSiliguri(
+                            style: GoogleFonts.anekBangla(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
                               color: _getProductTitleColor(product),
@@ -1807,7 +1825,7 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
                           children: [
                             Text(
                               'বিক্রয় মূল্য',
-                              style: GoogleFonts.hindSiliguri(
+                              style: GoogleFonts.anekBangla(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w500,
                                 color: slate500,
@@ -1816,7 +1834,7 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
                             const SizedBox(height: 2),
                             Text(
                               '${product.cost?.toStringAsFixed(0) ?? '0'} ৳',
-                              style: GoogleFonts.hindSiliguri(
+                              style: GoogleFonts.anekBangla(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
                                 color: slate800,
@@ -1834,7 +1852,7 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
                           children: [
                             Text(
                               'স্টক সংখ্যা',
-                              style: GoogleFonts.hindSiliguri(
+                              style: GoogleFonts.anekBangla(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w500,
                                 color: slate500,
@@ -1843,7 +1861,7 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
                             const SizedBox(height: 2),
                             Text(
                               '${product.quantity ?? 0}',
-                              style: GoogleFonts.hindSiliguri(
+                              style: GoogleFonts.anekBangla(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
                                 color: slate800,
@@ -1884,7 +1902,7 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
             children: [
               Text(
                 'সর্বমোট:',
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                   color: Colors.white,
@@ -1893,7 +1911,7 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
               const SizedBox(width: 8),
               Text(
                 '৳ ${_cartTotal.toStringAsFixed(0)}',
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -1937,7 +1955,7 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
                           },
                           child: Text(
                             '$_cartItemCount',
-                            style: GoogleFonts.hindSiliguri(
+                            style: GoogleFonts.anekBangla(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
                             ),

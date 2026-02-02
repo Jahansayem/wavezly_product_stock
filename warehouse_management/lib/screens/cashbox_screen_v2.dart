@@ -84,7 +84,7 @@ class _CashboxScreenV2State extends State<CashboxScreenV2> {
           SnackBar(
             content: Text(
               'ডেটা লোড করতে সমস্যা হয়েছে: $e',
-              style: GoogleFonts.hindSiliguri(),
+              style: GoogleFonts.anekBangla(),
             ),
             backgroundColor: ColorPalette.red500,
           ),
@@ -169,7 +169,7 @@ class _CashboxScreenV2State extends State<CashboxScreenV2> {
       SnackBar(
         content: Text(
           'ফিল্টার শীঘ্রই আসছে',
-          style: GoogleFonts.hindSiliguri(),
+          style: GoogleFonts.anekBangla(),
         ),
       ),
     );
@@ -339,7 +339,7 @@ class _CashboxScreenV2State extends State<CashboxScreenV2> {
         ),
         title: Text(
           'ক্যাশবক্স',
-          style: GoogleFonts.hindSiliguri(
+          style: GoogleFonts.anekBangla(
             fontSize: 20,
             fontWeight: FontWeight.w600,
             letterSpacing: 1.2,
@@ -445,7 +445,7 @@ class _BalanceCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           dateRangeText,
-                          style: GoogleFonts.hindSiliguri(
+                          style: GoogleFonts.anekBangla(
                             fontSize: 14,
                             color: ColorPalette.gray500,
                           ),
@@ -460,7 +460,7 @@ class _BalanceCard extends StatelessWidget {
                       ),
                       child: Text(
                         periodBadgeText,
-                        style: GoogleFonts.hindSiliguri(
+                        style: GoogleFonts.anekBangla(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                           color: ColorPalette.expensePrimary,
@@ -501,7 +501,7 @@ class _BalanceCard extends StatelessWidget {
                         children: [
                           Text(
                             'ব্যালেন্স',
-                            style: GoogleFonts.hindSiliguri(
+                            style: GoogleFonts.anekBangla(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                               color: ColorPalette.gray500,
@@ -510,7 +510,7 @@ class _BalanceCard extends StatelessWidget {
                           const SizedBox(height: 8),
                           Text(
                             isLoading ? '...' : '৳ ${formatNumber(balance)}',
-                            style: GoogleFonts.hindSiliguri(
+                            style: GoogleFonts.anekBangla(
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
                               color: ColorPalette.gray800,
@@ -603,7 +603,7 @@ class _RangeChipsRow extends StatelessWidget {
                 SnackBar(
                   content: Text(
                     'কাস্টম ডেট রেঞ্জ শীঘ্রই আসছে',
-                    style: GoogleFonts.hindSiliguri(),
+                    style: GoogleFonts.anekBangla(),
                   ),
                 ),
               );
@@ -666,7 +666,7 @@ class _RangeChip extends StatelessWidget {
               ],
               Text(
                 label,
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                   color: isActive ? Colors.white : ColorPalette.gray600,
@@ -754,7 +754,7 @@ class _SummaryCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.hindSiliguri(
+                    style: GoogleFonts.anekBangla(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                       color: ColorPalette.gray500,
@@ -779,7 +779,7 @@ class _SummaryCard extends StatelessWidget {
               // Amount
               Text(
                 isLoading ? '...' : '৳ ${formatNumber(amount)}',
-                style: GoogleFonts.hindSiliguri(
+                style: GoogleFonts.anekBangla(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: amountColor,
@@ -815,7 +815,7 @@ class _TransactionHeader extends StatelessWidget {
       children: [
         Text(
           'মোট লেনদেন: ${formatNumber(transactionCount.toDouble())}',
-          style: GoogleFonts.hindSiliguri(
+          style: GoogleFonts.anekBangla(
             fontSize: 18,
             fontWeight: FontWeight.w600,
             color: ColorPalette.gray800,
@@ -851,7 +851,7 @@ class _TransactionHeader extends StatelessWidget {
                   const SizedBox(width: 6),
                   Text(
                     'ফিল্টার',
-                    style: GoogleFonts.hindSiliguri(
+                    style: GoogleFonts.anekBangla(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                       color: ColorPalette.gray600,
@@ -897,7 +897,7 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'কোন লেনদেন পাওয়া যায়নি',
-              style: GoogleFonts.hindSiliguri(
+              style: GoogleFonts.anekBangla(
                 fontSize: 14,
                 color: ColorPalette.gray500,
               ),
@@ -905,7 +905,7 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'লেনদেন শুরু করতে নিচে বাটন চাপুন',
-              style: GoogleFonts.hindSiliguri(
+              style: GoogleFonts.anekBangla(
                 fontSize: 12,
                 color: ColorPalette.gray400,
               ),
@@ -982,7 +982,7 @@ class _BottomActionBar extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           'ক্যাশ ইন',
-                          style: GoogleFonts.hindSiliguri(
+                          style: GoogleFonts.anekBangla(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -1027,7 +1027,7 @@ class _BottomActionBar extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           'ক্যাশ আউট',
-                          style: GoogleFonts.hindSiliguri(
+                          style: GoogleFonts.anekBangla(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,

@@ -66,21 +66,21 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('নিশ্চিত করুন', style: GoogleFonts.hindSiliguri()),
+        title: Text('নিশ্চিত করুন', style: GoogleFonts.anekBangla()),
         content: Text(
           'এই খরচটি মুছে ফেলতে চান?',
-          style: GoogleFonts.hindSiliguri(),
+          style: GoogleFonts.anekBangla(),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('বাতিল', style: GoogleFonts.hindSiliguri()),
+            child: Text('বাতিল', style: GoogleFonts.anekBangla()),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: Text(
               'মুছুন',
-              style: GoogleFonts.hindSiliguri(color: ColorPalette.red500),
+              style: GoogleFonts.anekBangla(color: ColorPalette.red500),
             ),
           ),
         ],
@@ -110,7 +110,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: GoogleFonts.hindSiliguri()),
+        content: Text(message, style: GoogleFonts.anekBangla()),
         backgroundColor: ColorPalette.red500,
       ),
     );
@@ -119,7 +119,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
   void _showSuccess(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: GoogleFonts.hindSiliguri()),
+        content: Text(message, style: GoogleFonts.anekBangla()),
         backgroundColor: ColorPalette.green600,
       ),
     );
@@ -158,7 +158,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
         elevation: 2,
         title: Text(
           'ব্যয়ের তালিকা',
-          style: GoogleFonts.hindSiliguri(
+          style: GoogleFonts.anekBangla(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -179,14 +179,14 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                     children: [
                       Text(
                         'মোট খরচ',
-                        style: GoogleFonts.hindSiliguri(
+                        style: GoogleFonts.anekBangla(
                           fontSize: 14,
                           color: ColorPalette.gray600,
                         ),
                       ),
                       Text(
                         '৳ ${_formatBengaliNumber(_totalAmount)}',
-                        style: GoogleFonts.hindSiliguri(
+                        style: GoogleFonts.anekBangla(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: ColorPalette.expensePrimary,
@@ -211,7 +211,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                               const SizedBox(height: 16),
                               Text(
                                 'কোনো খরচ নেই',
-                                style: GoogleFonts.hindSiliguri(
+                                style: GoogleFonts.anekBangla(
                                   fontSize: 16,
                                   color: ColorPalette.gray500,
                                 ),
@@ -312,7 +312,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                             children: [
                                               Text(
                                                 category?.nameBengali ?? 'অন্যান্য',
-                                                style: GoogleFonts.hindSiliguri(
+                                                style: GoogleFonts.anekBangla(
                                                   fontSize: 16,
                                                   fontWeight: FontWeight.w600,
                                                   color: ColorPalette.gray800,
@@ -320,7 +320,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                               ),
                                               Text(
                                                 '৳ ${_formatBengaliNumber(expense.amount)}',
-                                                style: GoogleFonts.hindSiliguri(
+                                                style: GoogleFonts.anekBangla(
                                                   fontSize: 16,
                                                   fontWeight: FontWeight.bold,
                                                   color: ColorPalette.expensePrimary,
@@ -339,7 +339,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                               const SizedBox(width: 4),
                                               Text(
                                                 _formatDate(expense.expenseDate),
-                                                style: GoogleFonts.hindSiliguri(
+                                                style: GoogleFonts.anekBangla(
                                                   fontSize: 12,
                                                   color: ColorPalette.gray500,
                                                 ),
@@ -358,7 +358,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                             const SizedBox(height: 4),
                                             Text(
                                               expense.description!,
-                                              style: GoogleFonts.hindSiliguri(
+                                              style: GoogleFonts.anekBangla(
                                                 fontSize: 12,
                                                 color: ColorPalette.gray600,
                                               ),

@@ -45,11 +45,11 @@ class AppTheme {
   static const Color yellow100 = Color(0xFFFEF3C7);
 
   // ============================================================================
-  // Typography (Hind Siliguri)
+  // Typography (Anek Bangla)
   // ============================================================================
 
   /// Title style: 26px, weight 700 (bold), line-height 1.3
-  static TextStyle get titleBold => GoogleFonts.hindSiliguri(
+  static TextStyle get titleBold => GoogleFonts.anekBangla(
         fontSize: 26,
         fontWeight: FontWeight.w700,
         height: 1.3,
@@ -57,35 +57,35 @@ class AppTheme {
       );
 
   /// Body style: 16px, weight 400 (regular)
-  static TextStyle get bodyRegular => GoogleFonts.hindSiliguri(
+  static TextStyle get bodyRegular => GoogleFonts.anekBangla(
         fontSize: 16,
         fontWeight: FontWeight.w400,
         color: textPrimary,
       );
 
   /// Label medium: 14px, weight 500
-  static TextStyle get labelMedium => GoogleFonts.hindSiliguri(
+  static TextStyle get labelMedium => GoogleFonts.anekBangla(
         fontSize: 14,
         fontWeight: FontWeight.w500,
         color: textSecondary,
       );
 
   /// Label semibold: 14px, weight 600
-  static TextStyle get labelSemibold => GoogleFonts.hindSiliguri(
+  static TextStyle get labelSemibold => GoogleFonts.anekBangla(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: textPrimary,
       );
 
   /// Button style: 16px, weight 600 (semibold)
-  static TextStyle get buttonSemibold => GoogleFonts.hindSiliguri(
+  static TextStyle get buttonSemibold => GoogleFonts.anekBangla(
         fontSize: 16,
         fontWeight: FontWeight.w600,
         color: textPrimary,
       );
 
   /// Small text: 12px, weight 400
-  static TextStyle get smallRegular => GoogleFonts.hindSiliguri(
+  static TextStyle get smallRegular => GoogleFonts.anekBangla(
         fontSize: 12,
         fontWeight: FontWeight.w400,
         color: textSecondary,
