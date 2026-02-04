@@ -194,12 +194,24 @@ class _StockBookScreenState extends State<StockBookScreen> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: const Color(0xFF0D9488),
-      foregroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
+      foregroundColor: const Color(0xFF111827),
       elevation: 0,
       shadowColor: Colors.black.withOpacity(0.1),
+      flexibleSpace: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFFBBF24), // amber-400
+              Color(0xFFF59E0B), // amber-500
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+        ),
+      ),
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(Icons.arrow_back, color: Color(0xFF111827)),
         onPressed: () => Navigator.pop(context),
       ),
       title: Text(
@@ -207,7 +219,7 @@ class _StockBookScreenState extends State<StockBookScreen> {
         style: GoogleFonts.anekBangla(
           fontSize: 20,
           fontWeight: FontWeight.w600,
-          color: Colors.white,
+          color: const Color(0xFF111827),
         ),
       ),
       actions: [
@@ -215,25 +227,26 @@ class _StockBookScreenState extends State<StockBookScreen> {
           margin: const EdgeInsets.symmetric(vertical: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.black.withOpacity(0.1),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
             children: [
-              const Icon(Icons.history, size: 18),
+              const Icon(Icons.history, size: 18, color: Color(0xFF111827)),
               const SizedBox(width: 6),
               Text(
                 'স্টকের ইতিহাস',
                 style: GoogleFonts.anekBangla(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
+                  color: const Color(0xFF111827),
                 ),
               ),
             ],
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.more_vert),
+          icon: const Icon(Icons.more_vert, color: Color(0xFF111827)),
           onPressed: () {
             print('TODO: More options');
           },

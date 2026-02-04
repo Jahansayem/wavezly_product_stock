@@ -183,11 +183,23 @@ class _ExpenseManagementScreenV3State
     return PreferredSize(
       preferredSize: const Size.fromHeight(64),
       child: AppBar(
-        backgroundColor: ColorPalette.expensePrimary, // #009688
+        backgroundColor: Colors.transparent,
         elevation: 4,
         toolbarHeight: 64,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                ColorPalette.offerYellowStart,
+                ColorPalette.offerYellowEnd,
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: ColorPalette.gray900),
           onPressed: () => Navigator.pop(context),
           style: IconButton.styleFrom(
             backgroundColor: Colors.white.withOpacity(0.0),
@@ -200,12 +212,12 @@ class _ExpenseManagementScreenV3State
             fontSize: 20,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.2,
-            color: Colors.white,
+            color: ColorPalette.gray900,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.help_outline, color: Colors.white),
+            icon: const Icon(Icons.help_outline, color: ColorPalette.gray900),
             onPressed: () {
               // TODO: Show help dialog
             },

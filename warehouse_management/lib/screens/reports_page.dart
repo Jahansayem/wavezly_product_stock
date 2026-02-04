@@ -66,7 +66,16 @@ class _ReportsPageState extends State<ReportsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        color: ColorPalette.tealAccent,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              ColorPalette.offerYellowStart,
+              ColorPalette.offerYellowEnd,
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+        ),
         child: SafeArea(
           child: Container(
             color: Colors.white,
@@ -77,7 +86,14 @@ class _ReportsPageState extends State<ReportsPage> {
                   height: 90,
                   padding: const EdgeInsets.only(left: 10, right: 20, top: 10),
                   decoration: const BoxDecoration(
-                    color: ColorPalette.tealAccent,
+                    gradient: LinearGradient(
+                      colors: [
+                        ColorPalette.offerYellowStart,
+                        ColorPalette.offerYellowEnd,
+                      ],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
                     borderRadius: BorderRadius.only(
                       bottomLeft: Radius.circular(16),
                       bottomRight: Radius.circular(16),
@@ -88,7 +104,7 @@ class _ReportsPageState extends State<ReportsPage> {
                       IconButton(
                         icon: const Icon(
                           Icons.chevron_left_rounded,
-                          color: ColorPalette.timberGreen,
+                          color: ColorPalette.gray900,
                           size: 32,
                         ),
                         onPressed: () => Navigator.of(context).pop(),
@@ -98,14 +114,14 @@ class _ReportsPageState extends State<ReportsPage> {
                         style: TextStyle(
                           fontFamily: "Nunito",
                           fontSize: 28,
-                          color: ColorPalette.timberGreen,
+                          color: ColorPalette.gray900,
                         ),
                       ),
                       const Spacer(),
                       IconButton(
                         icon: const Icon(
                           Icons.refresh,
-                          color: ColorPalette.timberGreen,
+                          color: ColorPalette.gray900,
                         ),
                         onPressed: () {
                           setState(() => _isLoading = true);

@@ -12,6 +12,7 @@ class DashboardSummary {
   final double duesGiven;
   final int stockCount;
   final String? lastBackupTime;
+  final String? shopName;
 
   DashboardSummary({
     required this.balance,
@@ -22,6 +23,7 @@ class DashboardSummary {
     required this.duesGiven,
     required this.stockCount,
     this.lastBackupTime,
+    this.shopName,
   });
 }
 
@@ -31,6 +33,24 @@ class DashboardService {
   final _customerService = CustomerService();
 
   Future<DashboardSummary> getSummary() async {
+    // Get shop name from user_business_profiles
+    String? shopName;
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId != null) {
+        final businessProfile = await _supabase
+            .from('user_business_profiles')
+            .select('shop_name')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+        shopName = businessProfile?['shop_name'];
+      }
+    } catch (e) {
+      print('Failed to fetch shop name: $e');
+      // Continue with null shopName if fetch fails
+    }
+
     // Get customer summary (balance calculation)
     final customerSummary = await _customerService.getSummary();
     final balance = customerSummary['netTotal'] ?? 0.0;
@@ -61,6 +81,7 @@ class DashboardService {
       duesGiven: duesGiven,
       stockCount: stockCount,
       lastBackupTime: null,
+      shopName: shopName,
     );
   }
 

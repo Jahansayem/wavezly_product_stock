@@ -92,7 +92,14 @@ class _SalesScreenState extends State<SalesScreen> {
     return Container(
       height: 64,
       decoration: BoxDecoration(
-        color: primary,
+        gradient: const LinearGradient(
+          colors: [
+            ColorPalette.offerYellowStart,
+            ColorPalette.offerYellowEnd,
+          ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
         boxShadow: [
           BoxShadow(
             offset: const Offset(0, 2),
@@ -108,7 +115,7 @@ class _SalesScreenState extends State<SalesScreen> {
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                icon: const Icon(Icons.arrow_back, color: ColorPalette.gray900, size: 24),
                 onPressed: _handleBack,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -119,13 +126,13 @@ class _SalesScreenState extends State<SalesScreen> {
                 style: GoogleFonts.anekBangla(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: ColorPalette.gray900,
                 ),
               ),
             ],
           ),
           IconButton(
-            icon: const Icon(Icons.help_outline, color: Colors.white, size: 24),
+            icon: const Icon(Icons.help_outline, color: ColorPalette.gray900, size: 24),
             onPressed: () {
               showTextToast('Help feature coming soon');
             },

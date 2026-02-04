@@ -295,10 +295,22 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
       child: Scaffold(
         backgroundColor: ColorPalette.gray50,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF009688),
+          backgroundColor: Colors.transparent,
           elevation: 4,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  ColorPalette.offerYellowStart,
+                  ColorPalette.offerYellowEnd,
+                ],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+            ),
+          ),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: ColorPalette.white),
+            icon: const Icon(Icons.arrow_back, color: ColorPalette.gray900),
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
@@ -306,17 +318,17 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
             style: GoogleFonts.anekBangla(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: ColorPalette.white,
+              color: ColorPalette.gray900,
             ),
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.picture_as_pdf, color: ColorPalette.white),
+              icon: const Icon(Icons.picture_as_pdf, color: ColorPalette.gray900),
               onPressed: _exportToPDF,
               tooltip: 'Export PDF',
             ),
             IconButton(
-              icon: const Icon(Icons.help_outline, color: ColorPalette.white),
+              icon: const Icon(Icons.help_outline, color: ColorPalette.gray900),
               onPressed: _showHelpDialog,
               tooltip: 'Help',
             ),

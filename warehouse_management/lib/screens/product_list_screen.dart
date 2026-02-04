@@ -152,12 +152,19 @@ class _ProductListScreenState extends State<ProductListScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
-        color: Color(0xFF0D9488),
+        gradient: LinearGradient(
+          colors: [
+            Color(0xFFFBBF24), // amber-400
+            Color(0xFFF59E0B), // amber-500
+          ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
       ),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF111827)),
             onPressed: () => Navigator.of(context).pop(),
           ),
           const SizedBox(width: 8),
@@ -167,18 +174,18 @@ class _ProductListScreenState extends State<ProductListScreen> {
               style: GoogleFonts.anekBangla(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: Colors.white,
+                color: const Color(0xFF111827),
               ),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
+            icon: const Icon(Icons.picture_as_pdf, color: Color(0xFF111827)),
             onPressed: () {
               print('TODO: Generate PDF');
             },
           ),
           IconButton(
-            icon: const Icon(Icons.help_outline, color: Colors.white),
+            icon: const Icon(Icons.help_outline, color: Color(0xFF111827)),
             onPressed: () {
               print('TODO: Show help');
             },

@@ -116,7 +116,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           style: GoogleFonts.anekBangla(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Colors.black87,
           ),
         ),
         if (subtitle != null) ...[
@@ -126,7 +126,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             style: GoogleFonts.anekBangla(
               fontSize: 10,
               fontWeight: FontWeight.w400,
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.black54,
             ),
           ),
         ],
@@ -136,16 +136,16 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
   List<Widget> _buildAppBarActions() {
     return [
-      // Chat icon
+      // Chat icon (WhatsApp style)
       IconButton(
-        icon: const Icon(Icons.chat, color: Colors.white),
+        icon: const Icon(Icons.chat, color: Colors.black87),
         onPressed: () {},
       ),
       // Notifications with badge
       Stack(
         children: [
           IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.white),
+            icon: const Icon(Icons.notifications, color: Colors.black87),
             onPressed: () {},
           ),
           Positioned(
@@ -158,7 +158,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                 color: Colors.red,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: ColorPalette.tealAccent,
+                  color: ColorPalette.offerYellowStart,
                   width: 1,
                 ),
               ),
@@ -168,7 +168,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       ),
       // Settings icon
       IconButton(
-        icon: const Icon(Icons.settings, color: Colors.white),
+        icon: const Icon(Icons.settings, color: Colors.black87),
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => SettingsPage()),
@@ -183,9 +183,21 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     return Scaffold(
       backgroundColor: ColorPalette.gray100, // Stitch: #F3F4F6
       appBar: AppBar(
-        backgroundColor: ColorPalette.tealAccent,
+        backgroundColor: Colors.transparent,
         toolbarHeight: 72,
         elevation: 4,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                ColorPalette.offerYellowStart, // #FBBF24 (amber-400)
+                ColorPalette.offerYellowEnd,   // #F59E0B (amber-500)
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        ),
         title: _buildAppBarTitle(
           subtitle: _summary?.lastBackupTime ?? 'Last sync: Not configured',
         ),
@@ -1013,7 +1025,7 @@ class _SupportCard extends StatelessWidget {
           ElevatedButton(
             onPressed: onLiveChatTap,
             style: ElevatedButton.styleFrom(
-              backgroundColor: ColorPalette.tealAccent, // Stitch: #26A69A
+              backgroundColor: ColorPalette.navBlue, // Blue to match reference design
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               shape: RoundedRectangleBorder(

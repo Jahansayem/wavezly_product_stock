@@ -178,7 +178,14 @@ class _GiveDueScreenState extends State<GiveDueScreen> {
             Container(
               height: 56,
               decoration: const BoxDecoration(
-                color: _primaryTeal,
+                gradient: LinearGradient(
+                  colors: [
+                    ColorPalette.offerYellowStart,
+                    ColorPalette.offerYellowEnd,
+                  ],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Color(0x1A000000),
@@ -197,7 +204,7 @@ class _GiveDueScreenState extends State<GiveDueScreen> {
                         padding: const EdgeInsets.all(4),
                         child: const Icon(
                           Icons.arrow_back,
-                          color: Colors.white,
+                          color: ColorPalette.gray900,
                           size: 24,
                         ),
                       ),
@@ -208,7 +215,7 @@ class _GiveDueScreenState extends State<GiveDueScreen> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: ColorPalette.gray900,
                       ),
                     ),
                   ],
