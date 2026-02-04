@@ -610,7 +610,7 @@ class _ToggleButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
           color: isActive ? ColorPalette.tealAccent : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
@@ -686,7 +686,7 @@ class _OfferBanner extends StatelessWidget {
             ),
             // Content
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
                   Expanded(
@@ -714,12 +714,16 @@ class _OfferBanner extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Text(
-                              'নতুন বছর উপলক্ষে',
-                              style: GoogleFonts.anekBangla(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
+                            Flexible(
+                              child: Text(
+                                'নতুন বছর উপলক্ষে',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                style: GoogleFonts.anekBangla(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
                               ),
                             ),
                           ],
@@ -738,12 +742,16 @@ class _OfferBanner extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Text(
-                              'ছাড়ে লাইফটাইম প্যাক',
-                              style: GoogleFonts.anekBangla(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black87,
+                            Flexible(
+                              child: Text(
+                                'ছাড়ে লাইফটাইম প্যাক',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                style: GoogleFonts.anekBangla(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black87,
+                                ),
                               ),
                             ),
                           ],
@@ -753,6 +761,8 @@ class _OfferBanner extends StatelessWidget {
                           opacity: 0.8,
                           child: Text(
                             'সাথে থাকছে নিশ্চিত উপহার',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                             style: GoogleFonts.anekBangla(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
@@ -766,7 +776,7 @@ class _OfferBanner extends StatelessWidget {
                   // CTA Button - White
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
+                      horizontal: 12,
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
