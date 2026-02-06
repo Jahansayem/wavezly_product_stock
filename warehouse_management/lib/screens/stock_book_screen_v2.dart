@@ -63,14 +63,14 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = const Color(0xFF0D9488);
-    final bgLight = const Color(0xFFF8FAFC);
-    final bgDark = const Color(0xFF0F172A);
+    final primaryColor = ColorPalette.tealAccent;
+    final bgLight = ColorPalette.gray100;
+    final bgDark = ColorPalette.slate900;
     final backgroundColor = _isDarkMode ? bgDark : bgLight;
-    final cardColor = _isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final textColor = _isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
-    final mutedColor = _isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-    final borderColor = _isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final cardColor = _isDarkMode ? ColorPalette.slate800 : ColorPalette.white;
+    final textColor = _isDarkMode ? ColorPalette.slate100 : ColorPalette.slate900;
+    final mutedColor = _isDarkMode ? ColorPalette.slate400 : ColorPalette.slate600;
+    final borderColor = _isDarkMode ? ColorPalette.slate700 : ColorPalette.slate200;
 
     return Theme(
       data: ThemeData(
@@ -86,11 +86,18 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
                 // App Bar
                 Container(
                   decoration: BoxDecoration(
-                    color: primaryColor,
+                    gradient: const LinearGradient(
+                      colors: [
+                        ColorPalette.offerYellowStart,
+                        ColorPalette.offerYellowEnd,
+                      ],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 6,
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
                     ],
@@ -114,7 +121,7 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
                               },
                               icon: const Icon(
                                 Icons.arrow_back,
-                                color: Colors.white,
+                                color: Colors.black87,
                                 size: 24,
                               ),
                               padding: const EdgeInsets.all(4),
@@ -126,7 +133,7 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
                               style: GoogleFonts.anekBangla(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                                color: Colors.black87,
                               ),
                             ),
                           ],
@@ -135,7 +142,7 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
                       // History button
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.black.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(100),
                         ),
                         padding: const EdgeInsets.symmetric(
@@ -151,7 +158,7 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
                             children: [
                               const Icon(
                                 Icons.history,
-                                color: Colors.white,
+                                color: Colors.black87,
                                 size: 16,
                               ),
                               const SizedBox(width: 4),
@@ -160,7 +167,7 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
                                 style: GoogleFonts.anekBangla(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
-                                  color: Colors.white,
+                                  color: Colors.black87,
                                 ),
                               ),
                             ],
@@ -175,7 +182,7 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
                         },
                         icon: const Icon(
                           Icons.more_vert,
-                          color: Colors.white,
+                          color: Colors.black87,
                         ),
                         padding: const EdgeInsets.all(4),
                         constraints: const BoxConstraints(),

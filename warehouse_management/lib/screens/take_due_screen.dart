@@ -326,11 +326,18 @@ class _TakeDueScreenState extends State<TakeDueScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Fixed Header (ORIGINAL DESIGN)
+            // Fixed Header
             Container(
               height: 56,
               decoration: const BoxDecoration(
-                color: _primaryTeal,
+                gradient: LinearGradient(
+                  colors: [
+                    ColorPalette.offerYellowStart,
+                    ColorPalette.offerYellowEnd,
+                  ],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Color(0x1A000000),
@@ -349,7 +356,7 @@ class _TakeDueScreenState extends State<TakeDueScreen> {
                         padding: const EdgeInsets.all(4),
                         child: const Icon(
                           Icons.arrow_back,
-                          color: Colors.white,
+                          color: Colors.black87,
                           size: 24,
                         ),
                       ),
@@ -360,7 +367,7 @@ class _TakeDueScreenState extends State<TakeDueScreen> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: Colors.black87,
                       ),
                     ),
                   ],

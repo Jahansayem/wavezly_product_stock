@@ -360,7 +360,14 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
     return Container(
       padding: const EdgeInsets.only(top: 48, left: 16, right: 16, bottom: 16),
       decoration: const BoxDecoration(
-        color: _primary,
+        gradient: LinearGradient(
+          colors: [
+            ColorPalette.offerYellowStart,
+            ColorPalette.offerYellowEnd,
+          ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
         boxShadow: [
           BoxShadow(
             offset: Offset(0, 1),
@@ -380,7 +387,7 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
                   padding: const EdgeInsets.all(4),
                   child: const Icon(
                     Icons.arrow_back_ios,
-                    color: _white,
+                    color: Colors.black87,
                     size: 20,
                   ),
                 ),
@@ -391,7 +398,7 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
-                  color: _white,
+                  color: Colors.black87,
                 ),
               ),
             ],
@@ -407,7 +414,7 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
                   padding: const EdgeInsets.all(4),
                   child: const Icon(
                     Icons.picture_as_pdf,
-                    color: _white,
+                    color: Colors.black87,
                     size: 24,
                   ),
                 ),
@@ -422,7 +429,7 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
                   padding: const EdgeInsets.all(4),
                   child: const Icon(
                     Icons.more_vert,
-                    color: _white,
+                    color: Colors.black87,
                     size: 24,
                   ),
                 ),

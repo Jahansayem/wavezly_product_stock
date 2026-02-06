@@ -67,7 +67,7 @@ class _CustomersPageState extends State<CustomersPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: ColorPalette.gray100,
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 80),
         child: FloatingActionButton(
@@ -89,11 +89,18 @@ class _CustomersPageState extends State<CustomersPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: ColorPalette.tealAccent,
+                gradient: const LinearGradient(
+                  colors: [
+                    ColorPalette.offerYellowStart,
+                    ColorPalette.offerYellowEnd,
+                  ],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: ColorPalette.tealAccent.withOpacity(0.2),
-                    blurRadius: 8,
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
                 ],
@@ -101,7 +108,7 @@ class _CustomersPageState extends State<CustomersPage> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: const Icon(Icons.arrow_back, color: Colors.black87),
                     onPressed: () => Navigator.pop(context),
                   ),
                   const SizedBox(width: 8),
@@ -112,19 +119,19 @@ class _CustomersPageState extends State<CustomersPage> {
                         fontFamily: 'Nunito',
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: Colors.black87,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
+                    icon: const Icon(Icons.picture_as_pdf, color: Colors.black87),
                     onPressed: () {
                       // TODO: Export PDF
                     },
                   ),
                   IconButton(
-                    icon: const Icon(Icons.help_outline, color: Colors.white),
+                    icon: const Icon(Icons.help_outline, color: Colors.black87),
                     onPressed: () {
                       // TODO: Show help
                     },
@@ -144,9 +151,9 @@ class _CustomersPageState extends State<CustomersPage> {
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE8F5E9),
+                            color: ColorPalette.emerald50,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFC8E6C9)),
+                            border: Border.all(color: ColorPalette.emerald100),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,7 +165,7 @@ class _CustomersPageState extends State<CustomersPage> {
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 0.5,
-                                  color: Color(0xFF2E7D32),
+                                  color: ColorPalette.emerald700,
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -168,7 +175,7 @@ class _CustomersPageState extends State<CustomersPage> {
                                   fontFamily: 'Nunito',
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF2E7D32),
+                                  color: ColorPalette.emerald700,
                                 ),
                               ),
                             ],
@@ -180,9 +187,9 @@ class _CustomersPageState extends State<CustomersPage> {
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFEBEE),
+                            color: ColorPalette.rose50,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFFFCDD2)),
+                            border: Border.all(color: ColorPalette.rose100),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,7 +201,7 @@ class _CustomersPageState extends State<CustomersPage> {
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 0.5,
-                                  color: Color(0xFFD32F2F),
+                                  color: ColorPalette.rose600,
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -204,7 +211,7 @@ class _CustomersPageState extends State<CustomersPage> {
                                   fontFamily: 'Nunito',
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFFD32F2F),
+                                  color: ColorPalette.rose600,
                                 ),
                               ),
                             ],
@@ -278,9 +285,9 @@ class _CustomersPageState extends State<CustomersPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: ColorPalette.white,
                 border: Border(
-                  bottom: BorderSide(color: Colors.white),
+                  bottom: BorderSide(color: ColorPalette.gray100),
                 ),
               ),
               child: Column(
@@ -290,8 +297,16 @@ class _CustomersPageState extends State<CustomersPage> {
                       Expanded(
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: ColorPalette.white,
                             borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: ColorPalette.gray200),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
                           ),
                           child: TextField(
                             controller: _searchController,
@@ -315,8 +330,16 @@ class _CustomersPageState extends State<CustomersPage> {
                       const SizedBox(width: 12),
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: ColorPalette.white,
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: ColorPalette.gray200),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
                         ),
                         child: IconButton(
                           icon: const Icon(Icons.tune),
