@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:wavezly/utils/color_palette.dart';
-import 'package:wavezly/services/auth_service.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import 'package:wavezly/functions/confirm_dialog.dart';
 import 'package:wavezly/screens/cash_counter_screen.dart';
+import 'package:wavezly/services/auth_service.dart';
+import 'package:wavezly/utils/color_palette.dart';
 
 class SettingsPage extends StatelessWidget {
   final AuthService _authService = AuthService();
@@ -12,43 +14,42 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        color: ColorPalette.tealAccent,
-        child: SafeArea(
-          child: Container(
-            color: Colors.white,
-            child: Column(
-              children: [
-                Container(
-                  height: 90,
-                  padding: const EdgeInsets.only(left: 20, right: 20, top: 10),
-                  decoration: const BoxDecoration(
-                    color: ColorPalette.tealAccent,
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(16),
-                      bottomRight: Radius.circular(16),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Text(
-                        "Settings",
-                        style: TextStyle(
-                          fontFamily: "Nunito",
-                          fontSize: 28,
-                          color: ColorPalette.timberGreen,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 20),
+      backgroundColor: ColorPalette.gray100,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        toolbarHeight: 72,
+        elevation: 4,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                ColorPalette.offerYellowStart, // #FBBF24 (amber-400)
+                ColorPalette.offerYellowEnd,   // #F59E0B (amber-500)
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        ),
+        title: Text(
+          'Settings',
+          style: GoogleFonts.anekBangla(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
                         Container(
                           decoration: BoxDecoration(
                             color: ColorPalette.white,
@@ -143,11 +144,6 @@ class SettingsPage extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );

@@ -139,7 +139,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       // Chat icon (WhatsApp style)
       IconButton(
         icon: const Icon(Icons.chat, color: Colors.black87),
-        onPressed: () {},
+        onPressed: _launchWhatsApp,
       ),
       // Notifications with badge
       Stack(
