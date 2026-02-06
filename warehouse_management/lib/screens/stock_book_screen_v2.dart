@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/product_service.dart';
+
 import '../models/product.dart';
+import '../services/product_service.dart';
+import '../utils/color_palette.dart';
 import '../utils/number_formatter.dart';
 
 class StockBookScreenV2 extends StatefulWidget {
@@ -86,7 +89,7 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
                 // App Bar
                 Container(
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       colors: [
                         ColorPalette.offerYellowStart,
                         ColorPalette.offerYellowEnd,
