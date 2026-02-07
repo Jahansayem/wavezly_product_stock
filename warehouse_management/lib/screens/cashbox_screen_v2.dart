@@ -326,7 +326,7 @@ class _CashboxScreenV2State extends State<CashboxScreenV2> {
     return PreferredSize(
       preferredSize: const Size.fromHeight(64),
       child: AppBar(
-        backgroundColor: ColorPalette.expensePrimary, // #00897B
+        backgroundColor: ColorPalette.tealAccent,
         elevation: 4,
         toolbarHeight: 64,
         leading: IconButton(
@@ -417,7 +417,7 @@ class _BalanceCard extends StatelessWidget {
             child: Container(
               width: 4,
               decoration: BoxDecoration(
-                color: ColorPalette.expensePrimary,
+                color: ColorPalette.tealAccent,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(12),
                   bottomLeft: Radius.circular(12),
@@ -463,7 +463,7 @@ class _BalanceCard extends StatelessWidget {
                         style: GoogleFonts.anekBangla(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: ColorPalette.expensePrimary,
+                          color: ColorPalette.tealAccent,
                         ),
                       ),
                     ),
@@ -631,7 +631,7 @@ class _RangeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: isActive ? ColorPalette.expensePrimary : Colors.white,
+      color: isActive ? ColorPalette.tealAccent : Colors.white,
       borderRadius: BorderRadius.circular(24),
       child: InkWell(
         onTap: onTap,
@@ -640,7 +640,7 @@ class _RangeChip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
             border: Border.all(
-              color: isActive ? ColorPalette.expensePrimary : ColorPalette.gray200,
+              color: isActive ? ColorPalette.tealAccent : ColorPalette.gray200,
             ),
             borderRadius: BorderRadius.circular(24),
             boxShadow: isActive

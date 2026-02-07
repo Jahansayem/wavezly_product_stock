@@ -269,7 +269,7 @@ class _ExpenseManagementScreenV3State
                     style: GoogleFonts.anekBangla(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: ColorPalette.expensePrimary,
+                      color: ColorPalette.tealAccent,
                       decoration: TextDecoration.none,
                     ),
                   ),
@@ -419,7 +419,7 @@ class _SummaryCard extends StatelessWidget {
             child: Container(
               width: 4,
               decoration: BoxDecoration(
-                color: ColorPalette.expensePrimary,
+                color: ColorPalette.tealAccent,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(12),
                   bottomLeft: Radius.circular(12),
@@ -457,7 +457,7 @@ class _SummaryCard extends StatelessWidget {
                             style: GoogleFonts.anekBangla(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
-                              color: ColorPalette.expensePrimary,
+                              color: ColorPalette.tealAccent,
                             ),
                           ),
                         ],
@@ -473,12 +473,12 @@ class _SummaryCard extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: ColorPalette.expensePrimary.withOpacity(0.1),
+                              color: ColorPalette.tealAccent.withOpacity(0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
                               Icons.receipt_long,
-                              color: ColorPalette.expensePrimary,
+                              color: ColorPalette.tealAccent,
                               size: 20,
                             ),
                           ),
@@ -488,7 +488,7 @@ class _SummaryCard extends StatelessWidget {
                             style: GoogleFonts.anekBangla(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              color: ColorPalette.expensePrimary,
+                              color: ColorPalette.tealAccent,
                             ),
                           ),
                         ],
@@ -699,7 +699,7 @@ class _BottomAddButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
           decoration: BoxDecoration(
-            color: ColorPalette.expensePrimary,
+            color: ColorPalette.tealAccent,
             borderRadius: BorderRadius.circular(48),
             boxShadow: [
               BoxShadow(

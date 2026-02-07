@@ -18,7 +18,6 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
   final TextEditingController _searchController = TextEditingController();
   final ProductService _productService = ProductService();
   String _searchQuery = '';
-  bool _isDarkMode = false;
 
   // Helper methods
   int _calculateTotalQuantity(List<Product> products) {
@@ -58,22 +57,15 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
     });
   }
 
-  void _toggleTheme() {
-    setState(() {
-      _isDarkMode = !_isDarkMode;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    final isNarrow = MediaQuery.sizeOf(context).width < 390;
     final primaryColor = ColorPalette.tealAccent;
-    final bgLight = ColorPalette.gray100;
-    final bgDark = ColorPalette.slate900;
-    final backgroundColor = _isDarkMode ? bgDark : bgLight;
-    final cardColor = _isDarkMode ? ColorPalette.slate800 : ColorPalette.white;
-    final textColor = _isDarkMode ? ColorPalette.slate100 : ColorPalette.slate900;
-    final mutedColor = _isDarkMode ? ColorPalette.slate400 : ColorPalette.slate600;
-    final borderColor = _isDarkMode ? ColorPalette.slate700 : ColorPalette.slate200;
+    final backgroundColor = ColorPalette.gray100;
+    final cardColor = ColorPalette.white;
+    final textColor = ColorPalette.slate900;
+    final mutedColor = ColorPalette.slate600;
+    final borderColor = ColorPalette.slate200;
 
     return Theme(
       data: ThemeData(
@@ -105,79 +97,85 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
                       ),
                     ],
                   ),
-                  padding: const EdgeInsets.only(
+                  padding: EdgeInsets.only(
                     top: 40,
-                    left: 16,
-                    right: 16,
+                    left: isNarrow ? 12 : 16,
+                    right: isNarrow ? 12 : 16,
                     bottom: 12,
                   ),
                   child: Row(
                     children: [
-                      // Back button and title
+                      // Back button
+                      IconButton(
+                        onPressed: () {
+                          Navigator.of(context).maybePop();
+                        },
+                        icon: const Icon(
+                          Icons.arrow_back,
+                          color: Colors.black87,
+                          size: 24,
+                        ),
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(),
+                      ),
+                      SizedBox(width: isNarrow ? 8 : 12),
+                      // Title (flexible)
                       Expanded(
-                        child: Row(
-                          children: [
-                            IconButton(
-                              onPressed: () {
-                                // TODO: Back navigation
-                                Navigator.of(context).maybePop();
-                              },
-                              icon: const Icon(
-                                Icons.arrow_back,
-                                color: Colors.black87,
-                                size: 24,
-                              ),
-                              padding: const EdgeInsets.all(4),
-                              constraints: const BoxConstraints(),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'স্টকের হিসাব',
-                              style: GoogleFonts.anekBangla(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          'স্টকের হিসাব',
+                          style: GoogleFonts.anekBangla(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: false,
                         ),
                       ),
-                      // History button
+                      SizedBox(width: isNarrow ? 4 : 8),
+                      // History button (responsive)
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.black.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(100),
                         ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isNarrow ? 8 : 12,
                           vertical: 6,
                         ),
                         child: InkWell(
                           onTap: () {
                             // TODO: Navigate to history
                           },
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.history,
-                                color: Colors.black87,
-                                size: 16,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'স্টকের ইতিহাস',
-                                style: GoogleFonts.anekBangla(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
+                          child: isNarrow
+                              ? const Icon(
+                                  Icons.history,
                                   color: Colors.black87,
+                                  size: 16,
+                                )
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.history,
+                                      color: Colors.black87,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'স্টকের ইতিহাস',
+                                      style: GoogleFonts.anekBangla(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
-                          ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: isNarrow ? 4 : 8),
                       // More button
                       IconButton(
                         onPressed: () {
@@ -397,32 +395,6 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
                 primaryColor: primaryColor,
                 cardColor: cardColor,
                 borderColor: borderColor,
-              ),
-            ),
-            // Floating theme toggle button
-            Positioned(
-              right: 16,
-              bottom: 96,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: borderColor),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: IconButton(
-                  onPressed: _toggleTheme,
-                  icon: Icon(
-                    Icons.dark_mode,
-                    color: primaryColor,
-                  ),
-                ),
               ),
             ),
           ],

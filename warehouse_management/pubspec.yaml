@@ -57,5 +57,5 @@ flutter_launcher_icons:
   android: true
   ios: false
   image_path: "assets/icon/wavezly_icon_1024.png"
-  adaptive_icon_background: "#00b7b7"
-  adaptive_icon_foreground: "assets/icon/wavezly_icon_1024.png"
+  adaptive_icon_background: "#FFD93D"
+  adaptive_icon_foreground: "assets/icon/wavezly_icon_foreground.png"

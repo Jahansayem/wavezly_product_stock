@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/product.dart';
 import '../services/product_service.dart';
+import '../utils/color_palette.dart';
 import 'product_details_screen.dart';
 import 'add_product_screen.dart';
 import 'barcode_scanner_screen.dart';
@@ -71,7 +72,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.edit, color: Color(0xFF0D9488)),
+              leading: Icon(Icons.edit, color: ColorPalette.tealAccent),
               title: Text('সম্পাদনা করুন', style: GoogleFonts.anekBangla()),
               onTap: () {
                 Navigator.pop(context);
@@ -255,7 +256,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
               ],
             ),
             child: IconButton(
-              icon: const Icon(Icons.filter_list, color: Color(0xFF0D9488)),
+              icon: Icon(Icons.filter_list, color: ColorPalette.tealAccent),
               onPressed: () {
                 print('TODO: Show filter options');
               },
@@ -266,7 +267,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
             height: 48,
             width: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFF0D9488),
+              color: ColorPalette.tealAccent,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
@@ -305,7 +306,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
               style: GoogleFonts.anekBangla(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF0D9488),
+                color: ColorPalette.tealAccent,
               ),
             ),
           ),
@@ -319,9 +320,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
       stream: _productService.getAllProducts(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
+          return Center(
             child: CircularProgressIndicator(
-              color: Color(0xFF0D9488),
+              color: ColorPalette.tealAccent,
             ),
           );
         }
@@ -438,11 +439,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
       height: 56,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D9488),
+        color: ColorPalette.tealAccent,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0D9488).withOpacity(0.3),
+            color: ColorPalette.tealAccent.withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -517,7 +518,7 @@ class _ProductTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final displayName = product.name ?? '';
     final isPriceRed = _shouldPriceBeRed(product);
-    final priceColor = isPriceRed ? const Color(0xFFEF4444) : const Color(0xFF14B8A6);
+    final priceColor = isPriceRed ? const Color(0xFFEF4444) : ColorPalette.tealAccent;
 
     return InkWell(
       onTap: onTap,
@@ -547,13 +548,13 @@ class _ProductTile extends StatelessWidget {
                     ? CachedNetworkImage(
                         imageUrl: product.image!,
                         fit: BoxFit.cover,
-                        placeholder: (context, url) => const Center(
+                        placeholder: (context, url) => Center(
                           child: SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Color(0xFF0D9488),
+                              color: ColorPalette.tealAccent,
                             ),
                           ),
                         ),

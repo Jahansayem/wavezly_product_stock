@@ -177,7 +177,7 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
           return Theme(
             data: Theme.of(context).copyWith(
               colorScheme: ColorScheme.light(
-                primary: const Color(0xFF009688),
+                primary: ColorPalette.tealAccent,
                 onPrimary: ColorPalette.white,
                 surface: ColorPalette.white,
                 onSurface: ColorPalette.gray800,
@@ -274,7 +274,7 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
             child: Text(
               'বুঝেছি',
               style: GoogleFonts.anekBangla(
-                color: const Color(0xFF009688),
+                color: ColorPalette.tealAccent,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -337,7 +337,7 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
         body: _isLoading
             ? const Center(
                 child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF009688)),
+                  valueColor: AlwaysStoppedAnimation<Color>(ColorPalette.tealAccent),
                 ),
               )
             : Column(
@@ -373,7 +373,7 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
                               color: ColorPalette.white,
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: const Color(0xFF009688).withOpacity(0.3),
+                                color: ColorPalette.tealAccent.withOpacity(0.3),
                               ),
                               boxShadow: [
                                 BoxShadow(
@@ -397,7 +397,7 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
                                 ),
                                 prefixIcon: Icon(
                                   Icons.search,
-                                  color: const Color(0xFF009688),
+                                  color: ColorPalette.tealAccent,
                                   size: 20,
                                 ),
                                 border: InputBorder.none,
@@ -516,7 +516,7 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
               _loadPurchases(); // Refresh list after purchase
             }
           },
-          backgroundColor: const Color(0xFF009688),
+          backgroundColor: ColorPalette.tealAccent,
           child: const Icon(Icons.add, color: ColorPalette.white),
         ),
       ),
@@ -541,7 +541,7 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
                 icon,
                 size: 24,
                 color: isActive
-                    ? const Color(0xFF009688)
+                    ? ColorPalette.tealAccent
                     : ColorPalette.gray400,
               ),
               const SizedBox(height: 4),
@@ -551,7 +551,7 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
                   fontSize: 12,
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                   color: isActive
-                      ? const Color(0xFF009688)
+                      ? ColorPalette.tealAccent
                       : ColorPalette.gray400,
                 ),
               ),
