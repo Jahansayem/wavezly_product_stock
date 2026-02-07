@@ -40,7 +40,7 @@ class PurchaseDateTotalCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Teal accent bar on left
+          // Royal blue accent bar on left
           Positioned(
             left: 0,
             top: 0,
@@ -48,7 +48,7 @@ class PurchaseDateTotalCard extends StatelessWidget {
             child: Container(
               width: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFF009688),
+                color: ColorPalette.tealAccent,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(12),
                   bottomLeft: Radius.circular(12),
@@ -90,7 +90,7 @@ class PurchaseDateTotalCard extends StatelessWidget {
                           child: Icon(
                             Icons.chevron_left_rounded,
                             color: enableNavigation
-                                ? const Color(0xFF009688)
+                                ? ColorPalette.tealAccent
                                 : ColorPalette.gray300,
                             size: 28,
                           ),
@@ -108,7 +108,7 @@ class PurchaseDateTotalCard extends StatelessWidget {
                             style: GoogleFonts.anekBangla(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: const Color(0xFF009688),
+                              color: ColorPalette.tealAccent,
                               letterSpacing: 0.5,
                             ).copyWith(
                               height: 1.2,
@@ -142,7 +142,7 @@ class PurchaseDateTotalCard extends StatelessWidget {
                           child: Icon(
                             Icons.chevron_right_rounded,
                             color: enableNavigation
-                                ? const Color(0xFF009688)
+                                ? ColorPalette.tealAccent
                                 : ColorPalette.gray300,
                             size: 28,
                           ),

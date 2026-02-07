@@ -237,7 +237,7 @@ class _PaymentConfirmScreenState extends State<PaymentConfirmScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7F9),
+      backgroundColor: ColorPalette.gray100,
       body: SafeArea(
         child: Column(
           children: [
@@ -283,21 +283,21 @@ class _PaymentConfirmScreenState extends State<PaymentConfirmScreen> {
   Widget _buildHeader() {
     return Container(
       height: 64,
-      decoration: BoxDecoration(
-        color: ColorPalette.tealAccent,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.12),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            ColorPalette.offerYellowStart,
+            ColorPalette.offerYellowEnd,
+          ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: const Icon(Icons.arrow_back, color: ColorPalette.gray900),
             onPressed: () => Navigator.pop(context),
           ),
           const Text(
@@ -305,7 +305,7 @@ class _PaymentConfirmScreenState extends State<PaymentConfirmScreen> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: ColorPalette.gray900,
             ),
           ),
         ],

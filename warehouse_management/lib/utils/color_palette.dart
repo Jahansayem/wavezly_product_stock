@@ -86,6 +86,7 @@ mixin ColorPalette {
   // Additional colors for grid items
   static const Color orange100 = Color(0xFFFFEDD5);
   static const Color orange600 = Color(0xFFEA580C);
+  static const Color blue50 = Color(0xFFE8EFFD);   // Royal Blue tint
   static const Color blue100 = Color(0xFFDBEAFE);
   static const Color blue600 = Color(0xFF2563EB);
   static const Color red100 = Color(0xFFFEE2E2);

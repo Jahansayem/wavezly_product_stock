@@ -61,7 +61,7 @@ class _CashboxEntryScreenState extends State<CashboxEntryScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.light(
-              primary: ColorPalette.expensePrimary,
+              primary: ColorPalette.tealAccent,
               onPrimary: Colors.white,
               surface: Colors.white,
               onSurface: ColorPalette.gray800,
@@ -159,11 +159,23 @@ class _CashboxEntryScreenState extends State<CashboxEntryScreen> {
     return Scaffold(
       backgroundColor: ColorPalette.gray100,
       appBar: AppBar(
-        backgroundColor: ColorPalette.expensePrimary,
+        backgroundColor: Colors.transparent,
         elevation: 4,
         toolbarHeight: 64,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                ColorPalette.offerYellowStart,
+                ColorPalette.offerYellowEnd,
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: ColorPalette.gray900),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -172,7 +184,7 @@ class _CashboxEntryScreenState extends State<CashboxEntryScreen> {
             fontSize: 20,
             fontWeight: FontWeight.w600,
             letterSpacing: 1.2,
-            color: Colors.white,
+            color: ColorPalette.gray900,
           ),
         ),
       ),

@@ -158,17 +158,29 @@ class _CategoryCreationScreenState extends State<CategoryCreationScreen> {
     return Scaffold(
       backgroundColor: ColorPalette.gray100,
       appBar: AppBar(
-        backgroundColor: ColorPalette.expensePrimary,
-        elevation: 2,
+        backgroundColor: Colors.transparent,
+        elevation: 4,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                ColorPalette.offerYellowStart,
+                ColorPalette.offerYellowEnd,
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        ),
         title: Text(
           'নতুন খাত তৈরি করুন',
           style: GoogleFonts.anekBangla(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: ColorPalette.gray900,
           ),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: ColorPalette.gray900),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -261,7 +273,7 @@ class _CategoryCreationScreenState extends State<CategoryCreationScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: ColorPalette.expensePrimary, width: 2),
+                    borderSide: BorderSide(color: ColorPalette.tealAccent, width: 2),
                   ),
                 ),
                 validator: (value) {
@@ -303,7 +315,7 @@ class _CategoryCreationScreenState extends State<CategoryCreationScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: ColorPalette.expensePrimary, width: 2),
+                    borderSide: BorderSide(color: ColorPalette.tealAccent, width: 2),
                   ),
                 ),
               ),
@@ -434,7 +446,7 @@ class _CategoryCreationScreenState extends State<CategoryCreationScreen> {
               ElevatedButton(
                 onPressed: _isSaving ? null : _saveCategory,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: ColorPalette.expensePrimary,
+                  backgroundColor: ColorPalette.tealAccent,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(

@@ -317,9 +317,9 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
-                    color: ColorPalette.teal50,
+                    color: ColorPalette.blue50,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: ColorPalette.teal100.withOpacity(0.5)),
+                    border: Border.all(color: ColorPalette.blue100.withOpacity(0.5)),
                   ),
                   child: Icon(
                     _getProductIcon(product.group),
@@ -530,7 +530,7 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
   Color _getStockColor(int quantity) {
     if (quantity < 0) return ColorPalette.danger;
     if (quantity == 0) return ColorPalette.slate400;
-    return ColorPalette.teal600;
+    return ColorPalette.tealAccent;
   }
 
   String _formatPrice(double price) {

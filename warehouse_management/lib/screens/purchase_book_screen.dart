@@ -8,7 +8,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:wavezly/functions/toast.dart';
 import 'package:wavezly/models/purchase.dart';
 import 'package:wavezly/screens/purchase_details_screen.dart';
-import 'package:wavezly/screens/sales_screen.dart';
 import 'package:wavezly/screens/select_product_buying_screen.dart';
 import 'package:wavezly/services/purchase_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
@@ -460,50 +459,6 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
                   ),
                 ],
               ),
-        bottomNavigationBar: Container(
-          height: 64,
-          decoration: BoxDecoration(
-            color: ColorPalette.white,
-            border: Border(
-              top: BorderSide(color: ColorPalette.gray200, width: 1),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                offset: const Offset(0, -2),
-                blurRadius: 8,
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(
-                icon: Icons.shopping_cart_rounded,
-                label: 'কেনা',
-                isActive: true,
-                onTap: () {},
-              ),
-              _buildNavItem(
-                icon: Icons.home_rounded,
-                label: 'হোম',
-                isActive: false,
-                onTap: () => Navigator.pop(context),
-              ),
-              _buildNavItem(
-                icon: Icons.storefront_rounded,
-                label: 'বেচা',
-                isActive: false,
-                onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SalesScreen()),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
         floatingActionButton: FloatingActionButton(
           onPressed: () async {
             final result = await Navigator.push(
@@ -518,45 +473,6 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
           },
           backgroundColor: ColorPalette.tealAccent,
           child: const Icon(Icons.add, color: ColorPalette.white),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 24,
-                color: isActive
-                    ? ColorPalette.tealAccent
-                    : ColorPalette.gray400,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: GoogleFonts.anekBangla(
-                  fontSize: 12,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                  color: isActive
-                      ? ColorPalette.tealAccent
-                      : ColorPalette.gray400,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

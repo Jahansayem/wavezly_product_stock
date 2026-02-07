@@ -13,6 +13,7 @@ import 'package:wavezly/screens/stock_book_screen_v2.dart';
 import 'package:wavezly/screens/expense_management_screen_v3.dart';
 import 'package:wavezly/screens/cashbox_screen_v2.dart';
 import 'package:wavezly/screens/user_list_screen_v1.dart';
+import 'package:wavezly/screens/select_product_buying_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // ============================================================================
@@ -377,7 +378,10 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       ),
       bottomNavigationBar: _BottomNavBar(
         onPurchaseTap: () {
-          if (widget.onNavTap != null) widget.onNavTap!(0);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SelectProductBuyingScreen()),
+          );
         },
         onHomeTap: () {
           if (widget.onNavTap != null) widget.onNavTap!(1);

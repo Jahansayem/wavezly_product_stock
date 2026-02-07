@@ -154,17 +154,29 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     return Scaffold(
       backgroundColor: ColorPalette.gray100,
       appBar: AppBar(
-        backgroundColor: ColorPalette.expensePrimary,
-        elevation: 2,
+        backgroundColor: Colors.transparent,
+        elevation: 4,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                ColorPalette.offerYellowStart,
+                ColorPalette.offerYellowEnd,
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        ),
         title: Text(
           'ব্যয়ের তালিকা',
           style: GoogleFonts.anekBangla(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: ColorPalette.gray900,
           ),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: ColorPalette.gray900),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -189,7 +201,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                         style: GoogleFonts.anekBangla(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: ColorPalette.expensePrimary,
+                          color: ColorPalette.tealAccent,
                         ),
                       ),
                     ],
@@ -323,7 +335,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                                 style: GoogleFonts.anekBangla(
                                                   fontSize: 16,
                                                   fontWeight: FontWeight.bold,
-                                                  color: ColorPalette.expensePrimary,
+                                                  color: ColorPalette.tealAccent,
                                                 ),
                                               ),
                                             ],
@@ -385,7 +397,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
             MaterialPageRoute(builder: (_) => const ExpenseEntryScreen()),
           ).then((_) => _loadData());
         },
-        backgroundColor: ColorPalette.expensePrimary,
+        backgroundColor: ColorPalette.tealAccent,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );

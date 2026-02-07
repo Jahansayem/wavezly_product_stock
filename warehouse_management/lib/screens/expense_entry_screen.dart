@@ -92,7 +92,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.light(
-              primary: ColorPalette.expensePrimary,
+              primary: ColorPalette.tealAccent,
             ),
           ),
           child: child!,
@@ -215,17 +215,29 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
     return Scaffold(
       backgroundColor: ColorPalette.gray100,
       appBar: AppBar(
-        backgroundColor: ColorPalette.expensePrimary,
-        elevation: 2,
+        backgroundColor: Colors.transparent,
+        elevation: 4,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                ColorPalette.offerYellowStart,
+                ColorPalette.offerYellowEnd,
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        ),
         title: Text(
           isEditing ? 'খরচ সম্পাদনা করুন' : 'খরচ যোগ করুন',
           style: GoogleFonts.anekBangla(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: ColorPalette.gray900,
           ),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: ColorPalette.gray900),
       ),
       body: _isLoadingCategories
           ? const Center(child: CircularProgressIndicator())
@@ -266,7 +278,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: ColorPalette.expensePrimary, width: 2),
+                          borderSide: BorderSide(color: ColorPalette.tealAccent, width: 2),
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
@@ -393,7 +405,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: ColorPalette.expensePrimary, width: 2),
+                          borderSide: BorderSide(color: ColorPalette.tealAccent, width: 2),
                         ),
                         contentPadding: const EdgeInsets.all(16),
                       ),
@@ -404,7 +416,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                     ElevatedButton(
                       onPressed: _isSaving ? null : _saveExpense,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: ColorPalette.expensePrimary,
+                        backgroundColor: ColorPalette.tealAccent,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -524,7 +536,7 @@ class _CategorySelectorBottomSheet extends StatelessWidget {
                         )
                       : null,
                   trailing: isSelected
-                      ? Icon(Icons.check_circle, color: ColorPalette.expensePrimary)
+                      ? Icon(Icons.check_circle, color: ColorPalette.tealAccent)
                       : null,
                 );
               },

@@ -128,7 +128,7 @@ class _UserListScreenV1State extends State<UserListScreenV1> {
           'ফিল্টার ফিচার শীঘ্রই আসছে',
           style: GoogleFonts.notoSansBengali(),
         ),
-        backgroundColor: ColorPalette.tealPrimary,
+        backgroundColor: ColorPalette.tealAccent,
       ),
     );
   }
@@ -142,7 +142,7 @@ class _UserListScreenV1State extends State<UserListScreenV1> {
           'সাহায্য পৃষ্ঠা শীঘ্রই আসছে',
           style: GoogleFonts.notoSansBengali(),
         ),
-        backgroundColor: ColorPalette.tealPrimary,
+        backgroundColor: ColorPalette.tealAccent,
       ),
     );
   }
@@ -156,7 +156,7 @@ class _UserListScreenV1State extends State<UserListScreenV1> {
           'ইউজার ডিটেইল: ${user.name}',
           style: GoogleFonts.notoSansBengali(),
         ),
-        backgroundColor: ColorPalette.tealPrimary,
+        backgroundColor: ColorPalette.tealAccent,
       ),
     );
   }
@@ -170,7 +170,7 @@ class _UserListScreenV1State extends State<UserListScreenV1> {
           'নতুন ইউজার যুক্ত করুন পৃষ্ঠা শীঘ্রই আসছে',
           style: GoogleFonts.notoSansBengali(),
         ),
-        backgroundColor: ColorPalette.tealPrimary,
+        backgroundColor: ColorPalette.tealAccent,
       ),
     );
   }
@@ -188,16 +188,26 @@ class _UserListScreenV1State extends State<UserListScreenV1> {
   /// Build AppBar with back, title, and help buttons
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: ColorPalette.tealPrimary,
+      backgroundColor: Colors.transparent,
       elevation: 4,
-      shadowColor: Colors.black.withOpacity(0.3),
+      flexibleSpace: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              ColorPalette.offerYellowStart,
+              ColorPalette.offerYellowEnd,
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+        ),
+      ),
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        icon: const Icon(Icons.arrow_back, color: ColorPalette.gray900),
         onPressed: () => Navigator.of(context).pop(),
         style: IconButton.styleFrom(
           shape: const CircleBorder(),
           backgroundColor: Colors.transparent,
-          overlayColor: Colors.white.withOpacity(0.1),
         ),
       ),
       title: Text(
@@ -205,17 +215,16 @@ class _UserListScreenV1State extends State<UserListScreenV1> {
         style: GoogleFonts.notoSansBengali(
           fontSize: 20,
           fontWeight: FontWeight.bold,
-          color: Colors.white,
+          color: ColorPalette.gray900,
         ),
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.help_outline, color: Colors.white),
+          icon: const Icon(Icons.help_outline, color: ColorPalette.gray900),
           onPressed: _onHelpPressed,
           style: IconButton.styleFrom(
             shape: const CircleBorder(),
             backgroundColor: Colors.transparent,
-            overlayColor: Colors.white.withOpacity(0.1),
           ),
         ),
       ],
@@ -226,7 +235,7 @@ class _UserListScreenV1State extends State<UserListScreenV1> {
   Widget _buildBody() {
     return RefreshIndicator(
       onRefresh: _loadUsers,
-      color: ColorPalette.tealPrimary,
+      color: ColorPalette.tealAccent,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 96),
@@ -390,7 +399,7 @@ class _UserListScreenV1State extends State<UserListScreenV1> {
         child: Padding(
           padding: const EdgeInsets.all(48),
           child: CircularProgressIndicator(
-            color: ColorPalette.tealPrimary,
+            color: ColorPalette.tealAccent,
           ),
         ),
       );
@@ -416,7 +425,7 @@ class _UserListScreenV1State extends State<UserListScreenV1> {
               ElevatedButton(
                 onPressed: _loadUsers,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: ColorPalette.tealPrimary,
+                  backgroundColor: ColorPalette.tealAccent,
                   foregroundColor: Colors.white,
                 ),
                 child: Text(
@@ -479,10 +488,10 @@ class _UserListScreenV1State extends State<UserListScreenV1> {
       ),
       child: SafeArea(
         child: Material(
-          color: ColorPalette.tealPrimary,
+          color: ColorPalette.tealAccent,
           borderRadius: BorderRadius.circular(8),
           elevation: 8,
-          shadowColor: ColorPalette.tealPrimary.withOpacity(0.4),
+          shadowColor: ColorPalette.tealAccent.withOpacity(0.4),
           child: InkWell(
             onTap: _onAddUserPressed,
             borderRadius: BorderRadius.circular(8),

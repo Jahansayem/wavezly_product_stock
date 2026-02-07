@@ -324,13 +324,25 @@ class _CashboxScreenV2State extends State<CashboxScreenV2> {
 
   PreferredSizeWidget _buildAppBar() {
     return PreferredSize(
-      preferredSize: const Size.fromHeight(64),
+      preferredSize: const Size.fromHeight(72),
       child: AppBar(
-        backgroundColor: ColorPalette.tealAccent,
+        backgroundColor: Colors.transparent,
         elevation: 4,
-        toolbarHeight: 64,
+        toolbarHeight: 72,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                ColorPalette.offerYellowStart, // #FBBF24 (amber-400)
+                ColorPalette.offerYellowEnd,   // #F59E0B (amber-500)
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.black87),
           onPressed: () => Navigator.pop(context),
           style: IconButton.styleFrom(
             backgroundColor: Colors.white.withOpacity(0.0),
@@ -343,12 +355,12 @@ class _CashboxScreenV2State extends State<CashboxScreenV2> {
             fontSize: 20,
             fontWeight: FontWeight.w600,
             letterSpacing: 1.2,
-            color: Colors.white,
+            color: Colors.black87,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.help_outline, color: Colors.white),
+            icon: const Icon(Icons.help_outline, color: Colors.black87),
             onPressed: () {
               // TODO: Show help dialog
             },

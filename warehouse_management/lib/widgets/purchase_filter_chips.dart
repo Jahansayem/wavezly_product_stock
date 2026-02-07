@@ -64,7 +64,7 @@ class PurchaseFilterChips extends StatelessWidget {
     final isSelected = selectedPeriod == value;
 
     return Material(
-      color: isSelected ? const Color(0xFF009688) : ColorPalette.white,
+      color: isSelected ? ColorPalette.tealAccent : ColorPalette.white,
       borderRadius: BorderRadius.circular(8),
       elevation: isSelected ? 1 : 0,
       child: InkWell(

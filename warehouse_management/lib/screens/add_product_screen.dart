@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:wavezly/utils/color_palette.dart';
 
 // ============================================================================
 // ENUMS
@@ -115,13 +116,13 @@ class AddProductScreen extends StatefulWidget {
 
 class _AddProductScreenState extends State<AddProductScreen> {
   // Colors
-  static const Color primary = Color(0xFF26A69A);
-  static const Color bgLight = Color(0xFFF5F7F9);
-  static const Color textDark = Color(0xFF1E293B);
-  static const Color textMuted = Color(0xFF64748B);
-  static const Color borderColor = Color(0xFFE2E8F0);
+  static const Color primary = ColorPalette.tealAccent;
+  static const Color bgLight = ColorPalette.gray100;
+  static const Color textDark = ColorPalette.gray900;
+  static const Color textMuted = ColorPalette.gray500;
+  static const Color borderColor = ColorPalette.gray200;
   static const Color cardBg = Colors.white;
-  static const Color toggleBg = Color(0xFFF8FAFC);
+  static const Color toggleBg = ColorPalette.gray50;
 
   // Form key
   final _formKey = GlobalKey<FormState>();
@@ -271,28 +272,28 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   Widget _buildHeader() {
     return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        color: primary,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+      height: 64,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            ColorPalette.offerYellowStart,
+            ColorPalette.offerYellowEnd,
+          ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
       ),
       child: Row(
         children: [
           IconButton(
             onPressed: widget.onBack ?? () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: const Icon(Icons.arrow_back, color: ColorPalette.gray900),
           ),
           const Expanded(
             child: Text(
               'প্রোডাক্ট যুক্ত করুন',
               style: TextStyle(
-                color: Colors.white,
+                color: ColorPalette.gray900,
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Nunito',
@@ -301,7 +302,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           ),
           IconButton(
             onPressed: widget.onHelp ?? () {},
-            icon: const Icon(Icons.help_outline, color: Colors.white),
+            icon: const Icon(Icons.help_outline, color: ColorPalette.gray900),
           ),
         ],
       ),
