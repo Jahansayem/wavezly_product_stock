@@ -32,9 +32,9 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
   List<Product>? _filteredProducts;
   String _filterType = 'all'; // all, low_stock, out_of_stock, in_stock
 
-  // Colors (matching home screen tealAccent #00BFA5)
+  // Colors (matching Home Dashboard theme)
   static const Color primary = ColorPalette.tealAccent;
-  static const Color background = ColorPalette.slate50;
+  static const Color background = ColorPalette.gray100;
 
   @override
   void dispose() {
@@ -69,12 +69,19 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
     return Container(
       height: 64,
       decoration: BoxDecoration(
-        color: primary,
+        gradient: const LinearGradient(
+          colors: [
+            ColorPalette.offerYellowStart,
+            ColorPalette.offerYellowEnd,
+          ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
         boxShadow: [
           BoxShadow(
             offset: const Offset(0, 2),
             blurRadius: 4,
-            color: Colors.black.withOpacity(0.12),
+            color: Colors.black.withOpacity(0.08),
           ),
         ],
       ),
@@ -86,7 +93,7 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
             children: [
               IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new,
-                    size: 20, color: Colors.white),
+                    size: 20, color: Colors.black87),
                 onPressed: () => Navigator.pop(context),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -97,7 +104,7 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Colors.black87,
                   letterSpacing: -0.5,
                 ),
               ),
@@ -106,7 +113,7 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.help_outline, size: 22, color: Colors.white),
+                icon: const Icon(Icons.help_outline, size: 22, color: Colors.black87),
                 onPressed: () {
                   showTextToast('Help feature coming soon');
                 },
@@ -115,7 +122,7 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
               ),
               const SizedBox(width: 8),
               IconButton(
-                icon: const Icon(Icons.more_vert, size: 22, color: Colors.white),
+                icon: const Icon(Icons.more_vert, size: 22, color: Colors.black87),
                 onPressed: () {
                   showTextToast('More options coming soon');
                 },
