@@ -1486,8 +1486,17 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
     } catch (e) {
       setState(() => _isProcessing = false);
 
+      final errorMsg = e.toString();
+
+      // Check for product sync error
+      if (errorMsg.contains('sync হয়নি') ||
+          errorMsg.contains('foreign key') ||
+          errorMsg.contains('uuid') ||
+          errorMsg.contains('product_id')) {
+        showTextToast('কিছু পণ্য সার্ভারে sync হয়নি। Sync করে আবার চেষ্টা করুন।');
+      }
       // Check for insufficient stock error
-      if (e.toString().contains('Insufficient stock')) {
+      else if (errorMsg.contains('Insufficient stock')) {
         showTextToast('স্টক অপর্যাপ্ত! পণ্যের স্টক চেক করুন');
       } else {
         showTextToast('ত্রুটি: ${e.toString()}');
@@ -1497,36 +1506,6 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
 
   void _showFilterDialog() {
     showTextToast('Filter feature coming soon');
-  }
-
-  // Fallback products for offline mode or service errors
-  List<Product> _getHardcodedProducts() {
-    return [
-      Product(
-        id: '1',
-        name: 'rahman',
-        cost: 50.0,
-        quantity: 0,
-        group: 'category1',
-        barcode: '1234567890',
-      ),
-      Product(
-        id: '2',
-        name: 'টেস্ট প্রোডাক্ট',
-        cost: 100.0,
-        quantity: 23,
-        group: 'category2',
-        barcode: '0987654321',
-      ),
-      Product(
-        id: '3',
-        name: 'প্রাণ চানাচুর',
-        cost: 45.0,
-        quantity: 12,
-        group: 'snacks',
-        barcode: '5555555555',
-      ),
-    ];
   }
 
   // Uniform product icon
@@ -1720,13 +1699,36 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
 
         if (snapshot.hasError) {
           print('Stream error: ${snapshot.error}');
-          final products = _getHardcodedProducts();
-          return _buildProductListView(products);
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: slate400),
+                const SizedBox(height: 16),
+                Text(
+                  'পণ্য লোড করতে ত্রুটি',
+                  style: GoogleFonts.anekBangla(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: slate500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'ইন্টারনেট সংযোগ চেক করুন',
+                  style: GoogleFonts.anekBangla(
+                    fontSize: 14,
+                    color: slate400,
+                  ),
+                ),
+              ],
+            ),
+          );
         }
 
         final products = (snapshot.hasData && snapshot.data!.isNotEmpty)
             ? (_filteredProducts ?? snapshot.data!)
-            : _getHardcodedProducts();
+            : <Product>[];
 
         return _buildProductListView(products);
       },

@@ -30,20 +30,26 @@ class ProductDao extends BaseDao<Product> {
 
   // Insert product
   Future<void> insertProduct(Product product, String userId) async {
+    print('💾 [ProductDao] insertProduct START - userId: $userId, productId: ${product.id}, name: ${product.name}');
+
     final map = toMap(product);
     map['id'] = product.id;
     map['user_id'] = userId;
     map['is_synced'] = 0;
     map['last_synced_at'] = null;
 
+    print('💾 [ProductDao] Inserting into SQLite table: $tableName');
     await _db.insert(
       tableName,
       map,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    print('✅ [ProductDao] Insert successful for product ${product.id}');
 
     // Notify stream listeners
+    print('📢 [ProductDao] Notifying stream listeners');
     await notifyProductsChanged(userId);
+    print('✅ [ProductDao] insertProduct COMPLETE');
   }
 
   // Update product

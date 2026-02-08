@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:wavezly/screens/inventory_screen.dart';
-import 'package:wavezly/screens/add_product_screen.dart';
+import 'package:wavezly/screens/add_product_screen.dart' show AddProductScreen, AddProductResult;
 import 'package:wavezly/screens/product_details_page.dart';
 import 'package:wavezly/screens/product_details_screen.dart';
 import 'package:wavezly/screens/global_search_page.dart';
@@ -68,10 +68,55 @@ class InventoryScreenWrapper extends StatelessWidget {
     );
   }
 
-  void _handleAddNewProduct(BuildContext context) {
-    Navigator.of(context).push(
+  void _handleAddNewProduct(BuildContext context) async {
+    final result = await Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const AddProductScreen()),
     );
+
+    if (result != null && result is AddProductResult) {
+      await _handleAddProductResult(context, result);
+    }
+  }
+
+  Future<void> _handleAddProductResult(BuildContext context, AddProductResult result) async {
+    try {
+      // Map AddProductResult to Product model
+      final product = Product(
+        name: result.name,
+        cost: result.purchasePrice ?? 0,
+        quantity: result.stockQty,
+        group: result.categoryId,
+        description: result.details,
+        stockAlertEnabled: result.stockAlertEnabled,
+        minStockLevel: result.minStockLevel,
+      );
+
+      // Persist to database
+      final productService = ProductService();
+      await productService.addProduct(product);
+
+      // Show success message
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Product added successfully'),
+            backgroundColor: Color(0xFF14B8A6),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      // Show error message
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to add product'),
+            backgroundColor: Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   void _handleProductTap(BuildContext context, ProductItem productItem) async {

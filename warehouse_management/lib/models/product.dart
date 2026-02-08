@@ -36,16 +36,36 @@ class Product {
         group: json["product_group"] as String?,
         location: json["location"] as String?,
         company: json["company"] as String?,
-        quantity: json["quantity"] as int?,
+        quantity: _parseIntSafe(json["quantity"]),
         image: json["image_url"] as String?,
         description: json["description"] as String?,
         barcode: json["barcode"] as String?,
         expiryDate: json["expiry_date"] != null
             ? DateTime.parse(json["expiry_date"] as String)
             : null,
-        stockAlertEnabled: json["stock_alert_enabled"] as bool?,
-        minStockLevel: json["min_stock_level"] as int?,
+        stockAlertEnabled: _parseBoolSafe(json["stock_alert_enabled"]),
+        minStockLevel: _parseIntSafe(json["min_stock_level"]),
     );
+
+    static int? _parseIntSafe(dynamic value) {
+        if (value == null) return null;
+        if (value is int) return value;
+        if (value is num) return value.toInt();
+        if (value is String) return int.tryParse(value);
+        return null;
+    }
+
+    static bool? _parseBoolSafe(dynamic value) {
+        if (value == null) return null;
+        if (value is bool) return value;
+        if (value is int) return value != 0;
+        if (value is String) {
+            final lower = value.toLowerCase();
+            if (lower == 'true' || lower == '1') return true;
+            if (lower == 'false' || lower == '0') return false;
+        }
+        return null;
+    }
 
     Map<String, dynamic> toMap() => {
         "name": name,

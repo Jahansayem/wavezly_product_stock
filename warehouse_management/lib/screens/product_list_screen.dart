@@ -6,7 +6,7 @@ import '../models/product.dart';
 import '../services/product_service.dart';
 import '../utils/color_palette.dart';
 import 'product_details_screen.dart';
-import 'add_product_screen.dart';
+import 'add_product_screen.dart' show AddProductScreen, AddProductResult;
 import 'barcode_scanner_screen.dart';
 
 class ProductListScreen extends StatefulWidget {
@@ -74,14 +74,18 @@ class _ProductListScreenState extends State<ProductListScreen> {
             ListTile(
               leading: Icon(Icons.edit, color: ColorPalette.tealAccent),
               title: Text('সম্পাদনা করুন', style: GoogleFonts.anekBangla()),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                Navigator.push(
+                final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => const AddProductScreen(),
                   ),
                 );
+
+                if (result != null && result is AddProductResult) {
+                  await _handleAddProductResult(result);
+                }
               },
             ),
             ListTile(
@@ -452,11 +456,15 @@ class _ProductListScreenState extends State<ProductListScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
-            Navigator.push(
+          onTap: () async {
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AddProductScreen()),
             );
+
+            if (result != null && result is AddProductResult) {
+              await _handleAddProductResult(result);
+            }
           },
           borderRadius: BorderRadius.circular(28),
           child: Row(
@@ -481,6 +489,52 @@ class _ProductListScreenState extends State<ProductListScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleAddProductResult(AddProductResult result) async {
+    try {
+      // Map AddProductResult to Product model
+      final product = Product(
+        name: result.name,
+        cost: result.purchasePrice ?? 0,
+        quantity: result.stockQty,
+        group: result.categoryId,
+        description: result.details,
+        stockAlertEnabled: result.stockAlertEnabled,
+        minStockLevel: result.minStockLevel,
+      );
+
+      // Persist to database
+      await _productService.addProduct(product);
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'পণ্য সফলভাবে যুক্ত হয়েছে',
+              style: GoogleFonts.anekBangla(),
+            ),
+            backgroundColor: ColorPalette.tealAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'পণ্য যুক্ত করতে ব্যর্থ হয়েছে',
+              style: GoogleFonts.anekBangla(),
+            ),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }
 

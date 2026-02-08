@@ -20,18 +20,22 @@ class ProductRepository {
       print('❌ ERROR: No authenticated user in ProductRepository');
       throw Exception('No authenticated user. Please login first.');
     }
+    print('🔑 [ProductRepository] _userId getter called: ${currentUser.id}');
     return currentUser.id;
   }
 
   // READ: Offline-first - return local data immediately, sync in background
   Stream<List<Product>> getAllProducts() {
+    final userId = _userId;
+    print('📖 [ProductRepository] getAllProducts() called with userId: $userId');
+
     // Trigger background sync if online
     if (_connectivity.isOnline) {
       _syncService.syncProductsInBackground();
     }
 
     // Return local data stream
-    return _productDao.getAllProducts(_userId);
+    return _productDao.getAllProducts(userId);
   }
 
   Stream<List<Product>> getProductsByGroup(String group) {
@@ -45,8 +49,10 @@ class ProductRepository {
   // WRITE: Save locally + queue for sync
   Future<void> addProduct(Product product, {File? imageFile}) async {
     try {
+      final userId = _userId;
       // Generate ID if not present
       product.id ??= const Uuid().v4();
+      print('➕ [ProductRepository] addProduct() START - userId: $userId, productId: ${product.id}, name: ${product.name}');
 
       // Handle image upload
       if (imageFile != null) {
@@ -67,13 +73,16 @@ class ProductRepository {
       }
 
       // Insert to local database
-      await _productDao.insertProduct(product, _userId);
+      print('💾 [ProductRepository] Inserting to local SQLite with userId: $userId');
+      await _productDao.insertProduct(product, userId);
 
       // Queue for sync
       final data = product.toMap();
-      data['user_id'] = _userId;
+      data['user_id'] = userId;
       data['id'] = product.id;
+      data['product_group'] ??= '';  // Ensure not null for Supabase
 
+      print('📤 [ProductRepository] Queuing sync operation for product ${product.id}');
       await _syncService.queueOperation(
         operation: SyncConfig.operationInsert,
         tableName: 'products',
@@ -83,16 +92,29 @@ class ProductRepository {
 
       // Trigger immediate sync if online
       if (await _connectivity.checkOnline()) {
-        _syncService.syncNow();
+        print('🌐 [ProductRepository] Online - attempting direct Supabase sync');
+        try {
+          await _directSupabaseInsert(product, userId);
+          print('✅ [ProductRepository] Direct sync successful');
+        } catch (e, stackTrace) {
+          print('❌ [ProductRepository] Direct sync FAILED: $e');
+          print('Stack trace: $stackTrace');
+          print('📋 Sync queue will retry on next periodic sync');
+        }
+      } else {
+        print('📴 [ProductRepository] Offline - sync queue will handle when online');
       }
+
+      print('✅ [ProductRepository] addProduct() COMPLETE for product ${product.id}');
     } catch (e) {
-      print('Error adding product: $e');
+      print('❌ [ProductRepository] addProduct() FAILED: $e');
       rethrow;
     }
   }
 
   Future<void> updateProduct(String id, Product product, {File? newImageFile}) async {
     try {
+      final userId = _userId;
       // Handle image replacement
       if (newImageFile != null && await _connectivity.checkOnline()) {
         try {
@@ -111,11 +133,11 @@ class ProductRepository {
       }
 
       // Update local database
-      await _productDao.updateProduct(id, product, _userId);
+      await _productDao.updateProduct(id, product, userId);
 
       // Queue for sync
       final data = product.toMap();
-      data['user_id'] = _userId;
+      data['user_id'] = userId;
       data['id'] = id;
 
       await _syncService.queueOperation(
@@ -175,14 +197,15 @@ class ProductRepository {
       }
 
       // Update product locally
+      final userId = _userId;
       final product = await _productDao.getProductById(productId);
       if (product != null) {
         product.image = null;
-        await _productDao.updateProduct(productId, product, _userId);
+        await _productDao.updateProduct(productId, product, userId);
 
         // Queue update for sync
         final data = product.toMap();
-        data['user_id'] = _userId;
+        data['user_id'] = userId;
         data['id'] = productId;
         data['image_url'] = null;
 
@@ -208,27 +231,32 @@ class ProductRepository {
   }
 
   Future<List<Product>> searchProducts(String query) async {
-    return await _productDao.searchProducts(_userId, query);
+    final userId = _userId;
+    return await _productDao.searchProducts(userId, query);
   }
 
   Future<List<Product>> searchProductsInGroup(String query, String group) async {
-    return await _productDao.searchProductsInGroup(_userId, query, group);
+    final userId = _userId;
+    return await _productDao.searchProductsInGroup(userId, query, group);
   }
 
   // Product groups
   Future<List<String>> getProductGroups() async {
-    return await _productDao.getProductGroups(_userId);
+    final userId = _userId;
+    return await _productDao.getProductGroups(userId);
   }
 
   Stream<List<String>> getProductGroupsStream() {
-    return _productDao.getProductGroupsStream(_userId);
+    final userId = _userId;
+    return _productDao.getProductGroupsStream(userId);
   }
 
   Future<void> addProductGroup(String groupName) async {
     try {
+      final userId = _userId;
       final id = const Uuid().v4();
 
-      await _productDao.addProductGroup(_userId, groupName, id);
+      await _productDao.addProductGroup(userId, groupName, id);
 
       // Queue for sync
       await _syncService.queueOperation(
@@ -238,7 +266,7 @@ class ProductRepository {
         data: {
           'id': id,
           'name': groupName,
-          'user_id': _userId,
+          'user_id': userId,
           'created_at': DateTime.now().toIso8601String(),
         },
       );
@@ -254,7 +282,8 @@ class ProductRepository {
 
   Future<void> deleteProductGroup(String groupName) async {
     try {
-      await _productDao.deleteProductGroup(_userId, groupName);
+      final userId = _userId;
+      await _productDao.deleteProductGroup(userId, groupName);
 
       // Note: We don't have the ID here, so we can't queue for sync properly
       // This is a limitation - ideally we'd fetch the ID first
@@ -271,6 +300,73 @@ class ProductRepository {
 
   // Locations
   Future<List<String>> getLocations() async {
-    return await _productDao.getLocations(_userId);
+    final userId = _userId;
+    return await _productDao.getLocations(userId);
+  }
+
+  /// Validates and refreshes auth session before sync operations
+  Future<bool> _ensureAuthSession() async {
+    try {
+      final session = SupabaseConfig.client.auth.currentSession;
+
+      if (session == null) {
+        print('❌ No auth session found');
+        return false;
+      }
+
+      // Check if token is expired or expiring soon (within 5 minutes)
+      final expiresAt = session.expiresAt;
+      if (expiresAt != null) {
+        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        final timeUntilExpiry = expiresAt - now;
+
+        if (timeUntilExpiry <= 0) {
+          print('❌ JWT token expired, refreshing...');
+          await SupabaseConfig.client.auth.refreshSession();
+          print('✅ Token refreshed successfully');
+        } else if (timeUntilExpiry < 300) { // Less than 5 minutes
+          print('⚠️ Token expiring soon, refreshing...');
+          await SupabaseConfig.client.auth.refreshSession();
+          print('✅ Token refreshed successfully');
+        } else {
+          print('✅ Auth session valid (expires in ${timeUntilExpiry}s)');
+        }
+      }
+
+      return true;
+    } catch (e) {
+      print('❌ Error validating auth session: $e');
+      return false;
+    }
+  }
+
+  // BACKUP: Direct Supabase insert as fallback
+  // This ensures products reach Supabase immediately even if sync queue fails
+  Future<void> _directSupabaseInsert(Product product, String userId) async {
+    // Validate auth session before attempting sync
+    final hasValidSession = await _ensureAuthSession();
+    if (!hasValidSession) {
+      throw Exception('Cannot sync: No valid auth session');
+    }
+    final data = {
+      'id': product.id,
+      'name': product.name,
+      'cost': product.cost,
+      'product_group': product.group ?? '',
+      'location': product.location,
+      'company': product.company,
+      'quantity': product.quantity,
+      'image_url': product.image,
+      'description': product.description,
+      'barcode': product.barcode,
+      'expiry_date': product.expiryDate?.toIso8601String().split('T')[0],
+      'stock_alert_enabled': product.stockAlertEnabled,
+      'min_stock_level': product.minStockLevel,
+      'user_id': userId,
+      'created_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+
+    await SupabaseConfig.client.from('products').insert(data);
   }
 }

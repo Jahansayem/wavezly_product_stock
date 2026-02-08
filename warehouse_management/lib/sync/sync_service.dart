@@ -162,9 +162,22 @@ class SyncService {
 
     switch (op) {
       case SyncConfig.operationInsert:
-        await _supabase.from(tableName).insert(data);
-        // Mark local record as synced
-        await _markRecordAsSynced(tableName, recordId);
+        try {
+          print('📤 SyncService: Inserting to $tableName - record_id: $recordId');
+          await _supabase.from(tableName).insert(data);
+          print('✅ SyncService: Insert successful');
+          await _markRecordAsSynced(tableName, recordId);
+        } catch (e) {
+          final errorStr = e.toString().toLowerCase();
+          if (errorStr.contains('duplicate') || errorStr.contains('unique') || errorStr.contains('23505')) {
+            print('ℹ️ SyncService: $tableName/$recordId already exists - marking as synced');
+            await _markRecordAsSynced(tableName, recordId);
+          } else {
+            print('❌ SyncService: Insert failed for $tableName/$recordId');
+            print('Error details: $e');
+            rethrow;
+          }
+        }
         break;
 
       case SyncConfig.operationUpdate:
