@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wavezly/app/app_theme.dart';
+import 'package:wavezly/features/auth/models/auth_flow_type.dart';
 import 'package:wavezly/features/auth/widgets/primary_button.dart';
 import 'package:wavezly/features/auth/widgets/helpline_button.dart';
 import 'package:wavezly/features/auth/widgets/promo_card.dart';
@@ -10,10 +11,10 @@ import 'package:wavezly/features/auth/widgets/otp_fields_row.dart';
 import 'package:wavezly/features/auth/widgets/bottom_toast.dart';
 import 'package:wavezly/config/supabase_config.dart';
 import 'package:wavezly/services/sms_service.dart';
-import 'package:wavezly/screens/main_navigation.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/features/onboarding/screens/business_info_screen.dart';
 import 'package:wavezly/features/auth/screens/pin_verification_screen.dart';
+import 'package:wavezly/features/onboarding/screens/pin_setup_screen.dart';
 
 /// OTP Verification Screen
 ///
@@ -25,10 +26,12 @@ import 'package:wavezly/features/auth/screens/pin_verification_screen.dart';
 /// - Error handling
 class OtpVerificationScreen extends StatefulWidget {
   final String phoneNumber;
+  final AppAuthFlowType flowType;
 
   const OtpVerificationScreen({
     super.key,
     required this.phoneNumber,
+    this.flowType = AppAuthFlowType.signup,  // Default preserves existing behavior
   });
 
   @override
@@ -143,120 +146,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       final isValid = await _smsService.verifyOTP(widget.phoneNumber, _currentOtp);
 
       if (isValid) {
-        // OTP verified successfully
-        // Create Supabase auth session
-        try {
-          final supabase = SupabaseConfig.client;
-
-          // Use synthetic email approach (Phone-prefixed for RFC compliance)
-          final email = 'Phone-${widget.phoneNumber}@halkhata.app';
-          final password = _generateSecurePassword(widget.phoneNumber, _currentOtp);
-
-          try {
-            // Try to sign in first (existing user)
-            await supabase.auth.signInWithPassword(
-              email: email,
-              password: password,
-            );
-            debugPrint('✅ Sign in successful with existing credentials');
-          } catch (signInError) {
-            debugPrint('⚠️ Sign in failed, attempting sign up: $signInError');
-
-            // Try to sign up (new user)
-            try {
-              await supabase.auth.signUp(
-                email: email,
-                password: password,
-                data: {
-                  'phone': widget.phoneNumber,
-                  'phone_verified': true,
-                },
-              );
-
-              // Sign in after sign up
-              await supabase.auth.signInWithPassword(
-                email: email,
-                password: password,
-              );
-              debugPrint('✅ New user signed up and signed in successfully');
-            } catch (signUpError) {
-              // Check if user already exists
-              if (signUpError is AuthApiException &&
-                  signUpError.code == 'user_already_exists') {
-                debugPrint('✅ User already exists, redirecting to PIN verification');
-
-                // Show message in Bengali
-                setState(() {
-                  _isVerifying = false;
-                  _errorMessage = 'আপনি ইতিমধ্যে নিবন্ধিত। পিন স্ক্রিনে যাচ্ছি...';
-                });
-
-                // Wait briefly for user to see message
-                await Future.delayed(const Duration(seconds: 1, milliseconds: 500));
-
-                if (mounted) {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (_) => PinVerificationScreen(
-                        phoneNumber: widget.phoneNumber,
-                      ),
-                    ),
-                  );
-                }
-                return; // Exit method early
-              } else {
-                // Other signup error - rethrow
-                throw signUpError;
-              }
-            }
-          }
-
-          // Verify session was created
-          final currentUser = supabase.auth.currentUser;
-          if (currentUser == null) {
-            throw Exception('Failed to create auth session');
-          }
-
-          debugPrint('✅ Auth session created for user: ${currentUser.id}');
-
-          // Check onboarding completion status
-          final onboardingResponse = await supabase
-              .from('user_business_profiles')
-              .select('onboarding_completed_at')
-              .eq('user_id', currentUser.id)
-              .maybeSingle();
-
-          final isOnboardingComplete = onboardingResponse != null &&
-              onboardingResponse['onboarding_completed_at'] != null;
-
-          debugPrint('📊 Onboarding status: ${isOnboardingComplete ? "Complete" : "Incomplete"}');
-
-          if (mounted) {
-            if (isOnboardingComplete) {
-              // Existing user with completed onboarding → PIN verification
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (_) => PinVerificationScreen(
-                    phoneNumber: widget.phoneNumber,
-                  ),
-                ),
-              );
-            } else {
-              // New user OR existing user with incomplete onboarding → Onboarding
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (_) => BusinessInfoScreen(
-                    phoneNumber: widget.phoneNumber,
-                  ),
-                ),
-              );
-            }
-          }
-        } catch (authError) {
-          debugPrint('❌ Auth session creation error: $authError');
-          setState(() {
-            _errorMessage = 'সেশন তৈরিতে ত্রুটি: ${authError.toString()}';
-          });
+        // OTP verified - now handle auth based on flow type
+        if (widget.flowType == AppAuthFlowType.forgotPin) {
+          // FORGOT PIN FLOW: Only sign in (user must already exist)
+          await _handleForgotPinAuth();
+        } else {
+          // SIGNUP/LOGIN FLOW: Try sign in, then sign up if needed
+          await _handleSignupLoginAuth();
         }
       } else {
         setState(() {
@@ -269,6 +165,179 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       });
     } finally {
       setState(() => _isVerifying = false);
+    }
+  }
+
+  /// Handle auth for forgot PIN flow (existing user only)
+  Future<void> _handleForgotPinAuth() async {
+    try {
+      final supabase = SupabaseConfig.client;
+      final email = 'phone-${widget.phoneNumber}@halkhata.app'; // lowercase 'phone-'
+      final newPassword = _generateSecurePassword(widget.phoneNumber, _currentOtp);
+
+      debugPrint('🔄 Forgot PIN: Resetting password for $email');
+
+      // Step 1: Reset password using RPC function (requires OTP verification first)
+      final result = await supabase.rpc('reset_user_password_by_phone', params: {
+        'user_phone': widget.phoneNumber,
+        'new_password': newPassword,
+      });
+
+      // Check if password reset was successful
+      if (result == null || result['success'] != true) {
+        final error = result?['error'] ?? 'Password reset failed';
+        throw Exception(error);
+      }
+
+      debugPrint('✅ Forgot PIN: Password reset successful');
+
+      // Step 2: Sign in with new password
+      await supabase.auth.signInWithPassword(
+        email: email,
+        password: newPassword,
+      );
+
+      debugPrint('✅ Forgot PIN: Sign in successful');
+
+      // Verify session
+      final currentUser = supabase.auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('Failed to create auth session');
+      }
+
+      debugPrint('✅ Auth session created for user: ${currentUser.id}');
+
+      // Navigate to PIN setup (reset mode)
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => PinSetupScreen(
+              phoneNumber: widget.phoneNumber,
+              flowType: AppAuthFlowType.forgotPin,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Forgot PIN auth error: $e');
+      setState(() {
+        _errorMessage = 'লগইন করতে সমস্যা হয়েছে। আবার চেষ্টা করুন';
+      });
+    }
+  }
+
+  /// Handle auth for signup/login flow
+  Future<void> _handleSignupLoginAuth() async {
+    try {
+      final supabase = SupabaseConfig.client;
+      final email = 'phone-${widget.phoneNumber}@halkhata.app'; // lowercase 'phone-'
+      final password = _generateSecurePassword(widget.phoneNumber, _currentOtp);
+
+      try {
+        // Try to sign in first (existing user)
+        await supabase.auth.signInWithPassword(
+          email: email,
+          password: password,
+        );
+        debugPrint('✅ Sign in successful with existing credentials');
+      } catch (signInError) {
+        debugPrint('⚠️ Sign in failed, attempting sign up: $signInError');
+
+        // Try to sign up (new user)
+        try {
+          await supabase.auth.signUp(
+            email: email,
+            password: password,
+            data: {
+              'phone': widget.phoneNumber,
+              'phone_verified': true,
+            },
+          );
+
+          // Sign in after sign up
+          await supabase.auth.signInWithPassword(
+            email: email,
+            password: password,
+          );
+          debugPrint('✅ New user signed up and signed in successfully');
+        } catch (signUpError) {
+          // Check if user already exists
+          if (signUpError is AuthApiException &&
+              signUpError.code == 'user_already_exists') {
+            debugPrint('✅ User already exists, redirecting to PIN verification');
+
+            // Show message in Bengali
+            setState(() {
+              _isVerifying = false;
+              _errorMessage = 'আপনি ইতিমধ্যে নিবন্ধিত। পিন স্ক্রিনে যাচ্ছি...';
+            });
+
+            // Wait briefly for user to see message
+            await Future.delayed(const Duration(seconds: 1, milliseconds: 500));
+
+            if (mounted) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (_) => PinVerificationScreen(
+                    phoneNumber: widget.phoneNumber,
+                  ),
+                ),
+              );
+            }
+            return; // Exit method
+          } else {
+            // Other signup error - rethrow
+            throw signUpError;
+          }
+        }
+      }
+
+      // Verify session was created
+      final currentUser = supabase.auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('Failed to create auth session');
+      }
+
+      debugPrint('✅ Auth session created for user: ${currentUser.id}');
+
+      // Check onboarding completion status
+      final onboardingResponse = await supabase
+          .from('user_business_profiles')
+          .select('onboarding_completed_at')
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+
+      final isOnboardingComplete = onboardingResponse != null &&
+          onboardingResponse['onboarding_completed_at'] != null;
+
+      debugPrint('📊 Onboarding status: ${isOnboardingComplete ? "Complete" : "Incomplete"}');
+
+      if (mounted) {
+        if (isOnboardingComplete) {
+          // Existing user → PIN verification
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => PinVerificationScreen(
+                phoneNumber: widget.phoneNumber,
+              ),
+            ),
+          );
+        } else {
+          // New user → Onboarding
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => BusinessInfoScreen(
+                phoneNumber: widget.phoneNumber,
+              ),
+            ),
+          );
+        }
+      }
+    } catch (authError) {
+      debugPrint('❌ Auth session creation error: $authError');
+      setState(() {
+        _errorMessage = 'সেশন তৈরিতে ত্রুটি: ${authError.toString()}';
+      });
     }
   }
 
