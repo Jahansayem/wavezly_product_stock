@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:wavezly/app/app_theme.dart';
 import 'package:wavezly/config/supabase_config.dart';
+import 'package:wavezly/features/auth/models/auth_flow_type.dart';
+import 'package:wavezly/features/auth/screens/otp_verification_screen.dart';
 import 'package:wavezly/features/auth/widgets/helpline_button.dart';
 import 'package:wavezly/features/auth/widgets/primary_button.dart';
 import 'package:wavezly/features/onboarding/widgets/pin_input_row.dart';
 import 'package:wavezly/screens/main_navigation.dart';
+import 'package:wavezly/services/sms_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/utils/security_helpers.dart';
 
@@ -39,6 +42,7 @@ class _PinVerificationScreenState extends State<PinVerificationScreen> {
   int _attemptCount = 0;
   static const maxAttempts = 5;
   bool _hasError = false;
+  final SmsService _smsService = SmsService();
 
   bool get _isFormValid => _pin.length == 5;
 
@@ -67,69 +71,15 @@ class _PinVerificationScreenState extends State<PinVerificationScreen> {
     });
 
     try {
-      // Get current user
-      final user = SupabaseConfig.client.auth.currentUser;
-      if (user == null) {
-        throw Exception('User not authenticated');
-      }
+      // Check if user is already authenticated (e.g., from OTP flow)
+      final currentUser = SupabaseConfig.client.auth.currentUser;
 
-      // Get stored PIN hash from user_security table
-      final response = await SupabaseConfig.client
-          .from('user_security')
-          .select('pin_hash')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-      if (response == null) {
-        // PIN not set (edge case - shouldn't happen for completed onboarding)
-        setState(() {
-          _isLoading = false;
-          _hasError = true;
-          _errorMessage = 'পিন সেটআপ সম্পূর্ণ হয়নি। পুনরায় সাইন ইন করুন';
-        });
-
-        // Logout and return to login after delay
-        await Future.delayed(const Duration(seconds: 2));
-        await _logoutAndReturnToLogin();
-        return;
-      }
-
-      final storedHash = response['pin_hash'] as String;
-
-      // Verify PIN using SecurityHelpers
-      if (SecurityHelpers.verifyPin(_pin, storedHash)) {
-        // Success - navigate to main app
-        if (mounted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const MainNavigation()),
-            (route) => false,
-          );
-        }
+      if (currentUser != null) {
+        // AUTHENTICATED USER PATH (from OTP verification or after forgot PIN)
+        await _verifyPinWithAuth(currentUser);
       } else {
-        // Failed verification
-        _attemptCount++;
-
-        if (_attemptCount >= maxAttempts) {
-          // Max attempts reached - logout and return to login
-          Fluttertoast.showToast(
-            msg: 'অনেকবার ভুল পিন। আবার লগইন করুন',
-            toastLength: Toast.LENGTH_LONG,
-            backgroundColor: ColorPalette.red500,
-            textColor: Colors.white,
-          );
-
-          await Future.delayed(const Duration(seconds: 1));
-          await _logoutAndReturnToLogin();
-        } else {
-          // Show error, allow retry
-          setState(() {
-            _isLoading = false;
-            _hasError = true;
-            _errorMessage =
-                'ভুল পিন। আবার চেষ্টা করুন (${maxAttempts - _attemptCount} বার বাকি)';
-            _pin = ''; // Clear PIN for retry
-          });
-        }
+        // UNAUTHENTICATED USER PATH (existing user from login screen)
+        await _verifyPinWithoutAuth();
       }
     } catch (e) {
       debugPrint('PIN verification error: $e');
@@ -137,6 +87,127 @@ class _PinVerificationScreenState extends State<PinVerificationScreen> {
         _isLoading = false;
         _hasError = true;
         _errorMessage = 'পিন যাচাই করতে সমস্যা হয়েছে। আবার চেষ্টা করুন';
+      });
+    }
+  }
+
+  /// Verify PIN for authenticated users (OTP flow)
+  Future<void> _verifyPinWithAuth(user) async {
+    // Get stored PIN hash from user_security table
+    final response = await SupabaseConfig.client
+        .from('user_security')
+        .select('pin_hash')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    if (response == null) {
+      // PIN not set (edge case - shouldn't happen for completed onboarding)
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _errorMessage = 'পিন সেটআপ সম্পূর্ণ হয়নি। পুনরায় সাইন ইন করুন';
+      });
+
+      await Future.delayed(const Duration(seconds: 2));
+      await _logoutAndReturnToLogin();
+      return;
+    }
+
+    final storedHash = response['pin_hash'] as String;
+
+    // Verify PIN using SecurityHelpers
+    if (SecurityHelpers.verifyPin(_pin, storedHash)) {
+      // Success - navigate to main app
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const MainNavigation()),
+          (route) => false,
+        );
+      }
+    } else {
+      _handleFailedAttempt();
+    }
+  }
+
+  /// Verify PIN for unauthenticated users (login screen flow)
+  Future<void> _verifyPinWithoutAuth() async {
+    // Hash the entered PIN
+    final inputPinHash = SecurityHelpers.hashPin(_pin);
+
+    // Call RPC function to verify PIN by phone number
+    final result = await SupabaseConfig.client
+        .rpc('verify_pin_by_phone', params: {
+      'phone_number': widget.phoneNumber,
+      'input_pin_hash': inputPinHash,
+    });
+
+    if (result == null) {
+      throw Exception('Empty response from verify_pin_by_phone');
+    }
+
+    final success = result['success'] == true;
+
+    if (success) {
+      // PIN verified! Now sign in the user
+      final userEmail = result['email'] as String;
+
+      // Generate password for sign-in (same logic as during signup)
+      final password = '${widget.phoneNumber}${DateTime.now().millisecondsSinceEpoch}';
+
+      // Reset password to new value
+      final resetResult = await SupabaseConfig.client
+          .rpc('reset_user_password_by_phone', params: {
+        'user_phone': widget.phoneNumber,
+        'new_password': password,
+      });
+
+      if (resetResult == null || resetResult['success'] != true) {
+        throw Exception('Password reset failed');
+      }
+
+      // Sign in with new password
+      await SupabaseConfig.client.auth.signInWithPassword(
+        email: userEmail,
+        password: password,
+      );
+
+      debugPrint('✅ User signed in after PIN verification');
+
+      // Navigate to main app
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const MainNavigation()),
+          (route) => false,
+        );
+      }
+    } else {
+      // PIN verification failed
+      _handleFailedAttempt();
+    }
+  }
+
+  /// Handle failed PIN attempt
+  void _handleFailedAttempt() {
+    _attemptCount++;
+
+    if (_attemptCount >= maxAttempts) {
+      // Max attempts reached - logout and return to login
+      Fluttertoast.showToast(
+        msg: 'অনেকবার ভুল পিন। আবার লগইন করুন',
+        toastLength: Toast.LENGTH_LONG,
+        backgroundColor: ColorPalette.red500,
+        textColor: Colors.white,
+      );
+
+      Future.delayed(const Duration(seconds: 1), _logoutAndReturnToLogin);
+    } else {
+      // Show error, allow retry
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _errorMessage =
+            'ভুল পিন। আবার চেষ্টা করুন (${maxAttempts - _attemptCount} বার বাকি)';
+        _pin = ''; // Clear PIN for retry
       });
     }
   }
@@ -165,12 +236,32 @@ class _PinVerificationScreenState extends State<PinVerificationScreen> {
     );
   }
 
-  void _handleForgotPin() {
-    // TODO: Implement forgot PIN flow
-    Fluttertoast.showToast(
-      msg: 'পিন রিসেট ফিচার শীঘ্রই আসছে',
-      toastLength: Toast.LENGTH_SHORT,
-    );
+  Future<void> _handleForgotPin() async {
+    // Generate and send OTP
+    final otp = _smsService.generateOTP();
+    final response = await _smsService.sendOTP(widget.phoneNumber, otp);
+
+    if (!response.success) {
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: response.message,
+          backgroundColor: ColorPalette.mandy,
+        );
+      }
+      return;
+    }
+
+    // Navigate to OTP verification in forgot-pin flow
+    if (mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => OtpVerificationScreen(
+            phoneNumber: widget.phoneNumber,
+            flowType: AppAuthFlowType.forgotPin,
+          ),
+        ),
+      );
+    }
   }
 
   @override

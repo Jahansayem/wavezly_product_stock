@@ -23,8 +23,8 @@ void showConfirmDialog(BuildContext context, String title, String action1title,
               mainAxisSize: MainAxisSize.min,
               children: [
                 GestureDetector(
-                  onTap: () {
-                    action1();
+                  onTap: () async {
+                    await action1();
                   },
                   child: Padding(
                     padding: const EdgeInsets.only(right: 20.0, top: 12),
@@ -38,8 +38,8 @@ void showConfirmDialog(BuildContext context, String title, String action1title,
                   ),
                 ),
                 GestureDetector(
-                  onTap: () {
-                    action2();
+                  onTap: () async {
+                    await action2();
                   },
                   child: Padding(
                     padding: const EdgeInsets.only(left: 20.0, top: 12),

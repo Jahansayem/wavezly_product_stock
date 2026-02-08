@@ -11,6 +11,8 @@ class Product {
         this.description,
         this.barcode,
         this.expiryDate,
+        this.stockAlertEnabled,
+        this.minStockLevel,
     });
 
     String? id;
@@ -24,6 +26,8 @@ class Product {
     String? description;
     String? barcode;
     DateTime? expiryDate;
+    bool? stockAlertEnabled;
+    int? minStockLevel;
 
     factory Product.fromMap(Map<String, dynamic> json) => Product(
         id: json["id"] as String?,
@@ -39,6 +43,8 @@ class Product {
         expiryDate: json["expiry_date"] != null
             ? DateTime.parse(json["expiry_date"] as String)
             : null,
+        stockAlertEnabled: json["stock_alert_enabled"] as bool?,
+        minStockLevel: json["min_stock_level"] as int?,
     );
 
     Map<String, dynamic> toMap() => {
@@ -52,5 +58,7 @@ class Product {
         "description": description,
         "barcode": barcode,
         "expiry_date": expiryDate?.toIso8601String().split('T')[0],
+        "stock_alert_enabled": stockAlertEnabled,
+        "min_stock_level": minStockLevel,
     };
 }

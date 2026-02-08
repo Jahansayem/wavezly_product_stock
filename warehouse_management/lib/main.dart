@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:wavezly/config/database_config.dart';
 import 'package:wavezly/config/supabase_config.dart';
+import 'package:wavezly/services/notification_service.dart';
 import 'package:wavezly/sync/connectivity_service.dart';
 import 'package:wavezly/sync/sync_service.dart';
 import 'package:wavezly/my_app.dart';
@@ -20,6 +22,28 @@ void main() async {
   // Initialize Supabase
   print('Initializing Supabase...');
   await SupabaseConfig.initialize();
+
+  // Initialize OneSignal push notifications
+  print('Initializing OneSignal...');
+  await NotificationService.initialize();
+
+  // Setup notification click handler
+  OneSignal.Notifications.addClickListener((event) {
+    final data = event.notification.additionalData;
+    if (data == null) return;
+
+    // Navigation will be handled by MyApp's global navigator key
+    if (data['type'] == 'stock_alert') {
+      // Navigate to product details
+      final productId = data['product_id'];
+      // TODO: Implement navigation to ProductDetailsPage
+      print('Stock alert clicked for product: $productId');
+    } else if (data['type'] == 'announcement') {
+      // Navigate to notifications screen
+      // TODO: Implement navigation to NotificationsScreen
+      print('Announcement clicked');
+    }
+  });
 
   // Initialize connectivity monitoring
   print('Initializing connectivity service...');

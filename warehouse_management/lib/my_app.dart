@@ -6,6 +6,9 @@ import 'package:wavezly/utils/color_palette.dart';
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  // Global navigator key for deep linking
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   Widget build(BuildContext context) {
     SystemChrome.setPreferredOrientations([
@@ -13,6 +16,7 @@ class MyApp extends StatelessWidget {
     ]);
 
     return MaterialApp(
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Halkhata',
       theme: ThemeData(

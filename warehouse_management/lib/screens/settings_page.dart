@@ -1,19 +1,29 @@
+import 'dart:async'; // For TimeoutException
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:wavezly/functions/confirm_dialog.dart';
+import 'package:wavezly/features/auth/screens/login_screen.dart'; // For fallback navigation
 import 'package:wavezly/screens/cash_counter_screen.dart';
 import 'package:wavezly/services/auth_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
 
-class SettingsPage extends StatelessWidget {
-  final AuthService _authService = AuthService();
+class SettingsPage extends StatefulWidget {
+  const SettingsPage({Key? key}) : super(key: key);
 
-  SettingsPage({Key? key}) : super(key: key);
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  final AuthService _authService = AuthService();
+  bool _isLoggingOut = false;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Stack(
+      children: [
+        Scaffold(
       backgroundColor: ColorPalette.gray100,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -81,16 +91,74 @@ class SettingsPage extends StatelessWidget {
                               Icons.chevron_right_rounded,
                               color: ColorPalette.nileBlue,
                             ),
-                            onTap: () {
+                            onTap: _isLoggingOut ? null : () {
                               showConfirmDialog(
                                 context,
                                 "Are you sure you want to Logout?",
                                 "No",
                                 "Yes",
                                 () => Navigator.of(context).pop(),
-                                () {
+                                () async {
                                   Navigator.of(context).pop();
-                                  _authService.signOut();
+
+                                  if (!mounted) return;
+
+                                  setState(() => _isLoggingOut = true);
+
+                                  try {
+                                    // Add UI-level timeout (8 seconds: 5s service + 3s buffer)
+                                    await _authService.signOut().timeout(
+                                      const Duration(seconds: 8),
+                                      onTimeout: () {
+                                        throw TimeoutException('Logout request timed out');
+                                      },
+                                    );
+
+                                    // SUCCESS PATH: Add explicit fallback navigation
+                                    // AuthWrapper should handle this, but if it doesn't respond
+                                    // within 500ms, navigate manually to prevent hang
+                                    if (mounted) {
+                                      await Future.delayed(const Duration(milliseconds: 500));
+
+                                      if (mounted && context.mounted) {
+                                        Navigator.of(context).pushAndRemoveUntil(
+                                          MaterialPageRoute(builder: (context) => const LoginScreen()),
+                                          (route) => false,
+                                        );
+                                      }
+                                    }
+                                  } on TimeoutException {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: const Text(
+                                            'Logout timed out. Please check your connection and try again.',
+                                            style: TextStyle(fontFamily: "Nunito"),
+                                          ),
+                                          backgroundColor: ColorPalette.mandy,
+                                          duration: const Duration(seconds: 4),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: const Text(
+                                            'Logout failed. Please try again.',
+                                            style: TextStyle(fontFamily: "Nunito"),
+                                          ),
+                                          backgroundColor: ColorPalette.mandy,
+                                        ),
+                                      );
+                                    }
+                                  } finally {
+                                    // CRITICAL: Always reset loading state
+                                    // Ensures UI never gets stuck
+                                    if (mounted) {
+                                      setState(() => _isLoggingOut = false);
+                                    }
+                                  }
                                 },
                               );
                             },
@@ -146,6 +214,32 @@ class SettingsPage extends StatelessWidget {
                     ),
         ),
       ),
+        ),
+        if (_isLoggingOut)
+          Container(
+            color: Colors.black54,
+            child: const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Logging out...',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontFamily: "Nunito",
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:wavezly/app/app_theme.dart';
+import 'package:wavezly/config/supabase_config.dart';
+import 'package:wavezly/features/auth/models/auth_flow_type.dart';
 import 'package:wavezly/features/auth/widgets/helpline_button.dart';
 import 'package:wavezly/features/auth/widgets/primary_button.dart';
 import 'package:wavezly/features/onboarding/models/business_info_model.dart';
@@ -9,15 +11,25 @@ import 'package:wavezly/features/onboarding/screens/business_type_screen.dart';
 import 'package:wavezly/features/onboarding/widgets/info_banner.dart';
 import 'package:wavezly/features/onboarding/widgets/pin_input_row.dart';
 import 'package:wavezly/features/onboarding/widgets/progress_header.dart';
+import 'package:wavezly/screens/main_navigation.dart';
 import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/utils/security_helpers.dart';
 
 class PinSetupScreen extends StatefulWidget {
-  final BusinessInfoModel businessInfo;
+  final String? phoneNumber;         // Required for forgotPin flow
+  final BusinessInfoModel? businessInfo;  // Required for signup flow
+  final AppAuthFlowType flowType;
 
   const PinSetupScreen({
     super.key,
-    required this.businessInfo,
-  });
+    this.phoneNumber,
+    this.businessInfo,
+    this.flowType = AppAuthFlowType.signup,
+  }) : assert(
+         (flowType == AppAuthFlowType.signup && businessInfo != null) ||
+         (flowType == AppAuthFlowType.forgotPin && phoneNumber != null),
+         'businessInfo required for signup, phoneNumber required for forgotPin',
+       );
 
   @override
   State<PinSetupScreen> createState() => _PinSetupScreenState();
@@ -31,6 +43,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
   // Error state
   bool _hasError = false;
   String? _errorMessage;
+  bool _isLoading = false;
 
   // Validation
   bool get _isFormValid {
@@ -68,23 +81,76 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
   }
 
   Future<void> _handleSubmit() async {
-    final pinModel = PinSetupModel(
-      pin: _createPin,
-      createdAt: DateTime.now(),
-    );
+    if (!_isFormValid || _isLoading) return;
 
-    // Navigate to Step 3: Business Type Selection
-    if (mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => BusinessTypeScreen(
-            businessInfo: widget.businessInfo,
-            pinModel: pinModel,
-          ),
-        ),
-      );
+    setState(() => _isLoading = true);
+
+    try {
+      if (widget.flowType == AppAuthFlowType.forgotPin) {
+        // Forgot PIN flow: Update existing PIN in database
+        await _updatePinInDatabase();
+
+        if (mounted) {
+          Fluttertoast.showToast(
+            msg: 'পিন সফলভাবে পরিবর্তন হয়েছে',
+            backgroundColor: ColorPalette.green500,
+          );
+
+          // Navigate directly to main app (clear navigation stack)
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const MainNavigation()),
+            (route) => false,
+          );
+        }
+      } else {
+        // Signup flow: Continue to business type selection (existing logic)
+        final pinModel = PinSetupModel(
+          pin: _createPin,
+          createdAt: DateTime.now(),
+        );
+
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BusinessTypeScreen(
+                businessInfo: widget.businessInfo!,
+                pinModel: pinModel,
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('PIN setup error: $e');
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: 'পিন সংরক্ষণে সমস্যা হয়েছে',
+          backgroundColor: ColorPalette.mandy,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
+  }
+
+  /// Update PIN in database (for forgot PIN flow)
+  Future<void> _updatePinInDatabase() async {
+    final user = SupabaseConfig.client.auth.currentUser;
+    if (user == null) throw Exception('User not authenticated');
+
+    final hashedPin = SecurityHelpers.hashPin(_createPin);
+
+    // Update existing PIN record
+    await SupabaseConfig.client
+        .from('user_security')
+        .update({
+          'pin_hash': hashedPin,
+          'pin_updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('user_id', user.id);
   }
 
   void _handleBack() {
@@ -155,15 +221,19 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: 24),
-                                  // Progress header
-                                  const ProgressHeader(
-                                    currentStep: 2,
-                                    totalSteps: 3,
-                                  ),
-                                  const SizedBox(height: 24),
+                                  // Progress header (only for signup flow)
+                                  if (widget.flowType == AppAuthFlowType.signup)
+                                    const ProgressHeader(
+                                      currentStep: 2,
+                                      totalSteps: 3,
+                                    ),
+                                  if (widget.flowType == AppAuthFlowType.signup)
+                                    const SizedBox(height: 24),
                                   // Title
                                   Text(
-                                    'পিন তৈরি করুন',
+                                    widget.flowType == AppAuthFlowType.forgotPin
+                                        ? 'নতুন পিন তৈরি করুন'
+                                        : 'পিন তৈরি করুন',
                                     style: AppTheme.titleBold,
                                   ),
                                 ],
@@ -184,9 +254,10 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     // Info banner
-                                    const InfoBanner(
-                                      text:
-                                          'তথ্য সুরক্ষার জন্য একটি ৫ ডিজিটের পিন সেট করুন',
+                                    InfoBanner(
+                                      text: widget.flowType == AppAuthFlowType.forgotPin
+                                          ? 'আপনার অ্যাকাউন্ট সুরক্ষার জন্য নতুন ৫ ডিজিটের পিন সেট করুন'
+                                          : 'তথ্য সুরক্ষার জন্য একটি ৫ ডিজিটের পিন সেট করুন',
                                       icon: Icons.lock,
                                     ),
                                     const SizedBox(height: 28),
@@ -278,9 +349,10 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                             child: Column(
                               children: [
                                 PrimaryButton(
-                                  text: 'পরবর্তী',
-                                  enabled: _isFormValid,
-                                  onPressed: _isFormValid ? _handleSubmit : null,
+                                  text: widget.flowType == AppAuthFlowType.forgotPin ? 'সম্পন্ন' : 'পরবর্তী',
+                                  enabled: _isFormValid && !_isLoading,
+                                  isLoading: _isLoading,
+                                  onPressed: _isFormValid && !_isLoading ? _handleSubmit : null,
                                 ),
                                 const SizedBox(height: 24),
                                 // Home indicator bar

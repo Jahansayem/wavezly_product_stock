@@ -14,6 +14,8 @@ import 'package:wavezly/screens/expense_management_screen_v3.dart';
 import 'package:wavezly/screens/cashbox_screen_v2.dart';
 import 'package:wavezly/screens/user_list_screen_v1.dart';
 import 'package:wavezly/screens/select_product_buying_screen.dart';
+import 'package:wavezly/screens/notifications_screen.dart';
+import 'package:wavezly/repositories/announcement_repository.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // ============================================================================
@@ -135,6 +137,17 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     );
   }
 
+  Stream<int> _getUnreadCountStream() {
+    return Stream.periodic(const Duration(seconds: 30), (_) async {
+      try {
+        final repo = AnnouncementRepository();
+        return await repo.getUnreadCount();
+      } catch (e) {
+        return 0;
+      }
+    }).asyncMap((future) => future);
+  }
+
   List<Widget> _buildAppBarActions() {
     return [
       // Chat icon (WhatsApp style)
@@ -142,30 +155,51 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         icon: const Icon(Icons.chat, color: Colors.black87),
         onPressed: _launchWhatsApp,
       ),
-      // Notifications with badge
-      Stack(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.black87),
-            onPressed: () {},
-          ),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: ColorPalette.offerYellowStart,
-                  width: 1,
-                ),
+      // Notifications with unread count badge
+      StreamBuilder<int>(
+        stream: _getUnreadCountStream(),
+        initialData: 0,
+        builder: (context, snapshot) {
+          final unreadCount = snapshot.data ?? 0;
+
+          return Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications, color: Colors.black87),
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                  );
+                  // Refresh unread count after returning
+                  if (mounted) setState(() {});
+                },
               ),
-            ),
-          ),
-        ],
+              if (unreadCount > 0)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      unreadCount > 9 ? '9+' : unreadCount.toString(),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
       // Settings icon
       IconButton(

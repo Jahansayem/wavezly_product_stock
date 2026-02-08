@@ -4,6 +4,7 @@ import 'package:wavezly/config/supabase_config.dart';
 import 'package:wavezly/screens/main_navigation.dart';
 import 'package:wavezly/features/auth/screens/login_screen.dart';
 import 'package:wavezly/features/onboarding/screens/business_info_screen.dart';
+import 'package:wavezly/services/notification_service.dart';
 import 'package:wavezly/sync/sync_service.dart';
 
 /// Handles authentication state and routes to appropriate screen.
@@ -59,6 +60,10 @@ class AuthWrapper extends StatelessWidget {
                 // Onboarding complete - go to main app
                 print('User authenticated, triggering sync...');
                 SyncService().syncNow();
+
+                // Login user to OneSignal for push targeting
+                NotificationService.loginUser(user.id);
+
                 return const MainNavigation();
               } else {
                 // Onboarding not complete - go to onboarding
