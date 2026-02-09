@@ -76,16 +76,30 @@ class _ProductListScreenState extends State<ProductListScreen> {
               title: Text('সম্পাদনা করুন', style: GoogleFonts.anekBangla()),
               onTap: () async {
                 Navigator.pop(context);
-                final result = await Navigator.push(
+
+                if (product.id == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'পণ্য সম্পাদনা করা যাচ্ছে না',
+                        style: GoogleFonts.anekBangla(),
+                      ),
+                      backgroundColor: const Color(0xFFEF4444),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  return;
+                }
+
+                Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const AddProductScreen(),
+                    builder: (_) => ProductDetailsScreen(
+                      product: product,
+                      docID: product.id!,
+                    ),
                   ),
                 );
-
-                if (result != null && result is AddProductResult) {
-                  await _handleAddProductResult(result);
-                }
               },
             ),
             ListTile(

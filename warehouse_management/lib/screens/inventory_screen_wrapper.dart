@@ -131,30 +131,19 @@ class InventoryScreenWrapper extends StatelessWidget {
       return;
     }
 
+    if (fullProduct.id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid product ID')),
+      );
+      return;
+    }
+
     // Navigate to ProductDetailsScreen
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => ProductDetailsScreen(
-          productName: fullProduct.name ?? 'Unknown Product',
-          salePriceText: '${_calculateSalePrice(fullProduct).toStringAsFixed(0)} ৳',
-          costPriceText: '${fullProduct.cost?.toStringAsFixed(0) ?? '0'} ৳',
-          profitText: '${_calculateProfit(fullProduct).toStringAsFixed(0)} ৳',
-          stockText: '${fullProduct.quantity ?? 0}',
-          stockValueText: '${_calculateStockValue(fullProduct).toStringAsFixed(0)} ৳',
-          discountText: 'Not set',
-          subCatText: fullProduct.group ?? 'Not set',
-          vatText: '0%',
-          warrantyText: 'Not set',
-          lowStockText: _getLowStockStatus(fullProduct),
-          descriptionText: fullProduct.description ?? 'No description provided for this item.',
-          imageUrl: fullProduct.image,
-          onBack: () => Navigator.of(context).pop(),
-          onHelp: () => _showHelpDialog(context),
-          onEdit: () => _handleEdit(context, fullProduct),
-          onDelete: () => _handleDelete(context, fullProduct),
-          onUpdateStock: () => _handleUpdateStock(context, fullProduct),
-          onShare: () => _handleShare(context, fullProduct),
-          onHistory: () => _handleHistory(context, fullProduct),
+          product: fullProduct,
+          docID: fullProduct.id!,
         ),
       ),
     );

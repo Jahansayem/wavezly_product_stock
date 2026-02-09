@@ -1,50 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../models/product.dart';
+import '../services/product_service.dart';
+import '../widgets/gradient_app_bar.dart';
+import 'add_product_screen.dart';
 
-class ProductDetailsScreen extends StatelessWidget {
-  final VoidCallback onBack;
-  final VoidCallback onHelp;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-  final VoidCallback onUpdateStock;
-  final VoidCallback onShare;
-  final VoidCallback onHistory;
-  final String productName;
-  final String salePriceText;
-  final String costPriceText;
-  final String profitText;
-  final String stockText;
-  final String stockValueText;
-  final String discountText;
-  final String subCatText;
-  final String vatText;
-  final String warrantyText;
-  final String lowStockText;
-  final String descriptionText;
-  final String? imageUrl;
+class ProductDetailsScreen extends StatefulWidget {
+  final Product product;
+  final String docID;
 
   const ProductDetailsScreen({
     Key? key,
-    required this.onBack,
-    required this.onHelp,
-    required this.onEdit,
-    required this.onDelete,
-    required this.onUpdateStock,
-    required this.onShare,
-    required this.onHistory,
-    required this.productName,
-    required this.salePriceText,
-    required this.costPriceText,
-    required this.profitText,
-    required this.stockText,
-    required this.stockValueText,
-    this.discountText = "Not set",
-    this.subCatText = "Not set",
-    this.vatText = "0%",
-    this.warrantyText = "Not set",
-    this.lowStockText = "Not set",
-    this.descriptionText = "No description provided for this item.",
-    this.imageUrl,
+    required this.product,
+    required this.docID,
   }) : super(key: key);
+
+  @override
+  State<ProductDetailsScreen> createState() => _ProductDetailsScreenState();
+}
+
+class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
+  final ProductService _productService = ProductService();
 
   static const Color _primaryTeal = Color(0xFF14B8A6);
   static const Color _bgLight = Color(0xFFF8FAFC);
@@ -66,106 +42,180 @@ class ProductDetailsScreen extends StatelessWidget {
   static const Color _emerald500 = Color(0xFF10B981);
   static const Color _white = Color(0xFFFFFFFF);
 
+  String _toBengaliNumber(double number) {
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return number.toString().split('').map((char) {
+      if (char.codeUnitAt(0) >= 48 && char.codeUnitAt(0) <= 57) {
+        return bengaliDigits[int.parse(char)];
+      }
+      return char;
+    }).join();
+  }
+
+  void _handleEdit() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const AddProductScreen(),
+      ),
+    );
+  }
+
+  Future<void> _handleDelete() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('নিশ্চিত করুন', style: GoogleFonts.anekBangla()),
+        content: Text('এই পণ্যটি মুছে ফেলতে চান?', style: GoogleFonts.anekBangla()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('না', style: GoogleFonts.anekBangla()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('হ্যাঁ', style: GoogleFonts.anekBangla()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await _productService.deleteProduct(widget.docID);
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'পণ্য সফলভাবে মুছে ফেলা হয়েছে',
+                style: GoogleFonts.anekBangla(),
+              ),
+              backgroundColor: _primaryTeal,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'পণ্য মুছে ফেলতে ব্যর্থ হয়েছে',
+                style: GoogleFonts.anekBangla(),
+              ),
+              backgroundColor: const Color(0xFFEF4444),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  void _handleUpdateStock() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Update Stock feature coming soon',
+          style: GoogleFonts.anekBangla(),
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _handleShare() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Share feature coming soon',
+          style: GoogleFonts.anekBangla(),
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _handleHistory() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'History feature coming soon',
+          style: GoogleFonts.anekBangla(),
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final productName = widget.product.name ?? 'Unknown Product';
+    final salePriceText = '${_toBengaliNumber(widget.product.cost ?? 0)} ৳';
+    final costPriceText = '${_toBengaliNumber(widget.product.cost ?? 0)} ৳';
+    final profitText = '${_toBengaliNumber(0)} ৳';
+    final stockText = _toBengaliNumber((widget.product.quantity ?? 0).toDouble());
+    final stockValueText = '${_toBengaliNumber((widget.product.cost ?? 0) * (widget.product.quantity ?? 0))} ৳';
+    final discountText = 'Not set';
+    final subCatText = widget.product.group ?? 'Not set';
+    final vatText = '0%';
+    final warrantyText = 'Not set';
+    final lowStockText = widget.product.stockAlertEnabled == true
+        ? _toBengaliNumber((widget.product.minStockLevel ?? 0).toDouble())
+        : 'Not set';
+    final descriptionText = widget.product.description ?? 'No description provided for this item.';
 
     return Scaffold(
       backgroundColor: isDark ? _bgDark : _bgLight,
-      body: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            _buildHeader(isDark),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildProductCard(isDark),
-                        const SizedBox(height: 16),
-                        _buildStatsGrid(isDark),
-                        const SizedBox(height: 16),
-                        _buildSectionTitle(isDark),
-                        const SizedBox(height: 12),
-                        _buildAdditionalInfo(isDark),
-                        const Spacer(),
-                        _buildActions(isDark),
-                        const SizedBox(height: 16),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+      appBar: GradientAppBar(
+        title: Text(
+          'পণ্যের বিস্তারিত',
+          style: GoogleFonts.anekBangla(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline, color: Colors.black87),
+            onPressed: () {
+              print('TODO: Show help');
+            },
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildProductCard(isDark, productName, salePriceText),
+                const SizedBox(height: 16),
+                _buildStatsGrid(isDark, stockText, costPriceText, profitText,
+                    stockValueText, discountText, subCatText),
+                const SizedBox(height: 16),
+                _buildSectionTitle(isDark),
+                const SizedBox(height: 12),
+                _buildAdditionalInfo(isDark, vatText, warrantyText, lowStockText),
+                const Spacer(),
+                _buildActions(isDark),
+                const SizedBox(height: 16),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.only(top: 40, left: 16, right: 16, bottom: 12),
-      decoration: BoxDecoration(
-        color: _primaryTeal,
-        boxShadow: [
-          BoxShadow(
-            offset: const Offset(0, 4),
-            blurRadius: 6,
-            color: Colors.black.withOpacity(0.1),
-          ),
-          BoxShadow(
-            offset: const Offset(0, 2),
-            blurRadius: 4,
-            color: Colors.black.withOpacity(0.06),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: onBack,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              child: const Icon(
-                Icons.arrow_back,
-                color: _white,
-                size: 24,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Text(
-            'Product Details',
-            style: TextStyle(
-              color: _white,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const Spacer(),
-          GestureDetector(
-            onTap: onHelp,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              child: const Icon(
-                Icons.help_outline,
-                color: _white,
-                size: 24,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildProductCard(bool isDark) {
+  Widget _buildProductCard(bool isDark, String productName, String salePriceText) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -204,9 +254,9 @@ class ProductDetailsScreen extends StatelessWidget {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: imageUrl != null && imageUrl!.isNotEmpty
+              child: widget.product.image != null && widget.product.image!.isNotEmpty
                   ? Image.network(
-                      imageUrl!,
+                      widget.product.image!,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return const Center(
@@ -234,7 +284,7 @@ class ProductDetailsScreen extends StatelessWidget {
               children: [
                 Text(
                   productName,
-                  style: TextStyle(
+                  style: GoogleFonts.anekBangla(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                     color: isDark ? _slate100 : _slate800,
@@ -243,7 +293,7 @@ class ProductDetailsScreen extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   salePriceText,
-                  style: const TextStyle(
+                  style: GoogleFonts.anekBangla(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
                     color: _primaryTeal,
@@ -254,7 +304,7 @@ class ProductDetailsScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: GestureDetector(
-                        onTap: onEdit,
+                        onTap: _handleEdit,
                         child: Container(
                           height: 40,
                           decoration: BoxDecoration(
@@ -264,18 +314,18 @@ class ProductDetailsScreen extends StatelessWidget {
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.edit,
                                 color: _primaryTeal,
                                 size: 18,
                               ),
-                              SizedBox(width: 6),
+                              const SizedBox(width: 6),
                               Text(
-                                'Edit',
-                                style: TextStyle(
+                                'সম্পাদনা',
+                                style: GoogleFonts.anekBangla(
                                   color: _primaryTeal,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
@@ -288,7 +338,7 @@ class ProductDetailsScreen extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     GestureDetector(
-                      onTap: onDelete,
+                      onTap: _handleDelete,
                       child: Container(
                         width: 48,
                         height: 40,
@@ -317,7 +367,8 @@ class ProductDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatsGrid(bool isDark) {
+  Widget _buildStatsGrid(bool isDark, String stockText, String costPriceText,
+      String profitText, String stockValueText, String discountText, String subCatText) {
     return Column(
       children: [
         Row(
@@ -387,8 +438,8 @@ class ProductDetailsScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Text(
-        'ADDITIONAL INFO',
-        style: TextStyle(
+        'অতিরিক্ত তথ্য',
+        style: GoogleFonts.anekBangla(
           fontSize: 14,
           fontWeight: FontWeight.w600,
           color: _primaryTeal,
@@ -398,7 +449,7 @@ class ProductDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAdditionalInfo(bool isDark) {
+  Widget _buildAdditionalInfo(bool isDark, String vatText, String warrantyText, String lowStockText) {
     return Row(
       children: [
         Expanded(
@@ -430,50 +481,12 @@ class ProductDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDescription(bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Product Description',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: _slate500,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(minHeight: 80),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isDark ? _slate800 : _white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isDark ? _slate700 : _slate200,
-              width: 1,
-            ),
-          ),
-          child: Text(
-            descriptionText,
-            style: TextStyle(
-              fontSize: 14,
-              fontStyle: FontStyle.italic,
-              color: _slate400,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildActions(bool isDark) {
     return Column(
       children: [
         _PrimaryButton(
-          text: 'Update Stock',
-          onPressed: onUpdateStock,
+          text: 'Stock আপডেট করুন',
+          onPressed: _handleUpdateStock,
           icon: Icons.add,
         ),
         const SizedBox(height: 12),
@@ -482,8 +495,8 @@ class ProductDetailsScreen extends StatelessWidget {
             Expanded(
               child: _SecondaryButton(
                 icon: Icons.share,
-                label: 'Share',
-                onPressed: onShare,
+                label: 'শেয়ার',
+                onPressed: _handleShare,
                 isDark: isDark,
               ),
             ),
@@ -491,8 +504,8 @@ class ProductDetailsScreen extends StatelessWidget {
             Expanded(
               child: _SecondaryButton(
                 icon: Icons.history,
-                label: 'History',
-                onPressed: onHistory,
+                label: 'ইতিহাস',
+                onPressed: _handleHistory,
                 isDark: isDark,
               ),
             ),
@@ -618,7 +631,7 @@ class _PrimaryButton extends StatelessWidget {
             ],
             Text(
               text,
-              style: const TextStyle(
+              style: GoogleFonts.anekBangla(
                 color: _white,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -676,7 +689,7 @@ class _SecondaryButton extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               label,
-              style: TextStyle(
+              style: GoogleFonts.anekBangla(
                 color: isDark ? _slate200 : _slate700,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,

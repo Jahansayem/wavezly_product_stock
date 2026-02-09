@@ -1,11 +1,13 @@
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:wavezly/functions/toast.dart';
 import 'package:wavezly/models/product.dart';
 import 'package:wavezly/services/product_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/widgets/gradient_app_bar.dart';
 import 'package:wavezly/widgets/location_drop_down.dart';
 import 'package:wavezly/widgets/product_image_picker.dart';
 
@@ -27,6 +29,31 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: GradientAppBar(
+        title: Text(
+          'Edit Product',
+          style: GoogleFonts.nunito(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete, color: Colors.black87),
+            onPressed: () async {
+              try {
+                await _productService.deleteProduct(widget.docID!);
+                showTextToast('Deleted Successfully!');
+                Navigator.of(context).pop();
+              } catch (e) {
+                showTextToast('Failed!');
+              }
+            },
+          ),
+        ],
+      ),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(
           bottom: 10,
@@ -55,106 +82,31 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           ),
         ),
       ),
-      body: Container(
-        color: ColorPalette.tealAccent,
-        child: SafeArea(
-          child: Container(
-            color: Colors.white,
-            height: double.infinity,
-            width: double.infinity,
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.only(
-                    top: 10,
-                    left: 10,
-                    right: 15,
-                  ),
-                  width: double.infinity,
-                  height: 90,
-                  decoration: const BoxDecoration(
-                    color: ColorPalette.tealAccent,
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(16),
-                      bottomRight: Radius.circular(16),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 20),
+            Expanded(
+              child: Stack(
+                children: [
+                  Container(
+                    height: double.infinity,
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 50,
                     ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        // mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          IconButton(
-                            icon: const Icon(
-                              Icons.chevron_left_rounded,
-                              size: 35,
-                            ),
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                          ),
-                          const Text(
-                            "Edit Product",
-                            style: TextStyle(
-                              fontFamily: "Nunito",
-                              fontSize: 28,
-                              color: ColorPalette.timberGreen,
-                            ),
-                          ),
-                        ],
+                    margin: const EdgeInsets.only(top: 75),
+                    decoration: const BoxDecoration(
+                      color: ColorPalette.white,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16),
                       ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete,
-                          color: ColorPalette.timberGreen,
-                        ),
-                        onPressed: () async {
-                          try {
-                            await _productService.deleteProduct(widget.docID!);
-                            showTextToast('Deleted Successfully!');
-                            Navigator.of(context).pop();
-                          } catch (e) {
-                            showTextToast('Failed!');
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: SizedBox(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: const [
-                              SizedBox(
-                                height: 20,
-                              ),
-                            ],
-                          ),
-                          Expanded(
-                            child: Stack(
-                              children: [
-                                Container(
-                                  height: double.infinity,
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 50,
-                                  ),
-                                  margin: const EdgeInsets.only(top: 75),
-                                  decoration: const BoxDecoration(
-                                    color: ColorPalette.white,
-                                    borderRadius: BorderRadius.only(
-                                      topLeft: Radius.circular(16),
-                                      topRight: Radius.circular(16),
-                                    ),
-                                  ),
-                                  child: SingleChildScrollView(
+                    ),
+                    child: SingleChildScrollView(
                                     child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -559,17 +511,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
