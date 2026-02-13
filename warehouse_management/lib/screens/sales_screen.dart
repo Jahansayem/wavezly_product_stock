@@ -22,11 +22,13 @@ import 'package:wavezly/utils/date_formatter.dart';
 class SalesScreen extends StatefulWidget {
   final VoidCallback? onBackPressed;
   final VoidCallback? onSaleCompleted;
+  final int salesSessionToken;
 
   const SalesScreen({
     Key? key,
     this.onBackPressed,
     this.onSaleCompleted,
+    required this.salesSessionToken,
   }) : super(key: key);
 
   @override
@@ -76,10 +78,12 @@ class _SalesScreenState extends State<SalesScreen> {
                     _QuickSellView(
                       onTabChange: (index) => setState(() => _selectedTab = index),
                       onSaleCompleted: widget.onSaleCompleted,
+                      salesSessionToken: widget.salesSessionToken,
                     ),
                     _ProductListView(
                       onTabChange: (index) => setState(() => _selectedTab = index),
                       onSaleCompleted: widget.onSaleCompleted,
+                      salesSessionToken: widget.salesSessionToken,
                     ),
                   ],
                 ),
@@ -281,11 +285,13 @@ class _SalesScreenState extends State<SalesScreen> {
 class _QuickSellView extends StatefulWidget {
   final Function(int) onTabChange;
   final VoidCallback? onSaleCompleted;
+  final int salesSessionToken;
 
   const _QuickSellView({
     Key? key,
     required this.onTabChange,
     this.onSaleCompleted,
+    required this.salesSessionToken,
   }) : super(key: key);
 
   @override
@@ -324,6 +330,24 @@ class _QuickSellViewState extends State<_QuickSellView> {
     _profitController.dispose();
     _detailsController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(_QuickSellView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reset Quick Sell state when session token changes (user re-enters Sales tab)
+    if (oldWidget.salesSessionToken != widget.salesSessionToken) {
+      setState(() {
+        _cashAmount = '';
+        _mobileController.clear();
+        _profitController.clear();
+        _detailsController.clear();
+        _receiptSmsEnabled = true;
+        _selectedDate = DateTime.now();
+        _customerName = null;
+        _customerId = null;
+      });
+    }
   }
 
   void _onKeypadTap(String key) {
@@ -1194,11 +1218,13 @@ class _QuickSellViewState extends State<_QuickSellView> {
 class _ProductListView extends StatefulWidget {
   final Function(int) onTabChange;
   final VoidCallback? onSaleCompleted;
+  final int salesSessionToken;
 
   const _ProductListView({
     Key? key,
     required this.onTabChange,
     this.onSaleCompleted,
+    required this.salesSessionToken,
   }) : super(key: key);
 
   @override
@@ -1215,8 +1241,13 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
   final Map<String, SellingCartItem> _cartItems = {};
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
-  List<Product>? _filteredProducts;
   bool _isProcessing = false;
+
+  // Stable stream initialized once
+  late final Stream<List<Product>> _productsStream;
+
+  // Recent usage map for sorting (product_id -> last sale timestamp)
+  Map<String, DateTime> _recentUsageMap = {};
 
   // Cart totals
   double _cartTotal = 0.0;
@@ -1252,6 +1283,12 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
+
+    // Initialize stable product stream once - LOCAL ONLY (no sync trigger)
+    _productsStream = _productService.getAllProductsLocalOnly();
+
+    // Load recent usage map for sorting
+    _loadRecentUsageMap();
 
     // Initialize animation controllers
     _flyingAnimationController = AnimationController(
@@ -1305,43 +1342,93 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(_ProductListView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reset Product List cart state when session token changes (user re-enters Sales tab)
+    if (oldWidget.salesSessionToken != widget.salesSessionToken) {
+      setState(() {
+        // Clear cart items and selections
+        _selectedProductIds.clear();
+        _cartItems.clear();
+        // Reset totals
+        _cartTotal = 0.0;
+        _cartItemCount = 0;
+        // Clear search
+        _searchController.clear();
+        // Reset processing flag
+        _isProcessing = false;
+      });
+    }
+  }
+
   void _onSearchChanged() {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () async {
-      final query = _searchController.text.trim();
-      if (query.isEmpty) {
-        setState(() => _filteredProducts = null);
-        return;
-      }
-      try {
-        final results = await _productService.searchProducts(query);
-        setState(() => _filteredProducts = results);
-      } catch (e) {
-        print('Search error: $e');
-      }
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      // Trigger rebuild to apply filter on live stream data
+      setState(() {});
     });
+  }
+
+  // Load recent usage map for sorting products by recently sold
+  Future<void> _loadRecentUsageMap() async {
+    try {
+      final usageMap = await _productService.getProductRecentUsageMap();
+      if (mounted) {
+        setState(() {
+          _recentUsageMap = usageMap;
+        });
+      }
+    } catch (e) {
+      print('Error loading recent usage map: $e');
+      // Continue with empty map (no sorting by recent usage)
+    }
+  }
+
+  // Sort products by recent usage: recently sold first, then never-sold, tie-breaker: name ASC
+  List<Product> _sortProductsByRecentUsage(List<Product> products) {
+    final sorted = List<Product>.from(products);
+
+    sorted.sort((a, b) {
+      final aId = a.id;
+      final bId = b.id;
+
+      // Get last usage timestamps
+      final aLastUsed = (aId != null) ? _recentUsageMap[aId] : null;
+      final bLastUsed = (bId != null) ? _recentUsageMap[bId] : null;
+
+      // Both have usage history -> sort by timestamp DESC (most recent first)
+      if (aLastUsed != null && bLastUsed != null) {
+        final timeComparison = bLastUsed.compareTo(aLastUsed); // DESC
+        if (timeComparison != 0) return timeComparison;
+        // Tie-breaker: name ASC
+        return (a.name ?? '').compareTo(b.name ?? '');
+      }
+
+      // Only A has usage -> A comes first
+      if (aLastUsed != null) return -1;
+
+      // Only B has usage -> B comes first
+      if (bLastUsed != null) return 1;
+
+      // Neither has usage -> sort by name ASC
+      return (a.name ?? '').compareTo(b.name ?? '');
+    });
+
+    return sorted;
   }
 
   void _toggleProductSelection(Product product, {GlobalKey? productIconKey}) {
     if (product.id == null) return;
 
-    if ((product.quantity ?? 0) == 0) {
-      showTextToast('এই পণ্যটি স্টকে নেই!');
-      return;
-    }
-
+    // Oversell support: Allow selling even when stock is 0 or negative
     setState(() {
       if (_selectedProductIds.contains(product.id)) {
-        // Already in cart → increment quantity (if stock allows)
+        // Already in cart → increment quantity (no stock limit check)
         final currentItem = _cartItems[product.id]!;
-        if (currentItem.quantity < currentItem.stockAvailable) {
-          _cartItems[product.id!] = currentItem.copyWith(
-            quantity: currentItem.quantity + 1,
-          );
-        } else {
-          showTextToast('স্টক সীমায় পৌঁছেছে!');
-          return;
-        }
+        _cartItems[product.id!] = currentItem.copyWith(
+          quantity: currentItem.quantity + 1,
+        );
       } else {
         // Not in cart → add with quantity=1
         _selectedProductIds.add(product.id!);
@@ -1515,6 +1602,9 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
         _isProcessing = false;
       });
 
+      // Reload recent usage map to reflect new sale (products just sold will appear at top)
+      await _loadRecentUsageMap();
+
       showTextToast('বিক্রয় সফল হয়েছে!');
 
       // Trigger dashboard refresh callback
@@ -1530,10 +1620,6 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
           errorMsg.contains('uuid') ||
           errorMsg.contains('product_id')) {
         showTextToast('কিছু পণ্য সার্ভারে sync হয়নি। Sync করে আবার চেষ্টা করুন।');
-      }
-      // Check for insufficient stock error
-      else if (errorMsg.contains('Insufficient stock')) {
-        showTextToast('স্টক অপর্যাপ্ত! পণ্যের স্টক চেক করুন');
       } else {
         showTextToast('ত্রুটি: ${e.toString()}');
       }
@@ -1559,16 +1645,14 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
     return primary.withOpacity(0.1);
   }
 
-  // Product title color (only special case: out of stock)
+  // Product title color (always normal color)
   Color _getProductTitleColor(Product product) {
-    return (product.quantity ?? 0) == 0
-        ? ColorPalette.gray400
-        : slate800;
+    return slate800;
   }
 
-  // Product opacity (out of stock indicator)
+  // Product opacity (always full opacity)
   double _getProductOpacity(Product product) {
-    return (product.quantity ?? 0) == 0 ? 0.5 : 1.0;
+    return 1.0;
   }
 
   @override
@@ -1723,7 +1807,7 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
 
   Widget _buildProductList() {
     return StreamBuilder<List<Product>>(
-      stream: _productService.getAllProducts(),
+      stream: _productsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -1762,11 +1846,30 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
           );
         }
 
-        final products = (snapshot.hasData && snapshot.data!.isNotEmpty)
-            ? (_filteredProducts ?? snapshot.data!)
-            : <Product>[];
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return _buildProductListView(<Product>[]);
+        }
 
-        return _buildProductListView(products);
+        // Apply search filter synchronously on live stream data
+        final allProducts = snapshot.data!;
+        final query = _searchController.text.trim().toLowerCase();
+
+        // Apply search filter
+        final filteredProducts = query.isEmpty
+            ? allProducts
+            : allProducts.where((product) {
+                final name = (product.name ?? '').toLowerCase();
+                final barcode = (product.barcode ?? '').toLowerCase();
+                final description = (product.description ?? '').toLowerCase();
+                return name.contains(query) ||
+                       barcode.contains(query) ||
+                       description.contains(query);
+              }).toList();
+
+        // Apply sorting by recent usage
+        final sortedProducts = _sortProductsByRecentUsage(filteredProducts);
+
+        return _buildProductListView(sortedProducts);
       },
     );
   }

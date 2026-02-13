@@ -41,6 +41,16 @@ class ProductRepository {
     return _productDao.getAllProducts(userId);
   }
 
+  // READ: Local-only - return local data stream WITHOUT triggering sync
+  // Used in Sales Screen to avoid server pressure
+  Stream<List<Product>> getAllProductsLocalOnly() {
+    final userId = _userId;
+    print('📖 [ProductRepository] getAllProductsLocalOnly() called with userId: $userId (NO SYNC)');
+
+    // Return local data stream directly - NO sync trigger
+    return _productDao.getAllProducts(userId);
+  }
+
   Stream<List<Product>> getProductsByGroup(String group) {
     if (_connectivity.isOnline) {
       _syncService.syncProductsInBackground();
@@ -162,13 +172,13 @@ class ProductRepository {
 
   /// Quantity-only update path for stock screens.
   /// Keeps sync payload minimal to avoid SQL errors from unrelated nullable fields.
+  /// OVERSELL SUPPORT: Allows negative quantities for overselling scenarios.
   Future<void> updateProductQuantity(String id, int newQuantity) async {
     try {
       final userId = _userId;
-      final safeQuantity = newQuantity < 0 ? 0 : newQuantity;
 
-      // Update local first
-      await _productDao.updateProductQuantity(id, safeQuantity, userId);
+      // Update local first (allow negative quantities)
+      await _productDao.updateProductQuantity(id, newQuantity, userId);
 
       // If legacy/non-UUID id exists locally, avoid sending invalid SQL to Supabase.
       if (!_uuidV4Like.hasMatch(id)) {
@@ -183,7 +193,7 @@ class ProductRepository {
         data: {
           'id': id,
           'user_id': userId,
-          'quantity': safeQuantity,
+          'quantity': newQuantity,
           'updated_at': DateTime.now().toIso8601String(),
         },
       );
@@ -424,5 +434,12 @@ class ProductRepository {
   Future<void> applyLocalStockIncrements(Map<String, int> increments) async {
     final userId = _userId;
     await _productDao.applyLocalStockIncrements(userId, increments);
+  }
+
+  /// Get recent usage map for products (product_id -> last sale timestamp)
+  /// Used for sorting products by recently sold in Sales Screen
+  Future<Map<String, DateTime>> getProductRecentUsageMap() async {
+    final userId = _userId;
+    return await _productDao.getProductRecentUsageMap(userId);
   }
 }

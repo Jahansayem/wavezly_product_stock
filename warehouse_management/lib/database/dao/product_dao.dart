@@ -5,14 +5,20 @@ import '../../config/database_config.dart';
 import 'base_dao.dart';
 
 class ProductDao extends BaseDao<Product> {
+  // Singleton pattern
+  static final ProductDao _instance = ProductDao._internal();
+  factory ProductDao() => _instance;
+  ProductDao._internal();
+
   @override
   String get tableName => 'products';
 
   Database get _db => DatabaseConfig.database;
 
-  // Broadcast stream controller for reactive product updates
+  // Broadcast stream controller for reactive product updates (shared across all instances)
   StreamController<List<Product>>? _productsController;
   String? _currentUserId;
+  bool _isRefreshing = false; // In-flight guard to prevent refresh storms
 
   @override
   Product fromMap(Map<String, dynamic> map) {
@@ -123,6 +129,7 @@ class ProductDao extends BaseDao<Product> {
       _productsController?.close();
       _productsController = null;
       _currentUserId = userId;
+      _isRefreshing = false;
     }
 
     // Create broadcast controller if needed
@@ -139,6 +146,9 @@ class ProductDao extends BaseDao<Product> {
       );
     } else {
       print('♻️ Reusing existing stream controller');
+      // CRITICAL FIX: Trigger refresh even when reusing controller
+      // This ensures new listeners get current data immediately
+      _refreshProducts(userId);
     }
 
     return _productsController!.stream;
@@ -158,6 +168,14 @@ class ProductDao extends BaseDao<Product> {
       return;
     }
 
+    // In-flight guard: prevent concurrent refreshes
+    if (_isRefreshing) {
+      print('⏭️ Refresh already in progress, skipping duplicate call');
+      return;
+    }
+
+    _isRefreshing = true;
+
     try {
       print('📊 Querying products from database...');
       final products = await _queryProducts(userId);
@@ -168,6 +186,8 @@ class ProductDao extends BaseDao<Product> {
       print('❌ ERROR in _refreshProducts: $e');
       print('Stack trace: $stackTrace');
       _productsController!.addError(e, stackTrace);
+    } finally {
+      _isRefreshing = false;
     }
   }
 
@@ -181,6 +201,7 @@ class ProductDao extends BaseDao<Product> {
     _productsController?.close();
     _productsController = null;
     _currentUserId = null;
+    _isRefreshing = false;
   }
 
   Future<List<Product>> _queryProducts(String userId) async {
@@ -375,6 +396,7 @@ class ProductDao extends BaseDao<Product> {
   /// Apply local stock deductions after sale completion
   /// Does NOT queue for sync - server already has correct stock
   /// Updates local cache to match server state immediately
+  /// OVERSELL SUPPORT: Allows negative stock values
   Future<void> applyLocalStockDeductions(
     String userId,
     Map<String, int> deductions,
@@ -387,12 +409,13 @@ class ProductDao extends BaseDao<Product> {
           final productId = entry.key;
           final soldQty = entry.value;
 
-          // Update quantity: MAX(COALESCE(quantity, 0) - soldQty, 0)
+          // Update quantity: COALESCE(quantity, 0) - soldQty
+          // NO MAX CLAMP - allow negative stock for overselling
           // Keep is_synced = 1 (do not queue sync)
           await txn.rawUpdate(
             '''
             UPDATE $tableName
-            SET quantity = MAX(COALESCE(quantity, 0) - ?, 0),
+            SET quantity = COALESCE(quantity, 0) - ?,
                 updated_at = ?
             WHERE id = ? AND user_id = ?
             ''',
@@ -408,7 +431,7 @@ class ProductDao extends BaseDao<Product> {
 
       // Notify stream listeners to refresh UI
       await notifyProductsChanged(userId);
-      print('✅ [ProductDao] Local stock deductions applied for ${deductions.length} products');
+      print('✅ [ProductDao] Local stock deductions applied for ${deductions.length} products (oversell enabled)');
     } catch (e) {
       print('❌ [ProductDao] Error applying local stock deductions: $e');
       rethrow;
@@ -455,6 +478,47 @@ class ProductDao extends BaseDao<Product> {
     } catch (e) {
       print('❌ [ProductDao] Error applying local stock increments: $e');
       rethrow;
+    }
+  }
+
+  /// Get recent usage map for products (product_id -> last sale timestamp)
+  /// Used for sorting products by recently sold in Sales Screen
+  /// Returns map of product_id -> DateTime of most recent sale
+  Future<Map<String, DateTime>> getProductRecentUsageMap(String userId) async {
+    try {
+      final results = await _db.rawQuery(
+        '''
+        SELECT
+          si.product_id,
+          MAX(s.created_at) as last_used_at
+        FROM sale_items si
+        INNER JOIN sales s ON si.sale_id = s.id
+        WHERE s.user_id = ?
+          AND si.product_id IS NOT NULL
+        GROUP BY si.product_id
+        ''',
+        [userId],
+      );
+
+      final Map<String, DateTime> usageMap = {};
+      for (final row in results) {
+        final productId = row['product_id'] as String?;
+        final lastUsedAtStr = row['last_used_at'] as String?;
+
+        if (productId != null && lastUsedAtStr != null) {
+          try {
+            usageMap[productId] = DateTime.parse(lastUsedAtStr);
+          } catch (e) {
+            print('⚠️ Failed to parse date for product $productId: $lastUsedAtStr');
+          }
+        }
+      }
+
+      print('✅ [ProductDao] Recent usage map built: ${usageMap.length} products with sales history');
+      return usageMap;
+    } catch (e) {
+      print('❌ [ProductDao] Error building recent usage map: $e');
+      return {};
     }
   }
 }

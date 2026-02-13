@@ -8,6 +8,9 @@ class ProductService {
   // Delegate to repository
   Stream<List<Product>> getAllProducts() => _repository.getAllProducts();
 
+  // Local-only stream (no sync trigger) - used in Sales Screen
+  Stream<List<Product>> getAllProductsLocalOnly() => _repository.getAllProductsLocalOnly();
+
   Future<List<Product>> getProducts() async {
     return await getAllProducts().first;
   }
@@ -84,4 +87,9 @@ class ProductService {
   /// Updates local cache immediately without queuing sync
   Future<void> applyLocalStockIncrements(Map<String, int> increments) =>
       _repository.applyLocalStockIncrements(increments);
+
+  /// Get recent usage map for products (product_id -> last sale timestamp)
+  /// Used for sorting products by recently sold in Sales Screen
+  Future<Map<String, DateTime>> getProductRecentUsageMap() =>
+      _repository.getProductRecentUsageMap();
 }

@@ -25,16 +25,35 @@ class _ProductListScreenState extends State<ProductListScreen> {
   List<Product> _products = [];
   List<Product> _filteredProducts = [];
 
+  // Manual stream subscription for instant rendering
+  StreamSubscription<List<Product>>? _productsSub;
+
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
+
+    // Subscribe to local-only stream for instant cache-first loading
+    _productsSub = _productService.getAllProductsLocalOnly().listen(
+      (products) {
+        if (mounted) {
+          setState(() {
+            _products = products;
+            _filterProducts();
+          });
+        }
+      },
+      onError: (error) {
+        print('Product stream error: $error');
+      },
+    );
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _debounceTimer?.cancel();
+    _productsSub?.cancel();
     super.dispose();
   }
 
@@ -312,166 +331,122 @@ class _ProductListScreenState extends State<ProductListScreen> {
   }
 
   Widget _buildProductCount() {
-    return StreamBuilder<List<Product>>(
-      stream: _productService.getAllProducts(),
-      builder: (context, snapshot) {
-        final count = snapshot.data?.length ?? 0;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'মোট পণ্য আছে: ${_toBengaliNumber(count.toDouble())}',
-              style: GoogleFonts.anekBangla(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: ColorPalette.tealAccent,
-              ),
-            ),
+    final count = _products.length;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          'মোট পণ্য আছে: ${_toBengaliNumber(count.toDouble())}',
+          style: GoogleFonts.anekBangla(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: ColorPalette.tealAccent,
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
   Widget _buildProductList() {
-    return StreamBuilder<List<Product>>(
-      stream: _productService.getAllProducts(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(
-            child: CircularProgressIndicator(
-              color: ColorPalette.tealAccent,
+    // Render immediately from local state (no blocking spinner)
+    if (_products.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.inventory_2_outlined,
+              size: 64,
+              color: Color(0xFF94A3B8),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'কোন পণ্য নেই',
+              style: GoogleFonts.anekBangla(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'নতুন পণ্য যুক্ত করতে + বাটনে ক্লিক করুন',
+              style: GoogleFonts.anekBangla(
+                fontSize: 14,
+                color: const Color(0xFF94A3B8),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_filteredProducts.isEmpty && _searchQuery.isNotEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.search_off,
+              size: 64,
+              color: Color(0xFF94A3B8),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'কোন পণ্য পাওয়া যায়নি',
+              style: GoogleFonts.anekBangla(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'অন্য শব্দ দিয়ে খুঁজে দেখুন',
+              style: GoogleFonts.anekBangla(
+                fontSize: 14,
+                color: const Color(0xFF94A3B8),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      itemCount: _filteredProducts.length,
+      itemBuilder: (context, index) => _ProductTile(
+        product: _filteredProducts[index],
+        onTap: () {
+          final product = _filteredProducts[index];
+          if (product.id == null || product.id!.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'পণ্যের বিস্তারিত দেখা যাচ্ছে না',
+                  style: GoogleFonts.anekBangla(),
+                ),
+                backgroundColor: const Color(0xFFEF4444),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            return;
+          }
+          // Row tap opens read-only details screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ProductDetailsScreen(
+                product: product,
+                docID: product.id!,
+              ),
             ),
           );
-        }
-
-        if (snapshot.hasError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 48,
-                  color: Color(0xFFEF4444),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'পণ্য লোড করতে ত্রুটি হয়েছে',
-                  style: GoogleFonts.anekBangla(
-                    fontSize: 16,
-                    color: const Color(0xFF64748B),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        final products = snapshot.data ?? [];
-        if (products.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.inventory_2_outlined,
-                  size: 64,
-                  color: Color(0xFF94A3B8),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'কোন পণ্য নেই',
-                  style: GoogleFonts.anekBangla(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF64748B),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'নতুন পণ্য যুক্ত করতে + বাটনে ক্লিক করুন',
-                  style: GoogleFonts.anekBangla(
-                    fontSize: 14,
-                    color: const Color(0xFF94A3B8),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        _products = products;
-        _filterProducts();
-
-        if (_filteredProducts.isEmpty && _searchQuery.isNotEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.search_off,
-                  size: 64,
-                  color: Color(0xFF94A3B8),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'কোন পণ্য পাওয়া যায়নি',
-                  style: GoogleFonts.anekBangla(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF64748B),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'অন্য শব্দ দিয়ে খুঁজে দেখুন',
-                  style: GoogleFonts.anekBangla(
-                    fontSize: 14,
-                    color: const Color(0xFF94A3B8),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          itemCount: _filteredProducts.length,
-          itemBuilder: (context, index) => _ProductTile(
-            product: _filteredProducts[index],
-            onTap: () {
-              final product = _filteredProducts[index];
-              if (product.id == null || product.id!.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'পণ্যের বিস্তারিত দেখা যাচ্ছে না',
-                      style: GoogleFonts.anekBangla(),
-                    ),
-                    backgroundColor: const Color(0xFFEF4444),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-                return;
-              }
-              // Row tap opens read-only details screen
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ProductDetailsScreen(
-                    product: product,
-                    docID: product.id!,
-                  ),
-                ),
-              );
-            },
-            onMoreTap: () => _showProductOptions(context, _filteredProducts[index]),
-          ),
-        );
-      },
+        },
+        onMoreTap: () => _showProductOptions(context, _filteredProducts[index]),
+      ),
     );
   }
 

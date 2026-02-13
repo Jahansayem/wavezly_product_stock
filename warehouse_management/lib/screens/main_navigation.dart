@@ -22,6 +22,7 @@ class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 1; // Start with Home (center)
   DateTime? _lastBackPressTime;
   int _dashboardRefreshToken = 0; // Token to trigger dashboard refresh
+  int _salesSessionToken = 0; // Token to trigger sales cart reset
   DashboardSummary? _initialSummary;
 
   @override
@@ -41,6 +42,11 @@ class _MainNavigationState extends State<MainNavigation> {
 
   void _onNavTap(int index) {
     setState(() {
+      // If switching TO Sales tab (index 0 or 2) from non-Sales tab, increment session token
+      final isSwitchingToSales = (index == 0 || index == 2) && (_currentIndex != 0 && _currentIndex != 2);
+      if (isSwitchingToSales) {
+        _salesSessionToken++;
+      }
       _currentIndex = index;
     });
   }
@@ -48,7 +54,7 @@ class _MainNavigationState extends State<MainNavigation> {
   void _handleSaleCompleted() {
     setState(() {
       _dashboardRefreshToken++; // Increment token to trigger refresh
-      _currentIndex = 1; // Switch to Home tab
+      // Stay in current Sales context (Product List or Fast Sale)
     });
   }
 
@@ -86,6 +92,7 @@ class _MainNavigationState extends State<MainNavigation> {
             SalesScreen(
               onBackPressed: () => _onNavTap(1),
               onSaleCompleted: _handleSaleCompleted,
+              salesSessionToken: _salesSessionToken,
             ),
             // Index 1: Home Dashboard (হোম)
             HomeDashboardScreen(
@@ -98,6 +105,7 @@ class _MainNavigationState extends State<MainNavigation> {
             SalesScreen(
               onBackPressed: () => _onNavTap(1),
               onSaleCompleted: _handleSaleCompleted,
+              salesSessionToken: _salesSessionToken,
             ),
           ],
         ),
