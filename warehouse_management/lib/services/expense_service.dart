@@ -1,28 +1,22 @@
-import 'package:wavezly/config/supabase_config.dart';
 import 'package:wavezly/models/expense.dart';
 import 'package:wavezly/models/expense_category.dart';
+import 'package:wavezly/repositories/expense_repository.dart';
 
 /// Service for managing expenses and expense categories
+/// Now uses offline-first repository with local SQLite + sync queue
 /// Provides CRUD operations and analytics for expense tracking
 class ExpenseService {
-  final _supabase = SupabaseConfig.client;
+  final ExpenseRepository _repository = ExpenseRepository();
 
   // ============================================================================
   // CATEGORY OPERATIONS
   // ============================================================================
 
   /// Get all expense categories (system + user's custom categories)
-  Future<List<ExpenseCategory>> getCategories() async {
+  Future<List<ExpenseCategory>> getCategories(
+      {bool forceRefresh = false}) async {
     try {
-      final response = await _supabase
-          .from('expense_categories')
-          .select()
-          .order('is_system', ascending: false)
-          .order('name_bengali', ascending: true);
-
-      return (response as List)
-          .map((item) => ExpenseCategory.fromMap(item))
-          .toList();
+      return await _repository.getCategories();
     } catch (e) {
       throw Exception('Failed to load categories: $e');
     }
@@ -31,13 +25,7 @@ class ExpenseService {
   /// Get a single category by ID
   Future<ExpenseCategory?> getCategoryById(String id) async {
     try {
-      final response = await _supabase
-          .from('expense_categories')
-          .select()
-          .eq('id', id)
-          .maybeSingle();
-
-      return response != null ? ExpenseCategory.fromMap(response) : null;
+      return await _repository.getCategoryById(id);
     } catch (e) {
       throw Exception('Failed to load category: $e');
     }
@@ -46,17 +34,7 @@ class ExpenseService {
   /// Create a new custom expense category (user-created only)
   Future<ExpenseCategory> createCategory(ExpenseCategory category) async {
     try {
-      final data = category.toMap();
-      data['user_id'] = _supabase.auth.currentUser!.id;
-      data['is_system'] = false; // User categories are never system categories
-
-      final response = await _supabase
-          .from('expense_categories')
-          .insert(data)
-          .select()
-          .single();
-
-      return ExpenseCategory.fromMap(response);
+      return await _repository.createCategory(category);
     } catch (e) {
       throw Exception('Failed to create category: $e');
     }
@@ -65,15 +43,7 @@ class ExpenseService {
   /// Update an existing custom category (system categories cannot be updated)
   Future<void> updateCategory(String id, ExpenseCategory category) async {
     try {
-      final data = category.toMap();
-      data['updated_at'] = DateTime.now().toIso8601String();
-
-      await _supabase
-          .from('expense_categories')
-          .update(data)
-          .eq('id', id)
-          .eq('user_id', _supabase.auth.currentUser!.id)
-          .eq('is_system', false); // Ensure only non-system categories are updated
+      await _repository.updateCategory(id, category);
     } catch (e) {
       throw Exception('Failed to update category: $e');
     }
@@ -82,12 +52,7 @@ class ExpenseService {
   /// Delete a custom category (system categories cannot be deleted)
   Future<void> deleteCategory(String id) async {
     try {
-      await _supabase
-          .from('expense_categories')
-          .delete()
-          .eq('id', id)
-          .eq('user_id', _supabase.auth.currentUser!.id)
-          .eq('is_system', false); // Ensure only non-system categories are deleted
+      await _repository.deleteCategory(id);
     } catch (e) {
       throw Exception('Failed to delete category: $e');
     }
@@ -100,16 +65,7 @@ class ExpenseService {
   /// Create a new expense
   Future<Expense> createExpense(Expense expense) async {
     try {
-      final data = expense.toMap();
-      data['user_id'] = _supabase.auth.currentUser!.id;
-
-      final response = await _supabase
-          .from('expenses')
-          .insert(data)
-          .select()
-          .single();
-
-      return Expense.fromMap(response);
+      return await _repository.createExpense(expense);
     } catch (e) {
       throw Exception('Failed to create expense: $e');
     }
@@ -121,22 +77,10 @@ class ExpenseService {
     DateTime? endDate,
   }) async {
     try {
-      var query = _supabase
-          .from('expenses')
-          .select()
-          .eq('user_id', _supabase.auth.currentUser!.id);
-
-      if (startDate != null) {
-        query = query.gte('expense_date', startDate.toIso8601String().split('T')[0]);
-      }
-
-      if (endDate != null) {
-        query = query.lte('expense_date', endDate.toIso8601String().split('T')[0]);
-      }
-
-      final response = await query.order('expense_date', ascending: false);
-
-      return (response as List).map((item) => Expense.fromMap(item)).toList();
+      return await _repository.getExpenses(
+        startDate: startDate,
+        endDate: endDate,
+      );
     } catch (e) {
       throw Exception('Failed to load expenses: $e');
     }
@@ -145,14 +89,7 @@ class ExpenseService {
   /// Get a single expense by ID
   Future<Expense?> getExpenseById(String id) async {
     try {
-      final response = await _supabase
-          .from('expenses')
-          .select()
-          .eq('id', id)
-          .eq('user_id', _supabase.auth.currentUser!.id)
-          .maybeSingle();
-
-      return response != null ? Expense.fromMap(response) : null;
+      return await _repository.getExpenseById(id);
     } catch (e) {
       throw Exception('Failed to load expense: $e');
     }
@@ -161,14 +98,7 @@ class ExpenseService {
   /// Update an existing expense
   Future<void> updateExpense(String id, Expense expense) async {
     try {
-      final data = expense.toMap();
-      data['updated_at'] = DateTime.now().toIso8601String();
-
-      await _supabase
-          .from('expenses')
-          .update(data)
-          .eq('id', id)
-          .eq('user_id', _supabase.auth.currentUser!.id);
+      await _repository.updateExpense(id, expense);
     } catch (e) {
       throw Exception('Failed to update expense: $e');
     }
@@ -177,43 +107,20 @@ class ExpenseService {
   /// Delete an expense
   Future<void> deleteExpense(String id) async {
     try {
-      await _supabase
-          .from('expenses')
-          .delete()
-          .eq('id', id)
-          .eq('user_id', _supabase.auth.currentUser!.id);
+      await _repository.deleteExpense(id);
     } catch (e) {
       throw Exception('Failed to delete expense: $e');
     }
   }
 
   // ============================================================================
-  // ANALYTICS & AGGREGATIONS
+  // ANALYTICS & AGGREGATIONS (computed from local data)
   // ============================================================================
 
   /// Get total expenses for a date range
   Future<double> getTotalExpenses(DateTime startDate, DateTime endDate) async {
     try {
-      final response = await _supabase
-          .from('expenses')
-          .select('amount')
-          .eq('user_id', _supabase.auth.currentUser!.id)
-          .gte('expense_date', startDate.toIso8601String().split('T')[0])
-          .lte('expense_date', endDate.toIso8601String().split('T')[0]);
-
-      if (response == null || (response as List).isEmpty) {
-        return 0.0;
-      }
-
-      double total = 0.0;
-      for (var item in response as List) {
-        final amount = item['amount'];
-        if (amount != null) {
-          total += amount is int ? amount.toDouble() : (amount as num).toDouble();
-        }
-      }
-
-      return total;
+      return await _repository.getTotalExpenses(startDate, endDate);
     } catch (e) {
       throw Exception('Failed to calculate total expenses: $e');
     }
@@ -222,11 +129,7 @@ class ExpenseService {
   /// Get current month's total expenses
   Future<double> getCurrentMonthTotal() async {
     try {
-      final now = DateTime.now();
-      final startOfMonth = DateTime(now.year, now.month, 1);
-      final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
-
-      return await getTotalExpenses(startOfMonth, endOfMonth);
+      return await _repository.getCurrentMonthTotal();
     } catch (e) {
       throw Exception('Failed to get current month total: $e');
     }
@@ -235,13 +138,26 @@ class ExpenseService {
   /// Get previous month's total expenses
   Future<double> getPreviousMonthTotal() async {
     try {
-      final now = DateTime.now();
-      final startOfLastMonth = DateTime(now.year, now.month - 1, 1);
-      final endOfLastMonth = DateTime(now.year, now.month, 0, 23, 59, 59);
-
-      return await getTotalExpenses(startOfLastMonth, endOfLastMonth);
+      return await _repository.getPreviousMonthTotal();
     } catch (e) {
       throw Exception('Failed to get previous month total: $e');
+    }
+  }
+
+  /// Get both current and previous month totals in a single call (optimized)
+  Future<Map<String, double>> getCurrentAndPreviousMonthTotals({
+    bool forceRefresh = false,
+  }) async {
+    try {
+      final currentTotal = await getCurrentMonthTotal();
+      final previousTotal = await getPreviousMonthTotal();
+
+      return {
+        'current': currentTotal,
+        'previous': previousTotal,
+      };
+    } catch (e) {
+      throw Exception('Failed to get month totals: $e');
     }
   }
 
@@ -265,25 +181,7 @@ class ExpenseService {
     DateTime endDate,
   ) async {
     try {
-      final response = await _supabase
-          .from('expenses')
-          .select('category_id, amount')
-          .eq('user_id', _supabase.auth.currentUser!.id)
-          .gte('expense_date', startDate.toIso8601String().split('T')[0])
-          .lte('expense_date', endDate.toIso8601String().split('T')[0]);
-
-      final breakdown = <String, double>{};
-
-      for (var item in response as List) {
-        final categoryId = item['category_id'] as String?;
-        if (categoryId != null) {
-          final amount = item['amount'];
-          final amountDouble = amount is int ? amount.toDouble() : (amount as num).toDouble();
-          breakdown[categoryId] = (breakdown[categoryId] ?? 0.0) + amountDouble;
-        }
-      }
-
-      return breakdown;
+      return await _repository.getCategoryBreakdown(startDate, endDate);
     } catch (e) {
       throw Exception('Failed to get category breakdown: $e');
     }
@@ -296,14 +194,7 @@ class ExpenseService {
         return await getExpenses();
       }
 
-      final response = await _supabase
-          .from('expenses')
-          .select()
-          .eq('user_id', _supabase.auth.currentUser!.id)
-          .ilike('description', '%$query%')
-          .order('expense_date', ascending: false);
-
-      return (response as List).map((item) => Expense.fromMap(item)).toList();
+      return await _repository.getExpenses(query: query);
     } catch (e) {
       throw Exception('Failed to search expenses: $e');
     }
@@ -312,16 +203,25 @@ class ExpenseService {
   /// Get expenses by category ID
   Future<List<Expense>> getExpensesByCategory(String categoryId) async {
     try {
-      final response = await _supabase
-          .from('expenses')
-          .select()
-          .eq('user_id', _supabase.auth.currentUser!.id)
-          .eq('category_id', categoryId)
-          .order('expense_date', ascending: false);
-
-      return (response as List).map((item) => Expense.fromMap(item)).toList();
+      return await _repository.getExpenses(categoryId: categoryId);
     } catch (e) {
       throw Exception('Failed to load expenses by category: $e');
+    }
+  }
+
+  /// Get transactions count for a date range
+  Future<int> getExpenseCount({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      final expenses = await getExpenses(
+        startDate: startDate,
+        endDate: endDate,
+      );
+      return expenses.length;
+    } catch (e) {
+      throw Exception('Failed to get expense count: $e');
     }
   }
 }

@@ -1,32 +1,21 @@
-import 'package:wavezly/config/supabase_config.dart';
 import 'package:wavezly/models/cashbox_transaction.dart';
 import 'package:wavezly/models/cashbox_summary.dart';
+import 'package:wavezly/repositories/cashbox_repository.dart';
 
 /// Service for managing cashbox transactions and cash flow analytics
 /// Provides CRUD operations and analytics for cash flow tracking
+/// Now uses local-first repository with sync queue
 class CashboxService {
-  final _supabase = SupabaseConfig.client;
+  final CashboxRepository _repository = CashboxRepository();
 
   // ============================================================================
   // TRANSACTION OPERATIONS
   // ============================================================================
 
   /// Create a new cashbox transaction
-  Future<CashboxTransaction> createTransaction(CashboxTransaction transaction) async {
-    try {
-      final data = transaction.toMap();
-      data['user_id'] = _supabase.auth.currentUser!.id;
-
-      final response = await _supabase
-          .from('cashbox_transactions')
-          .insert(data)
-          .select()
-          .single();
-
-      return CashboxTransaction.fromMap(response);
-    } catch (e) {
-      throw Exception('Failed to create transaction: $e');
-    }
+  Future<CashboxTransaction> createTransaction(
+      CashboxTransaction transaction) async {
+    return await _repository.createTransaction(transaction);
   }
 
   /// Get all transactions with optional date range filter
@@ -34,82 +23,81 @@ class CashboxService {
     DateTime? startDate,
     DateTime? endDate,
   }) async {
-    try {
-      var query = _supabase
-          .from('cashbox_transactions')
-          .select()
-          .eq('user_id', _supabase.auth.currentUser!.id);
-
-      if (startDate != null) {
-        query = query.gte('transaction_date', startDate.toIso8601String().split('T')[0]);
-      }
-
-      if (endDate != null) {
-        query = query.lte('transaction_date', endDate.toIso8601String().split('T')[0]);
-      }
-
-      final response = await query.order('transaction_date', ascending: false);
-
-      return (response as List).map((item) => CashboxTransaction.fromMap(item)).toList();
-    } catch (e) {
-      throw Exception('Failed to load transactions: $e');
-    }
+    return await _repository.getTransactions(
+      startDate: startDate,
+      endDate: endDate,
+    );
   }
 
   /// Get a single transaction by ID
   Future<CashboxTransaction?> getTransactionById(String id) async {
-    try {
-      final response = await _supabase
-          .from('cashbox_transactions')
-          .select()
-          .eq('id', id)
-          .eq('user_id', _supabase.auth.currentUser!.id)
-          .maybeSingle();
-
-      return response != null ? CashboxTransaction.fromMap(response) : null;
-    } catch (e) {
-      throw Exception('Failed to load transaction: $e');
-    }
+    return await _repository.getTransactionById(id);
   }
 
   /// Update an existing transaction
-  Future<void> updateTransaction(String id, CashboxTransaction transaction) async {
-    try {
-      final data = transaction.toMap();
-      data['updated_at'] = DateTime.now().toIso8601String();
-
-      await _supabase
-          .from('cashbox_transactions')
-          .update(data)
-          .eq('id', id)
-          .eq('user_id', _supabase.auth.currentUser!.id);
-    } catch (e) {
-      throw Exception('Failed to update transaction: $e');
-    }
+  Future<void> updateTransaction(
+      String id, CashboxTransaction transaction) async {
+    await _repository.updateTransaction(id, transaction);
   }
 
   /// Delete a transaction
   Future<void> deleteTransaction(String id) async {
-    try {
-      await _supabase
-          .from('cashbox_transactions')
-          .delete()
-          .eq('id', id)
-          .eq('user_id', _supabase.auth.currentUser!.id);
-    } catch (e) {
-      throw Exception('Failed to delete transaction: $e');
-    }
+    await _repository.deleteTransaction(id);
   }
 
   // ============================================================================
-  // ANALYTICS & AGGREGATIONS
+  // ANALYTICS & AGGREGATIONS (computed from local data)
   // ============================================================================
 
   /// Get summary for a specific date range
-  Future<CashboxSummary> getSummary(DateTime startDate, DateTime endDate) async {
+  Future<CashboxSummary> getSummary(
+      DateTime startDate, DateTime endDate) async {
     try {
       final transactions = await getTransactions(
         startDate: startDate,
+        endDate: endDate,
+      );
+
+      return buildSummaryFromTransactions(transactions, startDate, endDate);
+    } catch (e) {
+      throw Exception('Failed to get summary: $e');
+    }
+  }
+
+  /// Build summary from already-fetched transactions (avoids duplicate queries)
+  CashboxSummary buildSummaryFromTransactions(
+    List<CashboxTransaction> transactions,
+    DateTime startDate,
+    DateTime endDate,
+  ) {
+    double totalCashIn = 0.0;
+    double totalCashOut = 0.0;
+
+    for (var transaction in transactions) {
+      if (transaction.isCashIn) {
+        totalCashIn += transaction.amount;
+      } else {
+        totalCashOut += transaction.amount;
+      }
+    }
+
+    return CashboxSummary.fromValues(
+      cashIn: totalCashIn,
+      cashOut: totalCashOut,
+      count: transactions.length,
+      startDate: startDate,
+      endDate: endDate,
+    );
+  }
+
+  /// Get current balance (up to a specific date, or all time)
+  /// Balance = Total Cash In - Total Cash Out
+  Future<double> getBalance({DateTime? upToDate}) async {
+    try {
+      final endDate = upToDate ?? DateTime.now();
+
+      // Get all transactions from beginning to specified date
+      final transactions = await _repository.getTransactions(
         endDate: endDate,
       );
 
@@ -124,47 +112,6 @@ class CashboxService {
         }
       }
 
-      return CashboxSummary.fromValues(
-        cashIn: totalCashIn,
-        cashOut: totalCashOut,
-        count: transactions.length,
-        startDate: startDate,
-        endDate: endDate,
-      );
-    } catch (e) {
-      throw Exception('Failed to get summary: $e');
-    }
-  }
-
-  /// Get current balance (up to a specific date, or all time)
-  /// Balance = Total Cash In - Total Cash Out
-  Future<double> getBalance({DateTime? upToDate}) async {
-    try {
-      final endDate = upToDate ?? DateTime.now();
-
-      // Get all transactions from beginning to specified date
-      final response = await _supabase
-          .from('cashbox_transactions')
-          .select('transaction_type, amount')
-          .eq('user_id', _supabase.auth.currentUser!.id)
-          .lte('transaction_date', endDate.toIso8601String().split('T')[0]);
-
-      double totalCashIn = 0.0;
-      double totalCashOut = 0.0;
-
-      for (var item in response as List) {
-        final type = item['transaction_type'] as String;
-        final amount = item['amount'] is int
-            ? (item['amount'] as int).toDouble()
-            : (item['amount'] as num?)?.toDouble() ?? 0.0;
-
-        if (type == 'cash_in') {
-          totalCashIn += amount;
-        } else if (type == 'cash_out') {
-          totalCashOut += amount;
-        }
-      }
-
       return totalCashIn - totalCashOut;
     } catch (e) {
       throw Exception('Failed to calculate balance: $e');
@@ -174,20 +121,15 @@ class CashboxService {
   /// Get total cash in for a date range
   Future<double> getTotalCashIn(DateTime startDate, DateTime endDate) async {
     try {
-      final response = await _supabase
-          .from('cashbox_transactions')
-          .select('amount')
-          .eq('user_id', _supabase.auth.currentUser!.id)
-          .eq('transaction_type', 'cash_in')
-          .gte('transaction_date', startDate.toIso8601String().split('T')[0])
-          .lte('transaction_date', endDate.toIso8601String().split('T')[0]);
+      final transactions = await _repository.getTransactions(
+        startDate: startDate,
+        endDate: endDate,
+        type: TransactionType.cashIn,
+      );
 
       double total = 0.0;
-      for (var item in response as List) {
-        final amount = item['amount'];
-        if (amount != null) {
-          total += amount is int ? amount.toDouble() : (amount as num).toDouble();
-        }
+      for (var transaction in transactions) {
+        total += transaction.amount;
       }
 
       return total;
@@ -199,20 +141,15 @@ class CashboxService {
   /// Get total cash out for a date range
   Future<double> getTotalCashOut(DateTime startDate, DateTime endDate) async {
     try {
-      final response = await _supabase
-          .from('cashbox_transactions')
-          .select('amount')
-          .eq('user_id', _supabase.auth.currentUser!.id)
-          .eq('transaction_type', 'cash_out')
-          .gte('transaction_date', startDate.toIso8601String().split('T')[0])
-          .lte('transaction_date', endDate.toIso8601String().split('T')[0]);
+      final transactions = await _repository.getTransactions(
+        startDate: startDate,
+        endDate: endDate,
+        type: TransactionType.cashOut,
+      );
 
       double total = 0.0;
-      for (var item in response as List) {
-        final amount = item['amount'];
-        if (amount != null) {
-          total += amount is int ? amount.toDouble() : (amount as num).toDouble();
-        }
+      for (var transaction in transactions) {
+        total += transaction.amount;
       }
 
       return total;
@@ -264,14 +201,7 @@ class CashboxService {
         return await getTransactions();
       }
 
-      final response = await _supabase
-          .from('cashbox_transactions')
-          .select()
-          .eq('user_id', _supabase.auth.currentUser!.id)
-          .ilike('description', '%$query%')
-          .order('transaction_date', ascending: false);
-
-      return (response as List).map((item) => CashboxTransaction.fromMap(item)).toList();
+      return await _repository.getTransactions(query: query);
     } catch (e) {
       throw Exception('Failed to search transactions: $e');
     }
@@ -284,23 +214,11 @@ class CashboxService {
     DateTime? endDate,
   }) async {
     try {
-      var query = _supabase
-          .from('cashbox_transactions')
-          .select()
-          .eq('user_id', _supabase.auth.currentUser!.id)
-          .eq('transaction_type', type.value);
-
-      if (startDate != null) {
-        query = query.gte('transaction_date', startDate.toIso8601String().split('T')[0]);
-      }
-
-      if (endDate != null) {
-        query = query.lte('transaction_date', endDate.toIso8601String().split('T')[0]);
-      }
-
-      final response = await query.order('transaction_date', ascending: false);
-
-      return (response as List).map((item) => CashboxTransaction.fromMap(item)).toList();
+      return await _repository.getTransactions(
+        startDate: startDate,
+        endDate: endDate,
+        type: type,
+      );
     } catch (e) {
       throw Exception('Failed to load transactions by type: $e');
     }

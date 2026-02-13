@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/product.dart';
 import '../services/product_service.dart';
 import '../widgets/gradient_app_bar.dart';
-import 'add_product_screen.dart';
+import 'edit_product_screen.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final Product product;
@@ -22,7 +22,7 @@ class ProductDetailsScreen extends StatefulWidget {
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   final ProductService _productService = ProductService();
 
-  static const Color _primaryTeal = Color(0xFF14B8A6);
+  static const Color _primaryTeal = Color(0xFF4169E1);
   static const Color _bgLight = Color(0xFFF8FAFC);
   static const Color _bgDark = Color(0xFF0F172A);
   static const Color _cardBgDark = Color(0xFF1E293B);
@@ -53,10 +53,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   }
 
   void _handleEdit() {
+    // Navigate to edit screen
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const AddProductScreen(),
+        builder: (_) => EditProductScreen(
+          product: widget.product,
+          docID: widget.docID,
+        ),
       ),
     );
   }
@@ -597,7 +601,7 @@ class _PrimaryButton extends StatelessWidget {
     this.icon,
   }) : super(key: key);
 
-  static const Color _primaryTeal = Color(0xFF14B8A6);
+  static const Color _primaryTeal = Color(0xFF4169E1);
   static const Color _white = Color(0xFFFFFFFF);
 
   @override
@@ -658,7 +662,7 @@ class _SecondaryButton extends StatelessWidget {
     required this.isDark,
   }) : super(key: key);
 
-  static const Color _primaryTeal = Color(0xFF14B8A6);
+  static const Color _primaryTeal = Color(0xFF4169E1);
   static const Color _white = Color(0xFFFFFFFF);
   static const Color _slate200 = Color(0xFFE2E8F0);
   static const Color _slate700 = Color(0xFF334155);

@@ -70,6 +70,23 @@ class ProductDao extends BaseDao<Product> {
     await notifyProductsChanged(userId);
   }
 
+  // Update product quantity only (safer for partial stock edits)
+  Future<void> updateProductQuantity(String id, int quantity, String userId) async {
+    await _db.update(
+      tableName,
+      {
+        'quantity': quantity,
+        'updated_at': DateTime.now().toIso8601String(),
+        'is_synced': 0,
+        'last_synced_at': null,
+      },
+      where: 'id = ? AND user_id = ?',
+      whereArgs: [id, userId],
+    );
+
+    await notifyProductsChanged(userId);
+  }
+
   // Delete product
   Future<void> deleteProduct(String id) async {
     // Get userId before deleting
@@ -353,5 +370,91 @@ class ProductDao extends BaseDao<Product> {
     );
 
     return results.map((map) => map['name'] as String).toList();
+  }
+
+  /// Apply local stock deductions after sale completion
+  /// Does NOT queue for sync - server already has correct stock
+  /// Updates local cache to match server state immediately
+  Future<void> applyLocalStockDeductions(
+    String userId,
+    Map<String, int> deductions,
+  ) async {
+    if (deductions.isEmpty) return;
+
+    try {
+      await _db.transaction((txn) async {
+        for (final entry in deductions.entries) {
+          final productId = entry.key;
+          final soldQty = entry.value;
+
+          // Update quantity: MAX(COALESCE(quantity, 0) - soldQty, 0)
+          // Keep is_synced = 1 (do not queue sync)
+          await txn.rawUpdate(
+            '''
+            UPDATE $tableName
+            SET quantity = MAX(COALESCE(quantity, 0) - ?, 0),
+                updated_at = ?
+            WHERE id = ? AND user_id = ?
+            ''',
+            [
+              soldQty,
+              DateTime.now().toIso8601String(),
+              productId,
+              userId,
+            ],
+          );
+        }
+      });
+
+      // Notify stream listeners to refresh UI
+      await notifyProductsChanged(userId);
+      print('✅ [ProductDao] Local stock deductions applied for ${deductions.length} products');
+    } catch (e) {
+      print('❌ [ProductDao] Error applying local stock deductions: $e');
+      rethrow;
+    }
+  }
+
+  /// Apply local stock increments after purchase completion
+  /// Does NOT queue for sync - server already has correct stock
+  /// Updates local cache to match server state immediately
+  Future<void> applyLocalStockIncrements(
+    String userId,
+    Map<String, int> increments,
+  ) async {
+    if (increments.isEmpty) return;
+
+    try {
+      await _db.transaction((txn) async {
+        for (final entry in increments.entries) {
+          final productId = entry.key;
+          final purchasedQty = entry.value;
+
+          // Update quantity: COALESCE(quantity, 0) + purchasedQty
+          // Keep is_synced unchanged (do not queue sync)
+          await txn.rawUpdate(
+            '''
+            UPDATE $tableName
+            SET quantity = COALESCE(quantity, 0) + ?,
+                updated_at = ?
+            WHERE id = ? AND user_id = ?
+            ''',
+            [
+              purchasedQty,
+              DateTime.now().toIso8601String(),
+              productId,
+              userId,
+            ],
+          );
+        }
+      });
+
+      // Notify stream listeners to refresh UI
+      await notifyProductsChanged(userId);
+      print('✅ [ProductDao] Local stock increments applied for ${increments.length} products');
+    } catch (e) {
+      print('❌ [ProductDao] Error applying local stock increments: $e');
+      rethrow;
+    }
   }
 }

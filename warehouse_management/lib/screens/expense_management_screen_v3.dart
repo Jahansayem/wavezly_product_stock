@@ -18,8 +18,7 @@ class ExpenseManagementScreenV3 extends StatefulWidget {
       _ExpenseManagementScreenV3State();
 }
 
-class _ExpenseManagementScreenV3State
-    extends State<ExpenseManagementScreenV3> {
+class _ExpenseManagementScreenV3State extends State<ExpenseManagementScreenV3> {
   final TextEditingController _searchController = TextEditingController();
   final ExpenseService _expenseService = ExpenseService();
 
@@ -28,6 +27,8 @@ class _ExpenseManagementScreenV3State
   double _currentMonthTotal = 0.0;
   double _previousMonthTotal = 0.0;
   bool _isLoading = true;
+  bool _isRefreshing = false;
+  int _requestId = 0;
 
   @override
   void initState() {
@@ -42,26 +43,51 @@ class _ExpenseManagementScreenV3State
     super.dispose();
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+  Future<void> _loadData({bool isRefresh = false}) async {
+    // Increment request ID to track this specific load operation
+    final currentRequestId = ++_requestId;
+
+    // Set appropriate loading flag
+    if (mounted) {
+      setState(() {
+        if (_categories.isEmpty) {
+          _isLoading = true;
+        } else {
+          _isRefreshing = isRefresh;
+        }
+      });
+    }
 
     try {
-      final categories = await _expenseService.getCategories();
-      final currentTotal = await _expenseService.getCurrentMonthTotal();
-      final previousTotal = await _expenseService.getPreviousMonthTotal();
+      // Fetch categories and month totals in parallel
+      // Use forceRefresh for explicit user-initiated refreshes
+      final results = await Future.wait([
+        _expenseService.getCategories(forceRefresh: isRefresh),
+        _expenseService.getCurrentAndPreviousMonthTotals(
+            forceRefresh: isRefresh),
+      ]);
 
-      if (mounted) {
+      final categories = results[0] as List<ExpenseCategory>;
+      final totals = results[1] as Map<String, double>;
+
+      // Only apply response if this is still the latest request
+      if (mounted && currentRequestId == _requestId) {
         setState(() {
           _categories = categories;
           _filteredCategories = categories;
-          _currentMonthTotal = currentTotal;
-          _previousMonthTotal = previousTotal;
+          _currentMonthTotal = totals['current'] ?? 0.0;
+          _previousMonthTotal = totals['previous'] ?? 0.0;
           _isLoading = false;
+          _isRefreshing = false;
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
+      // Only show error if this is still the latest request
+      if (mounted && currentRequestId == _requestId) {
+        setState(() {
+          _isLoading = false;
+          _isRefreshing = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -96,35 +122,60 @@ class _ExpenseManagementScreenV3State
       MaterialPageRoute(
         builder: (_) => ExpenseEntryScreen(preSelectedCategory: category),
       ),
-    ).then((_) => _loadData());
+    ).then((result) {
+      // Only reload if data was modified (result == true)
+      if (result == true) {
+        _loadData(isRefresh: true);
+      }
+    });
   }
 
   void _onAddExpenseTap() {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const ExpenseEntryScreen()),
-    ).then((_) => _loadData());
+    ).then((result) {
+      // Only reload if data was modified (result == true)
+      if (result == true) {
+        _loadData(isRefresh: true);
+      }
+    });
   }
 
   void _onExpenseListTap() {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const ExpenseListScreen()),
-    ).then((_) => _loadData());
+    ).then((result) {
+      // Only reload if data was modified (result == true)
+      if (result == true) {
+        _loadData(isRefresh: true);
+      }
+    });
   }
 
   void _onNewCategoryTap() {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const CategoryCreationScreen()),
-    ).then((_) => _loadData());
+    ).then((result) {
+      // Only reload if data was modified (result == true)
+      if (result == true) {
+        _loadData(isRefresh: true);
+      }
+    });
   }
 
   void _onFilterTap() {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const ExpenseListScreen()),
-    ).then((_) => _loadData());
+    ).then((result) {
+      // Only reload if data was modified (result == true)
+      if (result == true) {
+        _loadData(isRefresh: true);
+      }
+    });
   }
 
   String _formatBengaliNumber(double number) {
@@ -165,7 +216,10 @@ class _ExpenseManagementScreenV3State
         children: [
           _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : _buildBody(),
+              : RefreshIndicator(
+                  onRefresh: () => _loadData(isRefresh: true),
+                  child: _buildBody(),
+                ),
 
           // Bottom FAB
           Positioned(
@@ -234,18 +288,39 @@ class _ExpenseManagementScreenV3State
 
   Widget _buildBody() {
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Summary Card
-            _SummaryCard(
-              monthName: _getCurrentMonthName(),
-              currentTotal: _currentMonthTotal,
-              previousTotal: _previousMonthTotal,
-              formatNumber: _formatBengaliNumber,
-              onExpenseListTap: _onExpenseListTap,
+            // Summary Card with refresh overlay
+            Stack(
+              children: [
+                _SummaryCard(
+                  monthName: _getCurrentMonthName(),
+                  currentTotal: _currentMonthTotal,
+                  previousTotal: _previousMonthTotal,
+                  formatNumber: _formatBengaliNumber,
+                  onExpenseListTap: _onExpenseListTap,
+                ),
+                if (_isRefreshing)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 24),
 

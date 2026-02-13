@@ -13,6 +13,9 @@ class ProductRepository {
   final SyncService _syncService = SyncService();
   final ConnectivityService _connectivity = ConnectivityService();
   final ImageStorageService _imageService = ImageStorageService();
+  static final RegExp _uuidV4Like = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+  );
 
   String get _userId {
     final currentUser = SupabaseConfig.client.auth.currentUser;
@@ -153,6 +156,43 @@ class ProductRepository {
       }
     } catch (e) {
       print('Error updating product: $e');
+      rethrow;
+    }
+  }
+
+  /// Quantity-only update path for stock screens.
+  /// Keeps sync payload minimal to avoid SQL errors from unrelated nullable fields.
+  Future<void> updateProductQuantity(String id, int newQuantity) async {
+    try {
+      final userId = _userId;
+      final safeQuantity = newQuantity < 0 ? 0 : newQuantity;
+
+      // Update local first
+      await _productDao.updateProductQuantity(id, safeQuantity, userId);
+
+      // If legacy/non-UUID id exists locally, avoid sending invalid SQL to Supabase.
+      if (!_uuidV4Like.hasMatch(id)) {
+        print('⚠️ Skipping remote sync for non-UUID product id: $id');
+        return;
+      }
+
+      await _syncService.queueOperation(
+        operation: SyncConfig.operationUpdate,
+        tableName: 'products',
+        recordId: id,
+        data: {
+          'id': id,
+          'user_id': userId,
+          'quantity': safeQuantity,
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+      );
+
+      if (await _connectivity.checkOnline()) {
+        _syncService.syncNow();
+      }
+    } catch (e) {
+      print('Error updating product quantity: $e');
       rethrow;
     }
   }
@@ -368,5 +408,21 @@ class ProductRepository {
     };
 
     await SupabaseConfig.client.from('products').insert(data);
+  }
+
+  /// Apply local stock deductions after sale completion
+  /// Local-only operation - does not queue for sync
+  /// Used to immediately update local cache after server sale
+  Future<void> applyLocalStockDeductions(Map<String, int> deductions) async {
+    final userId = _userId;
+    await _productDao.applyLocalStockDeductions(userId, deductions);
+  }
+
+  /// Apply local stock increments after purchase completion
+  /// Local-only operation - does not queue for sync
+  /// Used to immediately update local cache after server purchase
+  Future<void> applyLocalStockIncrements(Map<String, int> increments) async {
+    final userId = _userId;
+    await _productDao.applyLocalStockIncrements(userId, increments);
   }
 }

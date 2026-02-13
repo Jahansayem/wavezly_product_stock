@@ -5,7 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/product.dart';
 import '../services/product_service.dart';
 import '../utils/color_palette.dart';
-import 'product_details_screen.dart';
+import 'product_details_screen.dart'; // Read-only details
+import 'edit_product_screen.dart';    // Edit screen
 import 'add_product_screen.dart' show AddProductScreen, AddProductResult;
 import 'barcode_scanner_screen.dart';
 
@@ -94,7 +95,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => ProductDetailsScreen(
+                    builder: (_) => EditProductScreen(
                       product: product,
                       docID: product.id!,
                     ),
@@ -442,8 +443,30 @@ class _ProductListScreenState extends State<ProductListScreen> {
           itemBuilder: (context, index) => _ProductTile(
             product: _filteredProducts[index],
             onTap: () {
-              // TODO: Navigate to ProductDetailsScreen with all required parameters
-              _showProductOptions(context, _filteredProducts[index]);
+              final product = _filteredProducts[index];
+              if (product.id == null || product.id!.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'পণ্যের বিস্তারিত দেখা যাচ্ছে না',
+                      style: GoogleFonts.anekBangla(),
+                    ),
+                    backgroundColor: const Color(0xFFEF4444),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                return;
+              }
+              // Row tap opens read-only details screen
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProductDetailsScreen(
+                    product: product,
+                    docID: product.id!,
+                  ),
+                ),
+              );
             },
             onMoreTap: () => _showProductOptions(context, _filteredProducts[index]),
           ),

@@ -33,8 +33,14 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final expenses = await _expenseService.getExpenses();
-      final categories = await _expenseService.getCategories();
+      // Fetch expenses and categories in parallel for better performance
+      final results = await Future.wait([
+        _expenseService.getExpenses(),
+        _expenseService.getCategories(),
+      ]);
+
+      final expenses = results[0] as List<Expense>;
+      final categories = results[1] as List<ExpenseCategory>;
 
       final categoryMap = <String, ExpenseCategory>{};
       for (var cat in categories) {
@@ -104,7 +110,12 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
       MaterialPageRoute(
         builder: (_) => ExpenseEntryScreen(existingExpense: expense),
       ),
-    ).then((_) => _loadData());
+    ).then((result) {
+      // Only reload if data was modified (result == true)
+      if (result == true) {
+        _loadData();
+      }
+    });
   }
 
   void _showError(String message) {
@@ -250,7 +261,8 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                 ),
                                 alignment: Alignment.centerLeft,
                                 padding: const EdgeInsets.only(left: 20),
-                                child: const Icon(Icons.edit, color: Colors.white),
+                                child:
+                                    const Icon(Icons.edit, color: Colors.white),
                               ),
                               secondaryBackground: Container(
                                 margin: const EdgeInsets.only(bottom: 12),
@@ -260,7 +272,8 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                 ),
                                 alignment: Alignment.centerRight,
                                 padding: const EdgeInsets.only(right: 20),
-                                child: const Icon(Icons.delete, color: Colors.white),
+                                child: const Icon(Icons.delete,
+                                    color: Colors.white),
                               ),
                               confirmDismiss: (direction) async {
                                 if (direction == DismissDirection.startToEnd) {
@@ -281,7 +294,8 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: ColorPalette.gray200),
+                                  border:
+                                      Border.all(color: ColorPalette.gray200),
                                 ),
                                 child: Row(
                                   children: [
@@ -291,7 +305,8 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                         height: 40,
                                         decoration: BoxDecoration(
                                           color: category.getBgColor(),
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
                                         child: Icon(
                                           category.getIconData(),
@@ -305,7 +320,8 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                         height: 40,
                                         decoration: BoxDecoration(
                                           color: ColorPalette.gray100,
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
                                         child: Icon(
                                           Icons.category,
@@ -316,14 +332,16 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceBetween,
                                             children: [
                                               Text(
-                                                category?.nameBengali ?? 'অন্যান্য',
+                                                category?.nameBengali ??
+                                                    'অন্যান্য',
                                                 style: GoogleFonts.anekBangla(
                                                   fontSize: 16,
                                                   fontWeight: FontWeight.w600,
@@ -335,7 +353,8 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                                 style: GoogleFonts.anekBangla(
                                                   fontSize: 16,
                                                   fontWeight: FontWeight.bold,
-                                                  color: ColorPalette.tealAccent,
+                                                  color:
+                                                      ColorPalette.tealAccent,
                                                 ),
                                               ),
                                             ],
@@ -350,7 +369,8 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                               ),
                                               const SizedBox(width: 4),
                                               Text(
-                                                _formatDate(expense.expenseDate),
+                                                _formatDate(
+                                                    expense.expenseDate),
                                                 style: GoogleFonts.anekBangla(
                                                   fontSize: 12,
                                                   color: ColorPalette.gray500,
@@ -395,7 +415,12 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const ExpenseEntryScreen()),
-          ).then((_) => _loadData());
+          ).then((result) {
+            // Only reload if data was modified (result == true)
+            if (result == true) {
+              _loadData();
+            }
+          });
         },
         backgroundColor: ColorPalette.tealAccent,
         child: const Icon(Icons.add, color: Colors.white),

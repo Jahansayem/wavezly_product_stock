@@ -5,6 +5,7 @@ import 'package:wavezly/models/purchase.dart';
 import 'package:wavezly/models/purchase_item.dart';
 import 'package:wavezly/services/purchase_service.dart';
 import 'package:wavezly/utils/number_formatter.dart';
+import 'package:wavezly/widgets/gradient_app_bar.dart';
 
 class PurchaseDetailsScreen extends StatefulWidget {
   final Purchase purchase;
@@ -97,19 +98,13 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF26A69A),
-        foregroundColor: Colors.white,
-        elevation: 2,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
+      appBar: GradientAppBar(
         title: Text(
           'ক্রয়ের বিবরণ',
           style: GoogleFonts.anekBangla(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
           ),
         ),
       ),

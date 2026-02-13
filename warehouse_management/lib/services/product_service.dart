@@ -21,6 +21,9 @@ class ProductService {
   Future<void> updateProduct(String id, Product product, {File? newImageFile}) =>
       _repository.updateProduct(id, product, newImageFile: newImageFile);
 
+  Future<void> updateProductQuantity(String id, int newQuantity) =>
+      _repository.updateProductQuantity(id, newQuantity);
+
   Future<void> deleteProduct(String id) => _repository.deleteProduct(id);
 
   Future<void> deleteProductImage(String productId, String imageUrl) =>
@@ -71,4 +74,14 @@ class ProductService {
 
   // Locations management
   Future<List<String>> getLocations() => _repository.getLocations();
+
+  /// Apply local stock deductions after sale completion
+  /// Updates local cache immediately without queuing sync
+  Future<void> applyLocalStockDeductions(Map<String, int> deductions) =>
+      _repository.applyLocalStockDeductions(deductions);
+
+  /// Apply local stock increments after purchase completion
+  /// Updates local cache immediately without queuing sync
+  Future<void> applyLocalStockIncrements(Map<String, int> increments) =>
+      _repository.applyLocalStockIncrements(increments);
 }

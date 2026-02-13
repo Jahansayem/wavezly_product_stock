@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/screens/splash/auth_wrapper.dart';
+import 'package:wavezly/services/bootstrap_cache.dart';
 
 /// ShopStock splash screen with minimalist Hishabee-style design.
 /// Solid yellow background with centered black logo and text.
 /// Displays for 2 seconds then navigates to auth flow.
+/// Preloads dashboard data in parallel for instant Home screen render.
 class ShopStockSplash extends StatefulWidget {
   const ShopStockSplash({super.key});
 
@@ -17,7 +19,17 @@ class _ShopStockSplashState extends State<ShopStockSplash> {
   @override
   void initState() {
     super.initState();
+    // Kick off preload immediately (deduped, non-blocking)
+    _startPreload();
+    // Keep splash minimum 2 seconds
     _navigateAfterDelay();
+  }
+
+  void _startPreload() {
+    // Start preloading dashboard data in background (deduped)
+    // ensurePreloadStarted() is safe to call multiple times
+    // This doesn't block splash navigation
+    BootstrapCache().ensurePreloadStarted();
   }
 
   void _navigateAfterDelay() {

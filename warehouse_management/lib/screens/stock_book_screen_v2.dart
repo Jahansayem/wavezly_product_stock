@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:wavezly/features/inventory/screens/update_product_quantity_screen.dart';
+import 'package:wavezly/screens/add_product_screen.dart';
 
 import '../models/product.dart';
 import '../services/product_service.dart';
@@ -593,7 +595,12 @@ class BottomActionBar extends StatelessWidget {
           Expanded(
             child: OutlinedButton(
               onPressed: () {
-                // TODO: Update stock quantity
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const UpdateProductQuantityScreen(),
+                  ),
+                );
               },
               style: OutlinedButton.styleFrom(
                 foregroundColor: primaryColor,
@@ -617,7 +624,12 @@ class BottomActionBar extends StatelessWidget {
           Expanded(
             child: ElevatedButton(
               onPressed: () {
-                // TODO: Add new product
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AddProductScreen(),
+                  ),
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,

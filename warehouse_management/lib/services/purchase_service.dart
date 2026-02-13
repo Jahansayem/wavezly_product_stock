@@ -1,79 +1,58 @@
-import 'package:wavezly/config/supabase_config.dart';
 import 'package:wavezly/models/purchase.dart';
 import 'package:wavezly/models/purchase_item.dart';
 import 'package:wavezly/models/buying_cart_item.dart';
+import 'package:wavezly/repositories/purchase_repository.dart';
 
+/// PurchaseService - Backward-compatible facade over PurchaseRepository
+/// Maintains existing public API while using offline-first repository internally
 class PurchaseService {
-  final _supabase = SupabaseConfig.client;
+  final PurchaseRepository _repository = PurchaseRepository();
 
+  /// Generate purchase number (now handled locally by repository)
   Future<String> generatePurchaseNumber() async {
-    final response = await _supabase.rpc('generate_purchase_number');
-    return response as String;
+    // Generate local purchase number format: P-YYYYMMDD-XXXXX
+    final timestamp = DateTime.now();
+    final dateStr = '${timestamp.year}${timestamp.month.toString().padLeft(2, '0')}${timestamp.day.toString().padLeft(2, '0')}';
+    final random = timestamp.millisecondsSinceEpoch % 100000;
+    return 'P-$dateStr-${random.toString().padLeft(5, '0')}';
   }
 
+  /// Process purchase - now uses offline-first repository
   Future<String> processPurchase({
     required Purchase purchase,
     required List<BuyingCartItem> cartItems,
   }) async {
     try {
-      final purchaseNumber = await generatePurchaseNumber();
-      purchase.purchaseNumber = purchaseNumber;
-
-      final purchaseItemsJson = cartItems
-          .map((item) => {
-                'product_id': item.productId,
-                'product_name': item.productName,
-                'cost_price': item.costPrice,
-                'quantity': item.quantity,
-                'total_cost': item.totalCost,
-              })
-          .toList();
-
-      final response = await _supabase.rpc('process_purchase', params: {
-        'p_purchase_data': purchase.toMap(),
-        'p_purchase_items': purchaseItemsJson,
-      });
-
-      return response as String;
+      return await _repository.processPurchase(
+        purchase: purchase,
+        cartItems: cartItems,
+      );
     } catch (e) {
       throw Exception('Failed to process purchase: $e');
     }
   }
 
+  /// Get purchase by ID - reads from local database
   Future<Purchase> getPurchaseById(String purchaseId) async {
-    final response = await _supabase
-        .from('purchases')
-        .select()
-        .eq('id', purchaseId)
-        .single();
-    return Purchase.fromMap(response);
+    final purchase = await _repository.getPurchaseById(purchaseId);
+    if (purchase == null) {
+      throw Exception('Purchase not found');
+    }
+    return purchase;
   }
 
+  /// Get purchase items - returns stream (convert to future for backward compatibility)
   Future<List<PurchaseItem>> getPurchaseItems(String purchaseId) async {
-    final response = await _supabase
-        .from('purchase_items')
-        .select()
-        .eq('purchase_id', purchaseId)
-        .order('created_at');
-    return (response as List)
-        .map((item) => PurchaseItem.fromMap(item))
-        .toList();
+    return await _repository.getPurchaseItems(purchaseId).first;
   }
 
+  /// Get all purchases - returns stream (convert to future for backward compatibility)
   Future<List<Purchase>> getAllPurchases() async {
-    final response = await _supabase
-        .from('purchases')
-        .select()
-        .order('created_at', ascending: false);
-    return (response as List).map((item) => Purchase.fromMap(item)).toList();
+    return await _repository.getAllPurchases().first;
   }
 
+  /// Get purchases by supplier - reads from local database
   Future<List<Purchase>> getPurchasesBySupplier(String supplierId) async {
-    final response = await _supabase
-        .from('purchases')
-        .select()
-        .eq('supplier_id', supplierId)
-        .order('created_at', ascending: false);
-    return (response as List).map((item) => Purchase.fromMap(item)).toList();
+    return await _repository.getPurchasesBySupplier(supplierId);
   }
 }

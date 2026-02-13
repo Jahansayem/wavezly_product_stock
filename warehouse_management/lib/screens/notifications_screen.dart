@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:wavezly/models/announcement.dart';
-import 'package:wavezly/repositories/announcement_repository.dart';
+import 'package:wavezly/models/local_notification.dart';
+import 'package:wavezly/services/local_notification_cache_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/widgets/gradient_app_bar.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({Key? key}) : super(key: key);
@@ -13,25 +14,23 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final AnnouncementRepository _repository = AnnouncementRepository();
-  List<Announcement> _announcements = [];
-  Set<String> _readIds = {};
+  final LocalNotificationCacheService _cacheService =
+      LocalNotificationCacheService();
+  List<LocalNotification> _notifications = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadAnnouncements();
+    _loadNotifications();
   }
 
-  Future<void> _loadAnnouncements() async {
+  Future<void> _loadNotifications() async {
     setState(() => _isLoading = true);
     try {
-      final announcements = await _repository.getAnnouncements();
-      final readIds = await _repository.getReadAnnouncementIds();
+      final notifications = await _cacheService.getNotifications();
       setState(() {
-        _announcements = announcements;
-        _readIds = readIds;
+        _notifications = notifications;
         _isLoading = false;
       });
     } catch (e) {
@@ -44,11 +43,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  Future<void> _markAsRead(String id) async {
-    if (_readIds.contains(id)) return;
+  Future<void> _markAsRead(String notificationId) async {
     try {
-      await _repository.markAsRead(id);
-      setState(() => _readIds.add(id));
+      await _cacheService.markAsRead(notificationId);
+      // Update local state
+      setState(() {
+        final index = _notifications.indexWhere(
+          (n) => n.notificationId == notificationId,
+        );
+        if (index != -1) {
+          _notifications[index] = _notifications[index].copyWith(isRead: true);
+        }
+      });
     } catch (e) {
       // Silent fail for read tracking
     }
@@ -57,26 +63,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ColorPalette.slate50,
-      appBar: AppBar(
-        backgroundColor: ColorPalette.tealAccent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: ColorPalette.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+      backgroundColor: ColorPalette.gray100,
+      appBar: GradientAppBar(
         title: Text(
-          'Notifications',
+          'বিজ্ঞপ্তি',
           style: GoogleFonts.anekBangla(
-            color: ColorPalette.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
           ),
         ),
       ),
       body: _isLoading
         ? const Center(child: CircularProgressIndicator())
-        : _announcements.isEmpty
+        : _notifications.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -84,7 +84,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   Icon(Icons.notifications_none, size: 64, color: ColorPalette.gray400),
                   const SizedBox(height: 16),
                   Text(
-                    'No notifications yet',
+                    'কোন বিজ্ঞপ্তি নেই',
                     style: GoogleFonts.anekBangla(
                       fontSize: 16,
                       color: ColorPalette.gray500,
@@ -94,18 +94,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
             )
           : RefreshIndicator(
-              onRefresh: _loadAnnouncements,
+              onRefresh: _loadNotifications,
               child: ListView.builder(
                 padding: const EdgeInsets.all(16),
-                itemCount: _announcements.length,
+                itemCount: _notifications.length,
                 itemBuilder: (context, index) {
-                  final announcement = _announcements[index];
-                  final isRead = _readIds.contains(announcement.id);
+                  final notification = _notifications[index];
 
-                  return _AnnouncementCard(
-                    announcement: announcement,
-                    isRead: isRead,
-                    onTap: () => _markAsRead(announcement.id),
+                  return _NotificationCard(
+                    notification: notification,
+                    onTap: () => _markAsRead(notification.notificationId),
                   );
                 },
               ),
@@ -114,19 +112,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 }
 
-class _AnnouncementCard extends StatelessWidget {
-  final Announcement announcement;
-  final bool isRead;
+class _NotificationCard extends StatelessWidget {
+  final LocalNotification notification;
   final VoidCallback onTap;
 
-  const _AnnouncementCard({
-    required this.announcement,
-    required this.isRead,
+  const _NotificationCard({
+    required this.notification,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isRead = notification.isRead;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: isRead ? 0 : 2,
@@ -160,7 +158,7 @@ class _AnnouncementCard extends StatelessWidget {
                     ),
                   Expanded(
                     child: Text(
-                      announcement.title,
+                      notification.title,
                       style: GoogleFonts.anekBangla(
                         fontSize: 16,
                         fontWeight: isRead ? FontWeight.w400 : FontWeight.w700,
@@ -172,7 +170,7 @@ class _AnnouncementCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                announcement.body,
+                notification.body,
                 style: GoogleFonts.anekBangla(
                   fontSize: 14,
                   color: ColorPalette.slate600,
@@ -184,7 +182,7 @@ class _AnnouncementCard extends StatelessWidget {
                   Icon(Icons.access_time, size: 12, color: ColorPalette.slate400),
                   const SizedBox(width: 4),
                   Text(
-                    _formatDate(announcement.createdAt),
+                    _formatDate(notification.receivedAt),
                     style: const TextStyle(
                       fontSize: 12,
                       color: ColorPalette.slate400,
@@ -203,9 +201,9 @@ class _AnnouncementCard extends StatelessWidget {
     final now = DateTime.now();
     final diff = now.difference(date);
 
-    if (diff.inDays == 0) return 'Today';
-    if (diff.inDays == 1) return 'Yesterday';
-    if (diff.inDays < 7) return '${diff.inDays} days ago';
+    if (diff.inDays == 0) return 'আজ';
+    if (diff.inDays == 1) return 'গতকাল';
+    if (diff.inDays < 7) return '${diff.inDays} দিন আগে';
     return DateFormat('MMM dd, yyyy').format(date);
   }
 }

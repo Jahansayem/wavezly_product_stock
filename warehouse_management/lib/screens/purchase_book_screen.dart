@@ -13,8 +13,8 @@ import 'package:wavezly/services/purchase_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/utils/date_formatter.dart';
 import 'package:wavezly/widgets/purchase_card.dart';
-import 'package:wavezly/widgets/purchase_date_total_card.dart';
-import 'package:wavezly/widgets/purchase_filter_chips.dart';
+import 'package:wavezly/widgets/ledger/ledger_date_total_card.dart';
+import 'package:wavezly/widgets/ledger/ledger_filter_chips.dart';
 
 class PurchaseBookScreen extends StatefulWidget {
   const PurchaseBookScreen({Key? key}) : super(key: key);
@@ -34,8 +34,8 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
   bool _isLoading = true;
 
   // Date range state
-  late DateTime _rangeStart;
-  late DateTime _rangeEnd;
+  DateTime _rangeStart = DateTime.now();
+  DateTime _rangeEnd = DateTime.now();
   String _selectedPeriod = 'month';
 
   // Search state
@@ -67,7 +67,9 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
       _applyDateRangeFilter();
       _calculatePeriodTotal();
       _applySearchFilter('');
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ [PurchaseBookScreen] Load failed: $e');
+      print('Stack trace: $stackTrace');
       showTextToast('ক্রয় তথ্য লোড ব্যর্থ হয়েছে');
     } finally {
       setState(() => _isLoading = false);
@@ -347,10 +349,11 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Date Total Card
-                          PurchaseDateTotalCard(
+                          // Date Total Card (using shared component)
+                          LedgerDateTotalCard(
                             dateRange: _getDateRangeText(),
                             total: _periodTotal,
+                            totalLabel: 'মোট কেনা',
                             onPrevious: () => _navigateDateRange(-1),
                             onNext: () => _navigateDateRange(1),
                             enableNavigation: _selectedPeriod != 'custom',
@@ -358,8 +361,8 @@ class _PurchaseBookScreenState extends State<PurchaseBookScreen> {
 
                           const SizedBox(height: 16),
 
-                          // Filter Chips
-                          PurchaseFilterChips(
+                          // Filter Chips (using shared component)
+                          LedgerFilterChips(
                             selectedPeriod: _selectedPeriod,
                             onPeriodSelected: _onPeriodSelected,
                           ),

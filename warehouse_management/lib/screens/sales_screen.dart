@@ -16,14 +16,18 @@ import 'package:wavezly/services/product_service.dart';
 import 'package:wavezly/services/sales_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/utils/date_formatter.dart';
-import 'package:wavezly/utils/number_formatter.dart';
 
 /// Unified Sales Screen with tab-based view switching
 /// Contains Quick Sell and Product List views with state preservation
 class SalesScreen extends StatefulWidget {
   final VoidCallback? onBackPressed;
+  final VoidCallback? onSaleCompleted;
 
-  const SalesScreen({Key? key, this.onBackPressed}) : super(key: key);
+  const SalesScreen({
+    Key? key,
+    this.onBackPressed,
+    this.onSaleCompleted,
+  }) : super(key: key);
 
   @override
   _SalesScreenState createState() => _SalesScreenState();
@@ -71,9 +75,11 @@ class _SalesScreenState extends State<SalesScreen> {
                   children: [
                     _QuickSellView(
                       onTabChange: (index) => setState(() => _selectedTab = index),
+                      onSaleCompleted: widget.onSaleCompleted,
                     ),
                     _ProductListView(
                       onTabChange: (index) => setState(() => _selectedTab = index),
+                      onSaleCompleted: widget.onSaleCompleted,
                     ),
                   ],
                 ),
@@ -274,8 +280,13 @@ class _SalesScreenState extends State<SalesScreen> {
 // ===========================================================================
 class _QuickSellView extends StatefulWidget {
   final Function(int) onTabChange;
+  final VoidCallback? onSaleCompleted;
 
-  const _QuickSellView({Key? key, required this.onTabChange}) : super(key: key);
+  const _QuickSellView({
+    Key? key,
+    required this.onTabChange,
+    this.onSaleCompleted,
+  }) : super(key: key);
 
   @override
   _QuickSellViewState createState() => _QuickSellViewState();
@@ -348,11 +359,8 @@ class _QuickSellViewState extends State<_QuickSellView> {
     if (expression.isEmpty) return '';
 
     try {
-      // Convert Bengali to English for evaluation
-      String englishExpression = NumberFormatter.bengaliToEnglish(expression);
-
       // Replace display operators with math operators
-      englishExpression = englishExpression
+      String englishExpression = expression
           .replaceAll('×', '*')
           .replaceAll('÷', '/');
 
@@ -362,8 +370,8 @@ class _QuickSellViewState extends State<_QuickSellView> {
       ContextModel cm = ContextModel();
       double result = exp.evaluate(EvaluationType.REAL, cm);
 
-      // Convert back to Bengali
-      return NumberFormatter.formatToBengali(result, decimals: 2);
+      // Return result as English number
+      return result.toStringAsFixed(2);
     } catch (e) {
       // Invalid expression, return original
       return expression;
@@ -385,8 +393,7 @@ class _QuickSellViewState extends State<_QuickSellView> {
       }
 
       // Parse and validate cash amount
-      final String englishAmount = NumberFormatter.bengaliToEnglish(_cashAmount);
-      final double amount = double.tryParse(englishAmount) ?? 0.0;
+      final double amount = double.tryParse(_cashAmount) ?? 0.0;
 
       if (amount <= 0) {
         showTextToast('অনুগ্রহ করে ক্যাশ পরিমাণ লিখুন');
@@ -410,16 +417,13 @@ class _QuickSellViewState extends State<_QuickSellView> {
       }
 
       // Parse profit margin (optional)
-      final String englishProfit = NumberFormatter.bengaliToEnglish(
-        _profitController.text.trim()
-      );
-      final double profit = double.tryParse(englishProfit) ?? 0.0;
+      final double profit = double.tryParse(_profitController.text.trim()) ?? 0.0;
 
       // Get product details (optional)
       final String details = _detailsController.text.trim();
 
       // Process quick cash sale using new service method
-      final saleId = await _salesService.processQuickCashSale(
+      await _salesService.processQuickCashSale(
         userId: userId,
         cashReceived: amount,
         customerMobile: mobile.isNotEmpty ? mobile : null,
@@ -433,8 +437,22 @@ class _QuickSellViewState extends State<_QuickSellView> {
       // Success feedback
       showTextToast('বিক্রয় সফল হয়েছে!');
 
+      // Trigger dashboard refresh callback
+      widget.onSaleCompleted?.call();
+
       if (mounted) {
-        Navigator.pop(context, saleId);
+        // Do not pop here. In tab context this can pop the root route and
+        // show a blank screen after successful quick sale.
+        setState(() {
+          _cashAmount = '';
+          _mobileController.clear();
+          _profitController.clear();
+          _detailsController.clear();
+          _receiptSmsEnabled = true;
+          _selectedDate = DateTime.now();
+          _customerName = null;
+          _customerId = null;
+        });
       }
     } catch (e) {
       String errorMessage = 'ত্রুটি: ';
@@ -453,10 +471,6 @@ class _QuickSellViewState extends State<_QuickSellView> {
         setState(() => _isSubmitting = false);
       }
     }
-  }
-
-  double _parseBengaliNumber(String bengaliNumber) {
-    return NumberFormatter.parseBengaliNumber(bengaliNumber);
   }
 
   Future<void> _handleCustomerLookup() async {
@@ -705,7 +719,7 @@ class _QuickSellViewState extends State<_QuickSellView> {
             child: Align(
               alignment: Alignment.centerRight,
               child: Text(
-                _cashAmount.isEmpty ? '০' : _cashAmount,
+                _cashAmount.isEmpty ? '0' : _cashAmount,
                 style: GoogleFonts.manrope(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -1179,9 +1193,13 @@ class _QuickSellViewState extends State<_QuickSellView> {
 // ===========================================================================
 class _ProductListView extends StatefulWidget {
   final Function(int) onTabChange;
+  final VoidCallback? onSaleCompleted;
 
-  const _ProductListView({Key? key, required this.onTabChange})
-      : super(key: key);
+  const _ProductListView({
+    Key? key,
+    required this.onTabChange,
+    this.onSaleCompleted,
+  }) : super(key: key);
 
   @override
   _ProductListViewState createState() => _ProductListViewState();
@@ -1474,6 +1492,21 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
         );
       }).toList());
 
+      // Apply local stock deductions immediately
+      // Build deduction map: productId -> total quantity sold
+      final Map<String, int> deductions = {};
+      for (final item in _cartItems.values) {
+        deductions[item.productId] = (deductions[item.productId] ?? 0) + item.quantity;
+      }
+
+      try {
+        await _productService.applyLocalStockDeductions(deductions);
+        print('✅ Local stock updated for ${deductions.length} products');
+      } catch (e) {
+        // Don't fail sale if local update fails (sale already completed server-side)
+        print('⚠️ Local stock update failed (non-critical): $e');
+      }
+
       // Clear cart on success
       setState(() {
         _selectedProductIds.clear();
@@ -1483,6 +1516,9 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
       });
 
       showTextToast('বিক্রয় সফল হয়েছে!');
+
+      // Trigger dashboard refresh callback
+      widget.onSaleCompleted?.call();
     } catch (e) {
       setState(() => _isProcessing = false);
 

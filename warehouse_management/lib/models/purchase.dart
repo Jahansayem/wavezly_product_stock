@@ -44,6 +44,18 @@ class Purchase {
   bool get hasDue => dueAmount > 0;
   double get remainingDue => dueAmount;
 
+  // Helper: Parse bool from dynamic value (handles SQLite int 0/1, bool, string)
+  static bool _parseBool(dynamic v) {
+    if (v == null) return false;
+    if (v is bool) return v;
+    if (v is int) return v != 0;
+    if (v is String) {
+      final lower = v.toLowerCase();
+      return lower == 'true' || lower == '1';
+    }
+    return false;
+  }
+
   factory Purchase.fromMap(Map<String, dynamic> json) => Purchase(
         id: json["id"] as String?,
         purchaseNumber: json["purchase_number"] as String?,
@@ -62,7 +74,7 @@ class Purchase {
             : DateTime.now(),
         receiptImagePath: json["receipt_image_path"] as String?,
         comment: json["comment"] as String?,
-        smsEnabled: json["sms_enabled"] as bool? ?? false,
+        smsEnabled: _parseBool(json["sms_enabled"]),
         createdAt: json["created_at"] != null
             ? DateTime.parse(json["created_at"] as String)
             : null,

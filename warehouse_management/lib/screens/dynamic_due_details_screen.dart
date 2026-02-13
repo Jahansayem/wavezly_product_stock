@@ -1367,15 +1367,15 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
                 child: Container(
                   height: 56,
                   decoration: BoxDecoration(
-                    color: _rose500,
+                    color: ColorPalette.red500,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: isDark
                         ? []
                         : [
-                            const BoxShadow(
-                              offset: Offset(0, 10),
+                            BoxShadow(
+                              offset: const Offset(0, 10),
                               blurRadius: 15,
-                              color: Color(0x33FFE4E6),
+                              color: ColorPalette.red500.withOpacity(0.3),
                             ),
                           ],
                   ),
@@ -1408,15 +1408,15 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
                 child: Container(
                   height: 56,
                   decoration: BoxDecoration(
-                    color: _emerald600,
+                    color: ColorPalette.green500,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: isDark
                         ? []
                         : [
-                            const BoxShadow(
-                              offset: Offset(0, 10),
+                            BoxShadow(
+                              offset: const Offset(0, 10),
                               blurRadius: 15,
-                              color: Color(0x33D1FAE5),
+                              color: ColorPalette.green500.withOpacity(0.3),
                             ),
                           ],
                   ),

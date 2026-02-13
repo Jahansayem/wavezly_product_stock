@@ -7,6 +7,8 @@ import '../config/supabase_config.dart';
 import '../config/sync_config.dart';
 import '../database/dao/sync_queue_dao.dart';
 import '../database/dao/product_dao.dart';
+import '../database/dao/customer_dao.dart';
+import '../database/dao/customer_transaction_dao.dart';
 import 'connectivity_service.dart';
 
 class SyncResult {
@@ -46,6 +48,8 @@ class SyncService {
   final SyncQueueDao _queueDao = SyncQueueDao();
   final ConnectivityService _connectivity = ConnectivityService();
   final ProductDao _productDao = ProductDao();
+  final CustomerDao _customerDao = CustomerDao();
+  final CustomerTransactionDao _transactionDao = CustomerTransactionDao();
   SupabaseClient get _supabase => SupabaseConfig.client;
 
   Timer? _periodicTimer;
@@ -58,7 +62,8 @@ class SyncService {
       Duration(milliseconds: SyncConfig.syncIntervalMilliseconds),
       (_) => syncAll(),
     );
-    print('Periodic sync started (every ${SyncConfig.syncIntervalMinutes} minutes)');
+    print(
+        'Periodic sync started (every ${SyncConfig.syncIntervalMinutes} minutes)');
   }
 
   void stopPeriodicSync() {
@@ -152,7 +157,9 @@ class SyncService {
     final tableName = operation['table_name'] as String;
     final op = operation['operation'] as String;
     final recordId = operation['record_id'] as String;
-    final data = operation['data'] != null ? jsonDecode(operation['data'] as String) : null;
+    final data = operation['data'] != null
+        ? jsonDecode(operation['data'] as String)
+        : null;
 
     // Remove sync metadata fields before sending to Supabase
     if (data != null) {
@@ -163,14 +170,18 @@ class SyncService {
     switch (op) {
       case SyncConfig.operationInsert:
         try {
-          print('📤 SyncService: Inserting to $tableName - record_id: $recordId');
+          print(
+              '📤 SyncService: Inserting to $tableName - record_id: $recordId');
           await _supabase.from(tableName).insert(data);
           print('✅ SyncService: Insert successful');
           await _markRecordAsSynced(tableName, recordId);
         } catch (e) {
           final errorStr = e.toString().toLowerCase();
-          if (errorStr.contains('duplicate') || errorStr.contains('unique') || errorStr.contains('23505')) {
-            print('ℹ️ SyncService: $tableName/$recordId already exists - marking as synced');
+          if (errorStr.contains('duplicate') ||
+              errorStr.contains('unique') ||
+              errorStr.contains('23505')) {
+            print(
+                'ℹ️ SyncService: $tableName/$recordId already exists - marking as synced');
             await _markRecordAsSynced(tableName, recordId);
           } else {
             print('❌ SyncService: Insert failed for $tableName/$recordId');
@@ -222,9 +233,15 @@ class SyncService {
         totalPulled += count;
       }
 
-      // Notify ProductDao to refresh stream after sync
+      // Notify DAOs to refresh streams after sync
       if (totalPulled > 0) {
         await _productDao.notifyProductsChanged(userId);
+        await _customerDao.notifyCustomersChanged(userId);
+        // Note: CustomerTransactionDao uses per-customer streams,
+        // so we'd need to notify each customer separately.
+        // For now, UI will refresh on next navigation to customer details.
+        // Notify dashboard to refresh after data changes
+        _notifyDashboardRefresh();
       }
 
       print('Pulled $totalPulled records from server');
@@ -244,12 +261,61 @@ class SyncService {
       var query = _supabase.from(tableName).select();
 
       // Add user filter for user-specific tables
-      if (tableName != 'sale_items') {
+      // Special handling for child tables (sale_items, purchase_items) - scope by parent IDs
+      if (tableName == 'sale_items') {
+        // Fetch user's sales IDs from local database first
+        final db = DatabaseConfig.database;
+        final salesResults = await db.query(
+          'sales',
+          columns: ['id'],
+          where: 'user_id = ?',
+          whereArgs: [userId],
+        );
+        final saleIds = salesResults.map((row) => row['id'] as String).toList();
+
+        if (saleIds.isEmpty) {
+          // No sales for user, skip sync
+          return 0;
+        }
+
+        // Scope sale_items to user's sales IDs
+        query = query.inFilter('sale_id', saleIds);
+      } else if (tableName == 'purchase_items') {
+        // Fetch user's purchases IDs from local database first
+        final db = DatabaseConfig.database;
+        final purchasesResults = await db.query(
+          'purchases',
+          columns: ['id'],
+          where: 'user_id = ?',
+          whereArgs: [userId],
+        );
+        final purchaseIds = purchasesResults.map((row) => row['id'] as String).toList();
+
+        if (purchaseIds.isEmpty) {
+          // No purchases for user, skip sync
+          return 0;
+        }
+
+        // Scope purchase_items to user's purchases IDs
+        query = query.inFilter('purchase_id', purchaseIds);
+      } else if (tableName == 'expense_categories') {
+        // expense_categories: fetch system categories (user_id is null) and user's categories
+        query = query.or('is_system.eq.true,user_id.eq.$userId');
+      } else {
+        // Default: filter by user_id
         query = query.eq('user_id', userId);
       }
 
       // Filter by updated_at if table has it (some tables don't have updated_at)
-      final tablesWithoutUpdatedAt = ['product_groups', 'locations', 'sale_items', 'sales', 'customer_transactions'];
+      final tablesWithoutUpdatedAt = [
+        'product_groups',
+        'locations',
+        'sale_items',
+        'purchase_items',
+        'sales',
+        'purchases',
+        'customer_transactions'
+      ];
       if (!tablesWithoutUpdatedAt.contains(tableName)) {
         if (lastSync != null) {
           query = query.gt('updated_at', lastSync);
@@ -378,7 +444,18 @@ class SyncService {
     };
   }
 
+  // Dashboard refresh notification
+  final _dashboardRefreshController = StreamController<void>.broadcast();
+  Stream<void> get onDashboardRefresh => _dashboardRefreshController.stream;
+
+  void _notifyDashboardRefresh() {
+    if (!_dashboardRefreshController.isClosed) {
+      _dashboardRefreshController.add(null);
+    }
+  }
+
   void dispose() {
     stopPeriodicSync();
+    _dashboardRefreshController.close();
   }
 }

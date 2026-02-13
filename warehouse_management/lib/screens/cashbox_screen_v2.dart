@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:wavezly/models/cashbox_summary.dart';
 import 'package:wavezly/models/cashbox_transaction.dart';
 import 'package:wavezly/services/cashbox_service.dart';
+import 'package:wavezly/repositories/cashbox_repository.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/screens/cashbox_entry_screen.dart';
 
@@ -20,6 +21,7 @@ enum TimeRange { day, month, year, allTime, custom }
 
 class _CashboxScreenV2State extends State<CashboxScreenV2> {
   final CashboxService _cashboxService = CashboxService();
+  final CashboxRepository _cashboxRepository = CashboxRepository();
 
   TimeRange _selectedRange = TimeRange.year;
   DateTime _startDate = DateTime.now();
@@ -27,12 +29,16 @@ class _CashboxScreenV2State extends State<CashboxScreenV2> {
   CashboxSummary? _summary;
   List<CashboxTransaction> _transactions = [];
   bool _isLoading = true;
+  bool _isRefreshing = false;
+  int _requestId = 0;
 
   @override
   void initState() {
     super.initState();
     _initializeDateRange();
     _loadData();
+    // Trigger initial sync
+    _cashboxRepository.triggerCashboxSyncIfNeeded();
   }
 
   void _initializeDateRange() {
@@ -60,26 +66,51 @@ class _CashboxScreenV2State extends State<CashboxScreenV2> {
     }
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+  Future<void> _loadData({bool isRefresh = false}) async {
+    // Increment request ID to track this specific load operation
+    final currentRequestId = ++_requestId;
+
+    // Set appropriate loading flag
+    if (mounted) {
+      setState(() {
+        if (_summary == null) {
+          _isLoading = true;
+        } else {
+          _isRefreshing = isRefresh;
+        }
+      });
+    }
 
     try {
-      final summary = await _cashboxService.getSummary(_startDate, _endDate);
+      // Single fetch for transactions
       final transactions = await _cashboxService.getTransactions(
         startDate: _startDate,
         endDate: _endDate,
       );
 
-      if (mounted) {
+      // Build summary from fetched transactions (no duplicate query)
+      final summary = _cashboxService.buildSummaryFromTransactions(
+        transactions,
+        _startDate,
+        _endDate,
+      );
+
+      // Only apply response if this is still the latest request
+      if (mounted && currentRequestId == _requestId) {
         setState(() {
           _summary = summary;
           _transactions = transactions;
           _isLoading = false;
+          _isRefreshing = false;
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
+      // Only show error if this is still the latest request
+      if (mounted && currentRequestId == _requestId) {
+        setState(() {
+          _isLoading = false;
+          _isRefreshing = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -98,7 +129,7 @@ class _CashboxScreenV2State extends State<CashboxScreenV2> {
       _selectedRange = newRange;
       _initializeDateRange();
     });
-    _loadData();
+    _loadData(isRefresh: true);
   }
 
   void _onChevronLeft() {
@@ -110,7 +141,8 @@ class _CashboxScreenV2State extends State<CashboxScreenV2> {
           break;
         case TimeRange.month:
           _startDate = DateTime(_startDate.year, _startDate.month - 1, 1);
-          _endDate = DateTime(_startDate.year, _startDate.month + 1, 0, 23, 59, 59);
+          _endDate =
+              DateTime(_startDate.year, _startDate.month + 1, 0, 23, 59, 59);
           break;
         case TimeRange.year:
           _startDate = DateTime(_startDate.year - 1, 1, 1);
@@ -120,7 +152,7 @@ class _CashboxScreenV2State extends State<CashboxScreenV2> {
           break;
       }
     });
-    _loadData();
+    _loadData(isRefresh: true);
   }
 
   void _onChevronRight() {
@@ -132,7 +164,8 @@ class _CashboxScreenV2State extends State<CashboxScreenV2> {
           break;
         case TimeRange.month:
           _startDate = DateTime(_startDate.year, _startDate.month + 1, 1);
-          _endDate = DateTime(_startDate.year, _startDate.month + 2, 0, 23, 59, 59);
+          _endDate =
+              DateTime(_startDate.year, _startDate.month + 2, 0, 23, 59, 59);
           break;
         case TimeRange.year:
           _startDate = DateTime(_startDate.year + 1, 1, 1);
@@ -142,25 +175,33 @@ class _CashboxScreenV2State extends State<CashboxScreenV2> {
           break;
       }
     });
-    _loadData();
+    _loadData(isRefresh: true);
   }
 
   void _onCashInTap() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => CashboxEntryScreen(transactionType: TransactionType.cashIn),
+        builder: (_) =>
+            CashboxEntryScreen(transactionType: TransactionType.cashIn),
       ),
-    ).then((_) => _loadData());
+    ).then((_) {
+      _cashboxRepository.triggerCashboxSyncIfNeeded();
+      _loadData(isRefresh: true);
+    });
   }
 
   void _onCashOutTap() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => CashboxEntryScreen(transactionType: TransactionType.cashOut),
+        builder: (_) =>
+            CashboxEntryScreen(transactionType: TransactionType.cashOut),
       ),
-    ).then((_) => _loadData());
+    ).then((_) {
+      _cashboxRepository.triggerCashboxSyncIfNeeded();
+      _loadData(isRefresh: true);
+    });
   }
 
   void _onFilterTap() {
@@ -187,8 +228,18 @@ class _CashboxScreenV2State extends State<CashboxScreenV2> {
 
   String _getDateRangeText() {
     final banglaMonths = [
-      'জানুয়ারী', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-      'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
+      'জানুয়ারী',
+      'ফেব্রুয়ারি',
+      'মার্চ',
+      'এপ্রিল',
+      'মে',
+      'জুন',
+      'জুলাই',
+      'আগস্ট',
+      'সেপ্টেম্বর',
+      'অক্টোবর',
+      'নভেম্বর',
+      'ডিসেম্বর'
     ];
 
     switch (_selectedRange) {
@@ -227,97 +278,126 @@ class _CashboxScreenV2State extends State<CashboxScreenV2> {
     return Scaffold(
       backgroundColor: ColorPalette.gray100, // #F3F4F6
       appBar: _buildAppBar(),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 96), // Bottom padding for fixed bar
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Balance Card
-                  _BalanceCard(
-                    balance: _summary?.balance ?? 0.0,
-                    dateRangeText: _getDateRangeText(),
-                    periodBadgeText: _getPeriodBadgeText(),
-                    isLoading: _isLoading,
-                    formatNumber: _formatBengaliNumber,
-                    onChevronLeft: _onChevronLeft,
-                    onChevronRight: _onChevronRight,
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Time Range Chips Row
-                  _RangeChipsRow(
-                    selectedRange: _selectedRange,
-                    onRangeChanged: _onRangeChanged,
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Cash In / Cash Out Summary Cards
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _SummaryCard(
-                          title: 'ক্যাশ ইন',
-                          amount: _summary?.totalCashIn ?? 0.0,
-                          icon: Icons.arrow_downward,
-                          borderColor: ColorPalette.green500,
-                          iconBgColor: const Color(0xFFF0FDF4), // green-50
-                          iconColor: ColorPalette.green500,
-                          amountColor: ColorPalette.green500,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await _cashboxRepository.triggerCashboxSyncIfNeeded(force: true);
+          await _loadData(isRefresh: true);
+        },
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    16, 20, 16, 96), // Bottom padding for fixed bar
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Balance Card
+                    Stack(
+                      children: [
+                        _BalanceCard(
+                          balance: _summary?.balance ?? 0.0,
+                          dateRangeText: _getDateRangeText(),
+                          periodBadgeText: _getPeriodBadgeText(),
                           isLoading: _isLoading,
                           formatNumber: _formatBengaliNumber,
+                          onChevronLeft: _onChevronLeft,
+                          onChevronRight: _onChevronRight,
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _SummaryCard(
-                          title: 'ক্যাশ আউট',
-                          amount: _summary?.totalCashOut ?? 0.0,
-                          icon: Icons.arrow_upward,
-                          borderColor: ColorPalette.red500,
-                          iconBgColor: const Color(0xFFFEF2F2), // red-50
-                          iconColor: ColorPalette.red500,
-                          amountColor: ColorPalette.red500,
-                          isLoading: _isLoading,
-                          formatNumber: _formatBengaliNumber,
+                        if (_isRefreshing)
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.7),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Center(
+                                child: SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Time Range Chips Row
+                    _RangeChipsRow(
+                      selectedRange: _selectedRange,
+                      onRangeChanged: _onRangeChanged,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Cash In / Cash Out Summary Cards
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _SummaryCard(
+                            title: 'ক্যাশ ইন',
+                            amount: _summary?.totalCashIn ?? 0.0,
+                            icon: Icons.arrow_downward,
+                            borderColor: ColorPalette.green500,
+                            iconBgColor: const Color(0xFFF0FDF4), // green-50
+                            iconColor: ColorPalette.green500,
+                            amountColor: ColorPalette.green500,
+                            isLoading: _isLoading,
+                            formatNumber: _formatBengaliNumber,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _SummaryCard(
+                            title: 'ক্যাশ আউট',
+                            amount: _summary?.totalCashOut ?? 0.0,
+                            icon: Icons.arrow_upward,
+                            borderColor: ColorPalette.red500,
+                            iconBgColor: const Color(0xFFFEF2F2), // red-50
+                            iconColor: ColorPalette.red500,
+                            amountColor: ColorPalette.red500,
+                            isLoading: _isLoading,
+                            formatNumber: _formatBengaliNumber,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
 
-                  // Transaction Header
-                  _TransactionHeader(
-                    transactionCount: _summary?.transactionCount ?? 0,
-                    formatNumber: _formatBengaliNumber,
-                    onFilterTap: _onFilterTap,
-                  ),
-                  const SizedBox(height: 16),
+                    // Transaction Header
+                    _TransactionHeader(
+                      transactionCount: _summary?.transactionCount ?? 0,
+                      formatNumber: _formatBengaliNumber,
+                      onFilterTap: _onFilterTap,
+                    ),
+                    const SizedBox(height: 16),
 
-                  // Transaction List or Empty State
-                  if (_transactions.isEmpty && !_isLoading)
-                    const _EmptyState()
-                  else if (_transactions.isNotEmpty)
-                    // TODO: Implement transaction list in future
-                    const _EmptyState(),
-                ],
+                    // Transaction List or Empty State
+                    if (_transactions.isEmpty && !_isLoading)
+                      const _EmptyState()
+                    else if (_transactions.isNotEmpty)
+                      // TODO: Implement transaction list in future
+                      const _EmptyState(),
+                  ],
+                ),
               ),
             ),
-          ),
 
-          // Bottom Fixed Action Bar
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _BottomActionBar(
-              onCashInTap: _onCashInTap,
-              onCashOutTap: _onCashOutTap,
+            // Bottom Fixed Action Bar
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _BottomActionBar(
+                onCashInTap: _onCashInTap,
+                onCashOutTap: _onCashOutTap,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -334,7 +414,7 @@ class _CashboxScreenV2State extends State<CashboxScreenV2> {
             gradient: LinearGradient(
               colors: [
                 ColorPalette.offerYellowStart, // #FBBF24 (amber-400)
-                ColorPalette.offerYellowEnd,   // #F59E0B (amber-500)
+                ColorPalette.offerYellowEnd, // #F59E0B (amber-500)
               ],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
@@ -465,7 +545,8 @@ class _BalanceCard extends StatelessWidget {
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: const Color(0xFFE0F2F1), // primary-light
                         borderRadius: BorderRadius.circular(4),

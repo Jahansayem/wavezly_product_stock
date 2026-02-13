@@ -31,7 +31,8 @@ class OtpVerificationScreen extends StatefulWidget {
   const OtpVerificationScreen({
     super.key,
     required this.phoneNumber,
-    this.flowType = AppAuthFlowType.signup,  // Default preserves existing behavior
+    this.flowType =
+        AppAuthFlowType.signup, // Default preserves existing behavior
   });
 
   @override
@@ -143,7 +144,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     });
 
     try {
-      final isValid = await _smsService.verifyOTP(widget.phoneNumber, _currentOtp);
+      final isValid =
+          await _smsService.verifyOTP(widget.phoneNumber, _currentOtp);
 
       if (isValid) {
         // OTP verified - now handle auth based on flow type
@@ -172,13 +174,16 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   Future<void> _handleForgotPinAuth() async {
     try {
       final supabase = SupabaseConfig.client;
-      final email = 'phone-${widget.phoneNumber}@halkhata.app'; // lowercase 'phone-'
-      final newPassword = _generateSecurePassword(widget.phoneNumber, _currentOtp);
+      final email =
+          'phone-${widget.phoneNumber}@halkhata.app'; // lowercase 'phone-'
+      final newPassword =
+          _generateSecurePassword(widget.phoneNumber, _currentOtp);
 
       debugPrint('🔄 Forgot PIN: Resetting password for $email');
 
       // Step 1: Reset password using RPC function (requires OTP verification first)
-      final result = await supabase.rpc('reset_user_password_by_phone', params: {
+      final result =
+          await supabase.rpc('reset_user_password_by_phone', params: {
         'user_phone': widget.phoneNumber,
         'new_password': newPassword,
       });
@@ -226,26 +231,30 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     }
   }
 
-  /// Handle auth for signup/login flow
+  /// Handle auth for signup/login flow using auth path as source of truth
   Future<void> _handleSignupLoginAuth() async {
     try {
       final supabase = SupabaseConfig.client;
-      final email = 'phone-${widget.phoneNumber}@halkhata.app'; // lowercase 'phone-'
+      final email =
+          'phone-${widget.phoneNumber}@halkhata.app'; // lowercase 'phone-'
       final password = _generateSecurePassword(widget.phoneNumber, _currentOtp);
 
+      bool isNewUser = false;
+
+      // Try signIn first (existing user)
       try {
-        // Try to sign in first (existing user)
         await supabase.auth.signInWithPassword(
           email: email,
           password: password,
         );
-        debugPrint('✅ Sign in successful with existing credentials');
+        debugPrint('✅ [OTP] Existing user - signIn succeeded');
+        isNewUser = false; // DETERMINISTIC: signIn success = existing user
       } catch (signInError) {
-        debugPrint('⚠️ Sign in failed, attempting sign up: $signInError');
+        debugPrint('⚠️ [OTP] signIn failed, attempting signUp');
 
-        // Try to sign up (new user)
+        // Try signUp (new user)
         try {
-          await supabase.auth.signUp(
+          final signUpResponse = await supabase.auth.signUp(
             email: email,
             password: password,
             data: {
@@ -254,79 +263,80 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             },
           );
 
+          // Check if signup actually created a new user
+          // Supabase returns empty identities for existing users (anti-enumeration)
+          final identities = signUpResponse.user?.identities ?? [];
+          if (identities.isEmpty) {
+            debugPrint('⚠️ [OTP] signUp returned but user already exists (empty identities)');
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => PinVerificationScreen(phoneNumber: widget.phoneNumber),
+                ),
+              );
+            }
+            return;
+          }
+
+          debugPrint('✅ [OTP] New user - signUp succeeded with identities');
+          isNewUser = true; // DETERMINISTIC: signUp success = new user
+
           // Sign in after sign up
           await supabase.auth.signInWithPassword(
             email: email,
             password: password,
           );
-          debugPrint('✅ New user signed up and signed in successfully');
         } catch (signUpError) {
-          // Check if user already exists
+          // Handle user_already_exists (edge case)
           if (signUpError is AuthApiException &&
               signUpError.code == 'user_already_exists') {
-            debugPrint('✅ User already exists, redirecting to PIN verification');
-
-            // Show message in Bengali
-            setState(() {
-              _isVerifying = false;
-              _errorMessage = 'আপনি ইতিমধ্যে নিবন্ধিত। পিন স্ক্রিনে যাচ্ছি...';
-            });
-
-            // Wait briefly for user to see message
-            await Future.delayed(const Duration(seconds: 1, milliseconds: 500));
-
+            debugPrint(
+                '⚠️ [OTP] User exists but wrong password - redirect to PIN');
             if (mounted) {
-              Navigator.of(context).pushReplacement(
+              Navigator.pushReplacement(
+                context,
                 MaterialPageRoute(
-                  builder: (_) => PinVerificationScreen(
-                    phoneNumber: widget.phoneNumber,
-                  ),
+                  builder: (_) =>
+                      PinVerificationScreen(phoneNumber: widget.phoneNumber),
                 ),
               );
             }
-            return; // Exit method
-          } else {
-            // Other signup error - rethrow
-            throw signUpError;
+            return;
           }
+          throw signUpError;
         }
       }
 
-      // Verify session was created
+      // Verify session
       final currentUser = supabase.auth.currentUser;
       if (currentUser == null) {
         throw Exception('Failed to create auth session');
       }
 
-      debugPrint('✅ Auth session created for user: ${currentUser.id}');
+      debugPrint('✅ [OTP] Auth session created for user: ${currentUser.id}');
+      debugPrint('📊 [OTP] User type: ${isNewUser ? "NEW" : "EXISTING"}');
 
-      // Check onboarding completion status
-      final onboardingResponse = await supabase
-          .from('user_business_profiles')
-          .select('onboarding_completed_at')
-          .eq('user_id', currentUser.id)
-          .maybeSingle();
-
-      final isOnboardingComplete = onboardingResponse != null &&
-          onboardingResponse['onboarding_completed_at'] != null;
-
-      debugPrint('📊 Onboarding status: ${isOnboardingComplete ? "Complete" : "Incomplete"}');
-
+      // ROUTE BASED ON AUTH PATH (deterministic, no timeout queries)
       if (mounted) {
-        if (isOnboardingComplete) {
-          // Existing user → PIN verification
-          Navigator.of(context).pushReplacement(
+        if (isNewUser) {
+          // NEW USER → Onboarding
+          debugPrint('🆕 [OTP] New user - navigating to BusinessInfoScreen');
+          Navigator.pushReplacement(
+            context,
             MaterialPageRoute(
-              builder: (_) => PinVerificationScreen(
+              builder: (_) => BusinessInfoScreen(
                 phoneNumber: widget.phoneNumber,
               ),
             ),
           );
         } else {
-          // New user → Onboarding
-          Navigator.of(context).pushReplacement(
+          // EXISTING USER → PIN verification
+          debugPrint('✅ [OTP] Existing user - navigating to PinVerificationScreen');
+          Navigator.pushReplacement(
+            context,
             MaterialPageRoute(
-              builder: (_) => BusinessInfoScreen(
+              builder: (_) => PinVerificationScreen(
                 phoneNumber: widget.phoneNumber,
               ),
             ),
@@ -375,7 +385,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   decoration: isTablet
                       ? BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusLg),
                           boxShadow: AppTheme.softShadow,
                         )
                       : null,
@@ -392,7 +403,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                               children: [
                                 // Top row: Back button + Helpline button
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     // Yellow back button
                                     GestureDetector(
@@ -419,7 +431,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
                                 // Promo/Testimonial card
                                 const PromoCard(
-                                  title: '"৪টি ব্যবসা, সব হিসাব একটি অ্যাপে হালখাতা"',
+                                  title:
+                                      '"৪টি ব্যবসা, সব হিসাব একটি অ্যাপে হালখাতা"',
                                   subtitle: '- মীর আবু সাইদ নোয়াখালী',
                                   currentPage: 1,
                                   totalPages: 5,
@@ -439,13 +452,16 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                   decoration: BoxDecoration(
                                     color: AppTheme.yellow50,
                                     border: Border.all(
-                                      color: const Color(0xFFFDE047), // yellow-300
+                                      color:
+                                          const Color(0xFFFDE047), // yellow-300
                                       width: 1,
                                     ),
-                                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                                    borderRadius: BorderRadius.circular(
+                                        AppTheme.radiusMd),
                                   ),
                                   child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Icon(
                                         Icons.sms_outlined,
@@ -465,13 +481,15 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                             children: [
                                               const TextSpan(text: 'আপনার '),
                                               TextSpan(
-                                                text: _formatPhone(widget.phoneNumber),
+                                                text: _formatPhone(
+                                                    widget.phoneNumber),
                                                 style: const TextStyle(
                                                   fontWeight: FontWeight.w600,
                                                 ),
                                               ),
                                               const TextSpan(
-                                                text: ' নম্বরে একটি ৬ ডিজিটের ভেরিফিকেশন কোড পাঠানো হয়েছে',
+                                                text:
+                                                    ' নম্বরে একটি ৬ ডিজিটের ভেরিফিকেশন কোড পাঠানো হয়েছে',
                                               ),
                                             ],
                                           ),
@@ -517,7 +535,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                       text: TextSpan(
                                         style: AppTheme.labelMedium,
                                         children: [
-                                          const TextSpan(text: 'আরেকবার চেষ্টা করুন '),
+                                          const TextSpan(
+                                              text: 'আরেকবার চেষ্টা করুন '),
                                           TextSpan(
                                             text: _formatTime(_resendCountdown),
                                             style: const TextStyle(
@@ -535,7 +554,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                       style: TextButton.styleFrom(
                                         padding: EdgeInsets.zero,
                                         minimumSize: const Size(0, 0),
-                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
                                       ),
                                       child: const Text(
                                         'মোবাইল নাম্বার পরিবর্তন করুন',
@@ -543,7 +563,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                           fontSize: 14,
                                           color: AppTheme.textSecondary,
                                           decoration: TextDecoration.underline,
-                                          decorationStyle: TextDecorationStyle.dotted,
+                                          decorationStyle:
+                                              TextDecorationStyle.dotted,
                                           fontFamily: 'HindSiliguri',
                                         ),
                                       ),
@@ -555,7 +576,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                 // Bottom toast
                                 Center(
                                   child: BottomToast(
-                                    message: 'Sent verification CODE at ${_formatPhone(widget.phoneNumber)}',
+                                    message:
+                                        'Sent verification CODE at ${_formatPhone(widget.phoneNumber)}',
                                     visible: _showToast,
                                   ),
                                 ),

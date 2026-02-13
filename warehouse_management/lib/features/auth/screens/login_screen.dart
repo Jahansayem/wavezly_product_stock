@@ -68,8 +68,9 @@ class _LoginScreenState extends State<LoginScreen> {
       return exists;
     } catch (e) {
       debugPrint('❌ Error checking user existence: $e');
-      // On error, treat as new user and proceed with OTP (safer)
-      return false;
+      // On error, treat as existing user (safer - sends to PIN screen)
+      // Worst case: new user just uses "forgot PIN" flow
+      return true;
     }
   }
 

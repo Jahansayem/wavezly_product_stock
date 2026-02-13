@@ -26,7 +26,7 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
   final ProductService _productService = ProductService();
 
   // State
-  final Set<String> _selectedProductIds = {};
+  final Map<String, int> _selectedProductQuantities = {};
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
   List<Product>? _filteredProducts;
@@ -278,7 +278,8 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
   // PRODUCT CARD
   // =======================================================================
   Widget _buildProductCard(Product product) {
-    final isSelected = _selectedProductIds.contains(product.id);
+    final selectedQty = _selectedProductQuantities[product.id] ?? 0;
+    final isSelected = selectedQty > 0;
     final stockColor = _getStockColor(product.quantity ?? 0);
     final salePrice = (product.cost ?? 0) * 1.3; // 30% markup
 
@@ -306,26 +307,58 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _toggleProductSelection(product),
+          onTap: () => _incrementProductQuantity(product),
+          onLongPress: () => _decrementProductQuantity(product),
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                // Icon Tile
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: ColorPalette.blue50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: ColorPalette.blue100.withOpacity(0.5)),
-                  ),
-                  child: Icon(
-                    _getProductIcon(product.group),
-                    color: primary,
-                    size: 32,
-                  ),
+                // Icon Tile with quantity badge
+                Stack(
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: ColorPalette.blue50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: ColorPalette.blue100.withOpacity(0.5)),
+                      ),
+                      child: Icon(
+                        _getProductIcon(product.group),
+                        color: primary,
+                        size: 32,
+                      ),
+                    ),
+                    if (isSelected)
+                      Positioned(
+                        top: -4,
+                        right: -4,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 24,
+                            minHeight: 24,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '$selectedQty',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(width: 16),
                 // Content
@@ -463,7 +496,7 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
                       size: 24, color: Colors.white),
                   const SizedBox(width: 8),
                   Text(
-                    '${_selectedProductIds.length} টি',
+                    '${_selectedProductQuantities.values.fold<int>(0, (sum, qty) => sum + qty)} টি',
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
@@ -480,7 +513,7 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(50),
             child: InkWell(
-              onTap: _selectedProductIds.isNotEmpty ? _handleBuyPressed : null,
+              onTap: _selectedProductQuantities.isNotEmpty ? _handleBuyPressed : null,
               borderRadius: BorderRadius.circular(50),
               child: Container(
                 padding:
@@ -566,14 +599,36 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
     });
   }
 
-  void _toggleProductSelection(Product product) {
+  void _incrementProductQuantity(Product product) {
+    if (product.id == null) return;
+
+    final currentQty = _selectedProductQuantities[product.id] ?? 0;
+
+    // Safety cap to prevent accidental runaway taps
+    if (currentQty >= 9999) {
+      showTextToast('সর্বোচ্চ পরিমাণে পৌঁছেছে (9999 টি)');
+      return;
+    }
+
     setState(() {
-      if (_selectedProductIds.contains(product.id)) {
-        _selectedProductIds.remove(product.id);
-      } else {
-        _selectedProductIds.add(product.id!);
-      }
+      _selectedProductQuantities[product.id!] = currentQty + 1;
     });
+  }
+
+  void _decrementProductQuantity(Product product) {
+    if (product.id == null) return;
+
+    final currentQty = _selectedProductQuantities[product.id] ?? 0;
+
+    if (currentQty <= 1) {
+      setState(() {
+        _selectedProductQuantities.remove(product.id);
+      });
+    } else {
+      setState(() {
+        _selectedProductQuantities[product.id!] = currentQty - 1;
+      });
+    }
   }
 
   void _showFilterDialog() {
@@ -624,13 +679,23 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
     );
 
     if (product != null && product.id != null) {
-      setState(() => _selectedProductIds.add(product.id!));
-      showTextToast('${product.name} যোগ করা হয়েছে!');
+      final currentQty = _selectedProductQuantities[product.id] ?? 0;
+
+      // Safety cap to prevent accidental runaway scans
+      if (currentQty >= 9999) {
+        showTextToast('${product.name} - সর্বোচ্চ পরিমাণে পৌঁছেছে (9999 টি)');
+        return;
+      }
+
+      setState(() {
+        _selectedProductQuantities[product.id!] = currentQty + 1;
+      });
+      showTextToast('${product.name} যোগ করা হয়েছে! (${currentQty + 1} টি)');
     }
   }
 
   Future<void> _handleBuyPressed() async {
-    if (_selectedProductIds.isEmpty) {
+    if (_selectedProductQuantities.isEmpty) {
       showTextToast('অনুগ্রহ করে পণ্য নির্বাচন করুন');
       return;
     }
@@ -666,14 +731,17 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
     final cartItems = <BuyingCartItem>[];
 
     try {
-      for (final productId in _selectedProductIds) {
+      for (final entry in _selectedProductQuantities.entries) {
+        final productId = entry.key;
+        final quantity = entry.value;
+
         final product = await _productService.getProductById(productId);
         if (product != null && product.id != null) {
           cartItems.add(BuyingCartItem(
             productId: product.id!,
             productName: product.name ?? 'Unknown',
             costPrice: product.cost ?? 0.0,
-            quantity: 1,
+            quantity: quantity,
           ));
         }
       }
@@ -757,12 +825,31 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
         cartItems: cartItems,
       );
 
+      // Apply local stock increments immediately (server already updated via RPC)
+      try {
+        final increments = <String, int>{};
+        for (final item in cartItems) {
+          final productId = item.productId;
+          final qty = item.quantity?.toInt() ?? 0;
+          if (productId != null && qty > 0) {
+            increments[productId] = (increments[productId] ?? 0) + qty;
+          }
+        }
+        if (increments.isNotEmpty) {
+          await _productService.applyLocalStockIncrements(increments);
+          print('✅ Local stock increments applied: $increments');
+        }
+      } catch (e) {
+        // Log warning but don't fail purchase flow
+        print('⚠️ Failed to apply local stock increments: $e');
+      }
+
       if (mounted) Navigator.pop(context);
 
       showTextToast('পণ্য ক্রয় সফল হয়েছে!');
 
       setState(() {
-        _selectedProductIds.clear();
+        _selectedProductQuantities.clear();
         _filteredProducts = null;
       });
 

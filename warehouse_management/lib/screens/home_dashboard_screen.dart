@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:wavezly/services/dashboard_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/screens/sales_screen.dart';
+import 'package:wavezly/screens/sales_book_screen.dart';
 import 'package:wavezly/screens/customers_page.dart';
 import 'package:wavezly/screens/settings_page.dart';
 import 'package:wavezly/screens/reports_page.dart';
@@ -15,7 +16,8 @@ import 'package:wavezly/screens/cashbox_screen_v2.dart';
 import 'package:wavezly/screens/user_list_screen_v1.dart';
 import 'package:wavezly/screens/select_product_buying_screen.dart';
 import 'package:wavezly/screens/notifications_screen.dart';
-import 'package:wavezly/repositories/announcement_repository.dart';
+import 'package:wavezly/services/local_notification_cache_service.dart';
+import 'package:wavezly/widgets/gradient_app_bar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // ============================================================================
@@ -24,8 +26,17 @@ import 'package:url_launcher/url_launcher.dart';
 
 class HomeDashboardScreen extends StatefulWidget {
   final Function(int)? onNavTap;
+  final int? refreshToken;
+  final DashboardSummary? initialSummary;
+  final String? initialShopName;
 
-  const HomeDashboardScreen({Key? key, this.onNavTap}) : super(key: key);
+  const HomeDashboardScreen({
+    Key? key,
+    this.onNavTap,
+    this.refreshToken,
+    this.initialSummary,
+    this.initialShopName,
+  }) : super(key: key);
 
   @override
   State<HomeDashboardScreen> createState() => _HomeDashboardScreenState();
@@ -34,25 +45,81 @@ class HomeDashboardScreen extends StatefulWidget {
 class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   final DashboardService _dashboardService = DashboardService();
   DashboardSummary? _summary;
-  bool _isLoading = true;
+  bool _isLoading = false; // Start with false - we use local-first approach
   bool _isDayView = true;
+  String? _shopName;
+  int _badgeRefreshToken = 0; // Token to trigger badge refresh
 
   @override
   void initState() {
     super.initState();
-    _loadDashboardData();
+
+    // Initialize shop name from initial value or preloaded summary
+    _shopName = widget.initialShopName ?? widget.initialSummary?.shopName;
+
+    // Priority 1: If preloaded summary exists, use it immediately
+    if (widget.initialSummary != null) {
+      _summary = widget.initialSummary;
+      // Background refresh to get latest data (silent)
+      _loadDashboardData(silent: true);
+    } else {
+      // Priority 2: Try to load from persistent cache for instant render
+      _loadFromCacheThenRefresh();
+    }
   }
 
-  Future<void> _loadDashboardData() async {
+  /// Load from persistent cache first (instant), then refresh from DB/remote.
+  /// Always silent - no loading indicator on first paint (local-first approach).
+  Future<void> _loadFromCacheThenRefresh() async {
     try {
+      // Try persistent cache first
+      final cachedSummary = await _dashboardService.getCachedSummary();
+      if (cachedSummary != null && mounted) {
+        setState(() {
+          _summary = cachedSummary;
+          if (cachedSummary.shopName != null) {
+            _shopName = cachedSummary.shopName;
+          }
+        });
+      }
+      // Always do background refresh (silent) - getSummary is offline-first anyway
+      _loadDashboardData(silent: true);
+    } catch (e) {
+      print('Cache load error: $e');
+      // Fallback: still do silent load since service is offline-first
+      _loadDashboardData(silent: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(HomeDashboardScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reload dashboard data when refresh token changes (silent refresh, no loader)
+    if (widget.refreshToken != oldWidget.refreshToken) {
+      _loadDashboardData(silent: true);
+    }
+  }
+
+  Future<void> _loadDashboardData({bool silent = false}) async {
+    if (!silent) {
+      setState(() => _isLoading = true);
+    }
+
+    try {
+      // getSummary now uses offline-first approach (returns local immediately)
       final summary = await _dashboardService.getSummary();
       if (mounted) {
         setState(() {
           _summary = summary;
           _isLoading = false;
+          // Update shop name if available in summary
+          if (summary.shopName != null) {
+            _shopName = summary.shopName;
+          }
         });
       }
     } catch (e) {
+      print('Dashboard load error: $e');
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -115,7 +182,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          _summary?.shopName ?? 'হালখাতা ম্যানেজার',
+          _shopName ?? 'হালখাতা ম্যানেজার',
           style: GoogleFonts.anekBangla(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -138,10 +205,10 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   }
 
   Stream<int> _getUnreadCountStream() {
+    final cacheService = LocalNotificationCacheService();
     return Stream.periodic(const Duration(seconds: 30), (_) async {
       try {
-        final repo = AnnouncementRepository();
-        return await repo.getUnreadCount();
+        return await cacheService.getUnreadCount();
       } catch (e) {
         return 0;
       }
@@ -157,6 +224,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       ),
       // Notifications with unread count badge
       StreamBuilder<int>(
+        key: ValueKey(_badgeRefreshToken), // Force rebuild when token changes
         stream: _getUnreadCountStream(),
         initialData: 0,
         builder: (context, snapshot) {
@@ -171,8 +239,12 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                     context,
                     MaterialPageRoute(builder: (_) => const NotificationsScreen()),
                   );
-                  // Refresh unread count after returning
-                  if (mounted) setState(() {});
+                  // Refresh badge count after returning
+                  if (mounted) {
+                    setState(() {
+                      _badgeRefreshToken++; // Trigger badge refresh
+                    });
+                  }
                 },
               ),
               if (unreadCount > 0)
@@ -217,22 +289,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ColorPalette.gray100, // Stitch: #F3F4F6
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        toolbarHeight: 72,
-        elevation: 4,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                ColorPalette.offerYellowStart, // #FBBF24 (amber-400)
-                ColorPalette.offerYellowEnd,   // #F59E0B (amber-500)
-              ],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
-          ),
-        ),
+      appBar: GradientAppBar(
         title: _buildAppBarTitle(
           subtitle: _summary?.lastBackupTime ?? 'Last sync: Not configured',
         ),
@@ -275,7 +332,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                               bgColor: ColorPalette.blue100,
                               iconColor: ColorPalette.blue600,
                               onTap: () => Navigator.push(context,
-                                MaterialPageRoute(builder: (_) => const SalesScreen())),
+                                MaterialPageRoute(builder: (_) => const SalesBookScreen())),
                             ),
                             _GridItemData(
                               icon: Icons.pending_actions,

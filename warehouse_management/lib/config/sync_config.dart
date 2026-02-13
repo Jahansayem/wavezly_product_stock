@@ -22,15 +22,20 @@ class SyncConfig {
   static const String statusCompleted = 'completed';
   static const String statusFailed = 'failed';
 
-  // Tables to sync
+  // Tables to sync (order matters: headers before items)
   static const List<String> syncTables = [
     'products',
     'product_groups',
     'locations',
     'customers',
     'customer_transactions',
+    'purchases',
+    'purchase_items',
     'sales',
     'sale_items',
+    'cashbox_transactions',
+    'expense_categories',
+    'expenses',
   ];
 
   // Retry delay calculation (exponential backoff)

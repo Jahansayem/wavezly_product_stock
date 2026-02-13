@@ -1,36 +1,27 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wavezly/config/supabase_config.dart';
 import 'package:wavezly/models/sale.dart';
 import 'package:wavezly/models/sale_item.dart';
 import 'package:wavezly/models/cart_item.dart';
+import 'package:wavezly/repositories/sales_repository.dart';
 
+/// SalesService - Backward-compatible facade over SalesRepository
+/// Maintains existing public API while using offline-first repository internally
 class SalesService {
-  final _supabase = SupabaseConfig.client;
+  final SalesRepository _repository = SalesRepository();
 
+  /// Generate sale number (now handled locally by repository)
   Future<String> generateSaleNumber() async {
-    final response = await _supabase.rpc('generate_sale_number');
-    return response as String;
+    // Generate local sale number format: S-YYYYMMDD-XXXXX
+    final timestamp = DateTime.now();
+    final dateStr = '${timestamp.year}${timestamp.month.toString().padLeft(2, '0')}${timestamp.day.toString().padLeft(2, '0')}';
+    final random = timestamp.millisecondsSinceEpoch % 100000;
+    return 'S-$dateStr-${random.toString().padLeft(5, '0')}';
   }
 
-  /// Check which product IDs are missing from server
+  /// Check which product IDs are missing from server (legacy - no longer needed for offline-first)
   Future<List<String>> findMissingProductIds(List<String> productIds) async {
-    if (productIds.isEmpty) return [];
-
-    try {
-      final response = await _supabase
-          .from('products')
-          .select('id')
-          .inFilter('id', productIds);
-
-      final existingIds = (response as List)
-          .map((row) => row['id'] as String)
-          .toSet();
-
-      return productIds.where((id) => !existingIds.contains(id)).toList();
-    } catch (e) {
-      // If query fails, assume all missing to be safe
-      return productIds;
-    }
+    // Offline-first: Always return empty (products are local)
+    return [];
   }
 
   /// Validate UUID format
@@ -43,56 +34,31 @@ class SalesService {
     return uuidPattern.hasMatch(id);
   }
 
+  /// Process sale - now uses offline-first repository
   Future<String> processSale(Sale sale, List<CartItem> cartItems) async {
-    // Collect and validate product IDs
+    // Validate product IDs (basic format check)
     final productIds = cartItems
         .map((item) => item.product.id)
         .where((id) => id != null && id.isNotEmpty)
         .cast<String>()
         .toList();
 
-    // Validate UUID format
     for (final id in productIds) {
       if (!_isValidUUID(id)) {
         throw Exception(
-          'পণ্যটি সার্ভারে sync হয়নি। Sync করে আবার চেষ্টা করুন।',
+          'পণ্যটি সঠিক নয়। আবার চেষ্টা করুন।',
         );
       }
-    }
-
-    // Check if products exist on server
-    final missingIds = await findMissingProductIds(productIds);
-    if (missingIds.isNotEmpty) {
-      throw Exception(
-        'কিছু পণ্য সার্ভারে sync হয়নি। Sync করে আবার চেষ্টা করুন।',
-      );
     }
 
     try {
-      final saleNumber = await generateSaleNumber();
-      sale.saleNumber = saleNumber;
-
-      final saleItems = cartItems.map((item) => item.toSaleItemJson()).toList();
-
-      final response = await _supabase.rpc('process_sale', params: {
-        'p_sale_data': sale.toJson(),
-        'p_sale_items': saleItems,
-      });
-
-      return response as String;
-    } on PostgrestException catch (e) {
-      // Map database errors to user-friendly messages
-      if (e.message.contains('foreign key') ||
-          e.message.contains('product_id') ||
-          e.message.contains('uuid')) {
-        throw Exception(
-          'কিছু পণ্য সার্ভারে sync হয়নি। Sync করে আবার চেষ্টা করুন।',
-        );
-      }
-      rethrow;
+      return await _repository.processSale(sale, cartItems);
+    } catch (e) {
+      throw Exception('বিক্রয় প্রক্রিয়া সম্পূর্ণ করা সম্ভব হয়নি: ${e.toString()}');
     }
   }
 
+  /// Process quick cash sale - uses offline-first repository
   Future<String> processQuickCashSale({
     required String userId,
     required double cashReceived,
@@ -104,30 +70,40 @@ class SalesService {
     String? photoUrl,
   }) async {
     try {
-      final response = await _supabase.rpc('create_quick_cash_sale', params: {
-        'p_user_id': userId,
-        'p_customer_mobile': customerMobile,
-        'p_cash_received': cashReceived,
-        'p_profit_margin': profitMargin ?? 0.0,
-        'p_product_details': productDetails,
-        'p_receipt_sms_enabled': receiptSmsEnabled,
-        'p_sale_date': saleDate?.toIso8601String().split('T')[0],
-        'p_photo_url': photoUrl,
-      });
-
-      return response as String;
+      return await _repository.processQuickCashSale(
+        cashReceived: cashReceived,
+        customerMobile: customerMobile,
+        profitMargin: profitMargin,
+        productDetails: productDetails,
+        receiptSmsEnabled: receiptSmsEnabled,
+        saleDate: saleDate,
+        photoUrl: photoUrl,
+      );
     } catch (e) {
       throw Exception('Quick cash sale failed: ${e.toString()}');
     }
   }
 
+  /// Get sale by ID - reads from local database
   Future<Sale> getSaleById(String saleId) async {
-    final response = await _supabase.from('sales').select().eq('id', saleId).single();
-    return Sale.fromMap(response);
+    final sale = await _repository.getSaleById(saleId);
+    if (sale == null) {
+      throw Exception('Sale not found');
+    }
+    return sale;
   }
 
+  /// Get sale items - returns stream (convert to future for backward compatibility)
   Future<List<SaleItem>> getSaleItems(String saleId) async {
-    final response = await _supabase.from('sale_items').select().eq('sale_id', saleId);
-    return (response as List).map((item) => SaleItem.fromMap(item)).toList();
+    return await _repository.getSaleItems(saleId).first;
+  }
+
+  /// Get all sales - returns stream (convert to future for backward compatibility)
+  Future<List<Sale>> getAllSales() async {
+    try {
+      return await _repository.getAllSales().first;
+    } catch (e) {
+      throw Exception('বিক্রয় তথ্য লোড করতে সমস্যা হয়েছে: ${e.toString()}');
+    }
   }
 }
