@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wavezly/models/expense_category.dart';
@@ -6,7 +8,6 @@ import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/screens/expense_entry_screen.dart';
 import 'package:wavezly/screens/expense_list_screen.dart';
 import 'package:wavezly/screens/category_creation_screen.dart';
-import 'package:intl/intl.dart';
 
 /// Expense Management Screen V3 - Matching Google Stitch Design
 /// Primary color: #009688 (Teal), Material 3 design with Hind Siliguri font
@@ -29,16 +30,32 @@ class _ExpenseManagementScreenV3State extends State<ExpenseManagementScreenV3> {
   bool _isLoading = true;
   bool _isRefreshing = false;
   int _requestId = 0;
+  StreamSubscription<int>? _expenseChangesSubscription;
+  StreamSubscription<int>? _categoryChangesSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadData();
     _searchController.addListener(_filterCategories);
+    _expenseChangesSubscription =
+        _expenseService.watchExpenseChanges().listen((_) {
+      if (mounted) {
+        _loadData(isRefresh: true);
+      }
+    });
+    _categoryChangesSubscription =
+        _expenseService.watchCategoryChanges().listen((_) {
+      if (mounted) {
+        _loadData(isRefresh: true);
+      }
+    });
   }
 
   @override
   void dispose() {
+    _expenseChangesSubscription?.cancel();
+    _categoryChangesSubscription?.cancel();
     _searchController.dispose();
     super.dispose();
   }

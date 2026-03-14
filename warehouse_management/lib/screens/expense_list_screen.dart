@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wavezly/models/expense.dart';
@@ -22,11 +24,32 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
   Map<String, ExpenseCategory> _categoryMap = {};
   bool _isLoading = true;
   double _totalAmount = 0.0;
+  StreamSubscription<int>? _expenseChangesSubscription;
+  StreamSubscription<int>? _categoryChangesSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _expenseChangesSubscription =
+        _expenseService.watchExpenseChanges().listen((_) {
+      if (mounted) {
+        _loadData();
+      }
+    });
+    _categoryChangesSubscription =
+        _expenseService.watchCategoryChanges().listen((_) {
+      if (mounted) {
+        _loadData();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _expenseChangesSubscription?.cancel();
+    _categoryChangesSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadData() async {

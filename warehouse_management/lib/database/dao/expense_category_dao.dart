@@ -1,11 +1,29 @@
+import 'dart:async';
 import 'package:sqflite/sqflite.dart';
 import '../../models/expense_category.dart';
 import '../../config/database_config.dart';
 
 class ExpenseCategoryDao {
+  static final ExpenseCategoryDao _instance = ExpenseCategoryDao._internal();
+  factory ExpenseCategoryDao() => _instance;
+  ExpenseCategoryDao._internal();
+
   Database get _db => DatabaseConfig.database;
 
   String get tableName => 'expense_categories';
+  StreamController<int>? _changesController;
+  int _changeVersion = 0;
+
+  Stream<int> watchChanges() {
+    _changesController ??= StreamController<int>.broadcast();
+    return _changesController!.stream;
+  }
+
+  Future<void> notifyChanged() async {
+    if (_changesController != null && !_changesController!.isClosed) {
+      _changesController!.add(++_changeVersion);
+    }
+  }
 
   /// Insert expense category
   Future<void> insertCategory(ExpenseCategory category, String? userId) async {
@@ -23,6 +41,8 @@ class ExpenseCategoryDao {
       map,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+
+    await notifyChanged();
   }
 
   /// Update expense category
@@ -39,6 +59,8 @@ class ExpenseCategoryDao {
       where: 'id = ? AND user_id = ? AND is_system = 0',
       whereArgs: [id, userId],
     );
+
+    await notifyChanged();
   }
 
   /// Delete expense category (only non-system categories)
@@ -48,6 +70,8 @@ class ExpenseCategoryDao {
       where: 'id = ? AND user_id = ? AND is_system = 0',
       whereArgs: [id, userId],
     );
+
+    await notifyChanged();
   }
 
   /// Get category by ID
@@ -86,6 +110,8 @@ class ExpenseCategoryDao {
       map,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+
+    await notifyChanged();
   }
 
   /// Get unsynced categories for push

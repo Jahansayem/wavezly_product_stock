@@ -1,11 +1,30 @@
+import 'dart:async';
 import 'package:sqflite/sqflite.dart';
 import '../../models/cashbox_transaction.dart';
 import '../../config/database_config.dart';
 
 class CashboxTransactionDao {
+  static final CashboxTransactionDao _instance =
+      CashboxTransactionDao._internal();
+  factory CashboxTransactionDao() => _instance;
+  CashboxTransactionDao._internal();
+
   Database get _db => DatabaseConfig.database;
 
   String get tableName => 'cashbox_transactions';
+  StreamController<int>? _changesController;
+  int _changeVersion = 0;
+
+  Stream<int> watchChanges() {
+    _changesController ??= StreamController<int>.broadcast();
+    return _changesController!.stream;
+  }
+
+  Future<void> notifyChanged() async {
+    if (_changesController != null && !_changesController!.isClosed) {
+      _changesController!.add(++_changeVersion);
+    }
+  }
 
   /// Insert cashbox transaction
   Future<void> insertTransaction(CashboxTransaction transaction, String userId) async {
@@ -22,6 +41,8 @@ class CashboxTransactionDao {
       map,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+
+    await notifyChanged();
   }
 
   /// Update cashbox transaction
@@ -37,6 +58,8 @@ class CashboxTransactionDao {
       where: 'id = ? AND user_id = ?',
       whereArgs: [id, userId],
     );
+
+    await notifyChanged();
   }
 
   /// Delete cashbox transaction
@@ -46,6 +69,8 @@ class CashboxTransactionDao {
       where: 'id = ? AND user_id = ?',
       whereArgs: [id, userId],
     );
+
+    await notifyChanged();
   }
 
   /// Get transaction by ID

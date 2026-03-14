@@ -154,6 +154,10 @@ class CashboxRepository {
     }
   }
 
+  Stream<int> watchTransactionChanges() {
+    return _dao.watchChanges();
+  }
+
   // ============================================================================
   // SYNC CONTROL: Manual trigger with cooldown
   // ============================================================================

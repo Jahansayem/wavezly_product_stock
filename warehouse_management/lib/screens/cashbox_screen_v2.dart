@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wavezly/models/cashbox_summary.dart';
@@ -31,14 +33,27 @@ class _CashboxScreenV2State extends State<CashboxScreenV2> {
   bool _isLoading = true;
   bool _isRefreshing = false;
   int _requestId = 0;
+  StreamSubscription<int>? _transactionChangesSubscription;
 
   @override
   void initState() {
     super.initState();
     _initializeDateRange();
     _loadData();
+    _transactionChangesSubscription =
+        _cashboxService.watchTransactionChanges().listen((_) {
+      if (mounted) {
+        _loadData(isRefresh: true);
+      }
+    });
     // Trigger initial sync
     _cashboxRepository.triggerCashboxSyncIfNeeded();
+  }
+
+  @override
+  void dispose() {
+    _transactionChangesSubscription?.cancel();
+    super.dispose();
   }
 
   void _initializeDateRange() {

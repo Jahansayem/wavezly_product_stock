@@ -224,4 +224,8 @@ class ExpenseService {
       throw Exception('Failed to get expense count: $e');
     }
   }
+
+  Stream<int> watchExpenseChanges() => _repository.watchExpenseChanges();
+
+  Stream<int> watchCategoryChanges() => _repository.watchCategoryChanges();
 }

@@ -239,4 +239,6 @@ class CashboxService {
       throw Exception('Failed to get transaction count: $e');
     }
   }
+
+  Stream<int> watchTransactionChanges() => _repository.watchTransactionChanges();
 }

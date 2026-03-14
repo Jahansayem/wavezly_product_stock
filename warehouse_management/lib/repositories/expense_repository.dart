@@ -270,6 +270,14 @@ class ExpenseRepository {
     }
   }
 
+  Stream<int> watchExpenseChanges() {
+    return _expenseDao.watchChanges();
+  }
+
+  Stream<int> watchCategoryChanges() {
+    return _categoryDao.watchChanges();
+  }
+
   // ============================================================================
   // ANALYTICS: Computed from local data
   // ============================================================================

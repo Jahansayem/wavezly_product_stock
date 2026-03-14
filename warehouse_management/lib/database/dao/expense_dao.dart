@@ -1,11 +1,29 @@
+import 'dart:async';
 import 'package:sqflite/sqflite.dart';
 import '../../models/expense.dart';
 import '../../config/database_config.dart';
 
 class ExpenseDao {
+  static final ExpenseDao _instance = ExpenseDao._internal();
+  factory ExpenseDao() => _instance;
+  ExpenseDao._internal();
+
   Database get _db => DatabaseConfig.database;
 
   String get tableName => 'expenses';
+  StreamController<int>? _changesController;
+  int _changeVersion = 0;
+
+  Stream<int> watchChanges() {
+    _changesController ??= StreamController<int>.broadcast();
+    return _changesController!.stream;
+  }
+
+  Future<void> notifyChanged() async {
+    if (_changesController != null && !_changesController!.isClosed) {
+      _changesController!.add(++_changeVersion);
+    }
+  }
 
   /// Insert expense
   Future<void> insertExpense(Expense expense, String userId) async {
@@ -23,6 +41,8 @@ class ExpenseDao {
       map,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+
+    await notifyChanged();
   }
 
   /// Update expense
@@ -38,6 +58,8 @@ class ExpenseDao {
       where: 'id = ? AND user_id = ?',
       whereArgs: [id, userId],
     );
+
+    await notifyChanged();
   }
 
   /// Delete expense
@@ -47,6 +69,8 @@ class ExpenseDao {
       where: 'id = ? AND user_id = ?',
       whereArgs: [id, userId],
     );
+
+    await notifyChanged();
   }
 
   /// Get expense by ID
@@ -187,6 +211,8 @@ class ExpenseDao {
       map,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+
+    await notifyChanged();
   }
 
   /// Get unsynced expenses for push
