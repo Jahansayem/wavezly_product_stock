@@ -35,7 +35,8 @@ class CustomerRepository {
   // READ: Offline-first - return local data immediately, sync in background
   Stream<List<Customer>> getAllCustomers() {
     final userId = _userId;
-    print('📖 [CustomerRepository] getAllCustomers() called with userId: $userId');
+    print(
+        '📖 [CustomerRepository] getAllCustomers() called with userId: $userId');
 
     // Trigger background sync if online
     if (_connectivity.isOnline) {
@@ -82,7 +83,8 @@ class CustomerRepository {
 
       // Generate ID if not present
       customer.id ??= const Uuid().v4();
-      print('➕ [CustomerRepository] createCustomer() START - userId: $userId, customerId: ${customer.id}, name: ${customer.name}');
+      print(
+          '➕ [CustomerRepository] createCustomer() START - userId: $userId, customerId: ${customer.id}, name: ${customer.name}');
 
       // Generate avatar color if not present
       if (customer.avatarColor == null && customer.name != null) {
@@ -90,7 +92,8 @@ class CustomerRepository {
       }
 
       // Insert to local database
-      print('💾 [CustomerRepository] Inserting to local SQLite with userId: $userId');
+      print(
+          '💾 [CustomerRepository] Inserting to local SQLite with userId: $userId');
       await _customerDao.insertCustomer(customer, userId);
 
       // Queue for sync
@@ -98,7 +101,8 @@ class CustomerRepository {
       data['user_id'] = userId;
       data['id'] = customer.id;
 
-      print('📤 [CustomerRepository] Queuing sync operation for customer ${customer.id}');
+      print(
+          '📤 [CustomerRepository] Queuing sync operation for customer ${customer.id}');
       await _syncService.queueOperation(
         operation: SyncConfig.operationInsert,
         tableName: 'customers',
@@ -111,10 +115,12 @@ class CustomerRepository {
         print('🌐 [CustomerRepository] Online - triggering immediate sync');
         _syncService.syncNow();
       } else {
-        print('📴 [CustomerRepository] Offline - sync queue will handle when online');
+        print(
+            '📴 [CustomerRepository] Offline - sync queue will handle when online');
       }
 
-      print('✅ [CustomerRepository] createCustomer() COMPLETE for customer ${customer.id}');
+      print(
+          '✅ [CustomerRepository] createCustomer() COMPLETE for customer ${customer.id}');
       return customer;
     } catch (e) {
       print('❌ [CustomerRepository] createCustomer() FAILED: $e');
@@ -215,7 +221,8 @@ class CustomerRepository {
       if (transaction.customerId == null || transaction.customerId!.isEmpty) {
         throw Exception('Customer ID is required');
       }
-      if (transaction.transactionType == null || transaction.transactionType!.isEmpty) {
+      if (transaction.transactionType == null ||
+          transaction.transactionType!.isEmpty) {
         throw Exception('Transaction type is required');
       }
       if (transaction.amount == null || transaction.amount! <= 0) {
@@ -229,7 +236,9 @@ class CustomerRepository {
 
       // Generate ID if not present
       transaction.id ??= const Uuid().v4();
-      print('➕ [CustomerRepository] addTransaction() START - transactionId: ${transaction.id}, customerId: ${transaction.customerId}, type: ${transaction.transactionType}, amount: ${transaction.amount}');
+      transaction.createdAt ??= DateTime.now();
+      print(
+          '➕ [CustomerRepository] addTransaction() START - transactionId: ${transaction.id}, customerId: ${transaction.customerId}, type: ${transaction.transactionType}, amount: ${transaction.amount}');
 
       // Ensure amount is always positive
       final positiveAmount = transaction.amount!.abs();
@@ -240,18 +249,22 @@ class CustomerRepository {
       await _transactionDao.insertTransaction(transaction, userId);
 
       // Calculate new total_due from local transactions
-      final newTotalDue = await _transactionDao.calculateTotalDue(transaction.customerId!);
+      final newTotalDue =
+          await _transactionDao.calculateTotalDue(transaction.customerId!);
       print('📊 [CustomerRepository] Calculated new total_due: $newTotalDue');
 
+      transaction.balance = newTotalDue;
+      await _transactionDao.updateTransactionBalance(
+          transaction.id!, newTotalDue);
+
       // Update customer total_due locally
-      await _customerDao.updateCustomerTotalDue(transaction.customerId!, newTotalDue, userId);
+      await _customerDao.updateCustomerTotalDue(
+          transaction.customerId!, newTotalDue, userId);
 
       // Queue transaction for sync
       final transactionData = transaction.toMap();
       transactionData['user_id'] = userId;
       transactionData['id'] = transaction.id;
-      transactionData['note'] = transaction.description ?? '';
-      transactionData['transaction_date'] = transaction.createdAt?.toIso8601String() ?? DateTime.now().toIso8601String();
 
       print('📤 [CustomerRepository] Queuing transaction sync operation');
       await _syncService.queueOperation(
@@ -263,7 +276,8 @@ class CustomerRepository {
 
       // Queue customer update for sync (to sync total_due)
       // Note: Server trigger will recalculate total_due, this ensures local changes sync
-      final customer = await _customerDao.getCustomerById(transaction.customerId!);
+      final customer =
+          await _customerDao.getCustomerById(transaction.customerId!);
       if (customer != null) {
         final customerData = customer.toMap();
         customerData['user_id'] = userId;
@@ -283,7 +297,8 @@ class CustomerRepository {
         print('🌐 [CustomerRepository] Online - triggering immediate sync');
         _syncService.syncNow();
       } else {
-        print('📴 [CustomerRepository] Offline - sync queue will handle when online');
+        print(
+            '📴 [CustomerRepository] Offline - sync queue will handle when online');
       }
 
       print('✅ [CustomerRepository] addTransaction() COMPLETE');
@@ -295,7 +310,8 @@ class CustomerRepository {
 
   // Get customer transactions stream (offline-first)
   Stream<List<CustomerTransaction>> getCustomerTransactions(String customerId) {
-    print('📖 [CustomerRepository] getCustomerTransactions() called for customerId: $customerId');
+    print(
+        '📖 [CustomerRepository] getCustomerTransactions() called for customerId: $customerId');
 
     // Trigger background sync if online
     if (_connectivity.isOnline) {
@@ -307,7 +323,8 @@ class CustomerRepository {
   }
 
   // Get recent transactions with customer details (for history view)
-  Future<List<Map<String, dynamic>>> getRecentTransactions({int limit = 50}) async {
+  Future<List<Map<String, dynamic>>> getRecentTransactions(
+      {int limit = 50}) async {
     try {
       return await _transactionDao.getRecentTransactions(limit: limit);
     } catch (e) {

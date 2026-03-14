@@ -14,14 +14,16 @@ class CustomerTransaction {
   String? id;
   String? customerId;
   String? userId;
-  String? transactionType; // 'payment', 'purchase', 'credit', 'debit', 'adjustment'
+  String?
+      transactionType; // 'payment', 'purchase', 'credit', 'debit', 'adjustment'
   double? amount;
   String? description;
   String? saleId;
-  double? balance;  // Running balance after this transaction
+  double? balance; // Running balance after this transaction
   DateTime? createdAt;
 
-  factory CustomerTransaction.fromMap(Map<String, dynamic> json) => CustomerTransaction(
+  factory CustomerTransaction.fromMap(Map<String, dynamic> json) =>
+      CustomerTransaction(
         id: json["id"] as String?,
         customerId: json["customer_id"] as String?,
         userId: json["user_id"] as String?,
@@ -29,7 +31,7 @@ class CustomerTransaction {
         amount: (json["amount"] as num?)?.toDouble(),
         // Map DB "note" to "description" for backward compatibility
         description: json["note"] as String? ?? json["description"] as String?,
-        saleId: json["sale_id"] as String?,
+        saleId: json["reference_id"] as String? ?? json["sale_id"] as String?,
         balance: (json["balance"] as num?)?.toDouble(),
         // Map DB "transaction_date" to createdAt, fallback to "created_at"
         createdAt: json["transaction_date"] != null
@@ -39,14 +41,22 @@ class CustomerTransaction {
                 : null,
       );
 
-  Map<String, dynamic> toMap() => {
-        "id": id,
-        "customer_id": customerId,
-        "user_id": userId,
-        "transaction_type": transactionType,
-        "amount": amount,
-        "description": description,
-        "sale_id": saleId,
-        "created_at": createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
-      };
+  Map<String, dynamic> toMap() {
+    final timestamp =
+        createdAt?.toIso8601String() ?? DateTime.now().toIso8601String();
+
+    return {
+      "id": id,
+      "customer_id": customerId,
+      "user_id": userId,
+      "transaction_type": transactionType,
+      "amount": amount,
+      "note": description,
+      "reference_id": saleId,
+      "balance": balance ?? 0.0,
+      "transaction_date": timestamp,
+      "created_at": timestamp,
+      "updated_at": DateTime.now().toIso8601String(),
+    };
+  }
 }

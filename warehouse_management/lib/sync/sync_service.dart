@@ -8,7 +8,6 @@ import '../config/sync_config.dart';
 import '../database/dao/sync_queue_dao.dart';
 import '../database/dao/product_dao.dart';
 import '../database/dao/customer_dao.dart';
-import '../database/dao/customer_transaction_dao.dart';
 import 'connectivity_service.dart';
 
 class SyncResult {
@@ -49,11 +48,12 @@ class SyncService {
   final ConnectivityService _connectivity = ConnectivityService();
   final ProductDao _productDao = ProductDao();
   final CustomerDao _customerDao = CustomerDao();
-  final CustomerTransactionDao _transactionDao = CustomerTransactionDao();
   SupabaseClient get _supabase => SupabaseConfig.client;
 
   Timer? _periodicTimer;
   bool _isSyncing = false;
+
+  String? get _currentUserId => _supabase.auth.currentUser?.id;
 
   // Start periodic sync (every 5 minutes)
   void startPeriodicSync() {
@@ -84,6 +84,12 @@ class SyncService {
       return SyncResult.offline();
     }
 
+    final userId = _currentUserId;
+    if (userId == null) {
+      print('No authenticated user, skipping sync');
+      return SyncResult.error('No authenticated user. Please login again.');
+    }
+
     _isSyncing = true;
     int totalSynced = 0;
     int totalFailed = 0;
@@ -92,12 +98,12 @@ class SyncService {
       print('Starting full sync...');
 
       // Step 1: PUSH - Upload queued local changes
-      final pushResult = await _pushToServer();
+      final pushResult = await _pushToServer(userId);
       totalSynced += pushResult.syncedCount;
       totalFailed += pushResult.failedCount;
 
       // Step 2: PULL - Fetch latest from server
-      final pullResult = await _pullFromServer();
+      final pullResult = await _pullFromServer(userId);
       totalSynced += pullResult.syncedCount;
 
       print('Sync completed: $totalSynced synced, $totalFailed failed');
@@ -115,33 +121,38 @@ class SyncService {
   }
 
   // PUSH: Upload queued local changes
-  Future<SyncResult> _pushToServer() async {
+  Future<SyncResult> _pushToServer(String userId) async {
     try {
-      final queue = await _queueDao.getPendingOperations();
-      if (queue.isEmpty) {
-        print('No pending operations to push');
-        return SyncResult.success();
-      }
-
-      print('Pushing ${queue.length} operations to server...');
       int synced = 0;
       int failed = 0;
 
-      for (var operation in queue) {
-        try {
-          await _queueDao.markAsProcessing(operation['id']);
-          await _processOperation(operation);
-          await _queueDao.markAsCompleted(operation['id']);
-          synced++;
-        } catch (e) {
-          print('Failed to sync operation ${operation['id']}: $e');
-          await _queueDao.markAsFailed(operation['id'], e.toString());
-          failed++;
+      while (true) {
+        final queue = await _queueDao.getPendingOperations(userId: userId);
+        if (queue.isEmpty) {
+          if (synced == 0 && failed == 0) {
+            print('No pending operations to push');
+          }
+          break;
         }
-      }
 
-      // Clear completed operations
-      await _queueDao.clearCompleted();
+        print('Pushing ${queue.length} operations to server...');
+
+        for (var operation in queue) {
+          try {
+            await _queueDao.markAsProcessing(operation['id']);
+            await _processOperation(operation);
+            await _queueDao.markAsCompleted(operation['id']);
+            synced++;
+          } catch (e) {
+            print('Failed to sync operation ${operation['id']}: $e');
+            await _queueDao.markAsFailed(operation['id'], e.toString());
+            failed++;
+          }
+        }
+
+        // Clear completed operations after each batch so the next batch can load.
+        await _queueDao.clearCompleted(userId);
+      }
 
       return SyncResult(
         success: failed == 0,
@@ -158,21 +169,37 @@ class SyncService {
     final op = operation['operation'] as String;
     final recordId = operation['record_id'] as String;
     final data = operation['data'] != null
-        ? jsonDecode(operation['data'] as String)
+        ? Map<String, dynamic>.from(
+            jsonDecode(operation['data'] as String) as Map,
+          )
         : null;
 
     // Remove sync metadata fields before sending to Supabase
     if (data != null) {
       data.remove('is_synced');
       data.remove('last_synced_at');
+      if (tableName == 'customer_transactions') {
+        final normalizedData =
+            await _normalizeCustomerTransactionData(data, recordId);
+        data
+          ..clear()
+          ..addAll(normalizedData);
+      }
     }
+
+    final payload = data == null ? null : Map<String, dynamic>.from(data);
 
     switch (op) {
       case SyncConfig.operationInsert:
         try {
           print(
               '📤 SyncService: Inserting to $tableName - record_id: $recordId');
-          await _supabase.from(tableName).insert(data);
+          if (payload == null) {
+            throw Exception(
+              'Missing sync payload for $tableName insert $recordId',
+            );
+          }
+          await _supabase.from(tableName).insert(payload);
           print('✅ SyncService: Insert successful');
           await _markRecordAsSynced(tableName, recordId);
         } catch (e) {
@@ -192,7 +219,12 @@ class SyncService {
         break;
 
       case SyncConfig.operationUpdate:
-        await _supabase.from(tableName).update(data).eq('id', recordId);
+        if (payload == null) {
+          throw Exception(
+            'Missing sync payload for $tableName update $recordId',
+          );
+        }
+        await _supabase.from(tableName).update(payload).eq('id', recordId);
         await _markRecordAsSynced(tableName, recordId);
         break;
 
@@ -200,6 +232,104 @@ class SyncService {
         await _supabase.from(tableName).delete().eq('id', recordId);
         break;
     }
+  }
+
+  Future<Map<String, dynamic>> _normalizeCustomerTransactionData(
+    Map<String, dynamic> data,
+    String recordId,
+  ) async {
+    final normalized = Map<String, dynamic>.from(data);
+    final db = DatabaseConfig.database;
+    final localRows = await db.query(
+      'customer_transactions',
+      where: 'id = ?',
+      whereArgs: [recordId],
+      limit: 1,
+    );
+    final localData = localRows.isEmpty
+        ? <String, dynamic>{}
+        : Map<String, dynamic>.from(localRows.first);
+    final now = DateTime.now().toIso8601String();
+
+    final createdAt = _firstNonEmptyString([
+          normalized['created_at'],
+          localData['created_at'],
+          normalized['transaction_date'],
+          localData['transaction_date'],
+        ]) ??
+        now;
+    final transactionDate = _firstNonEmptyString([
+          normalized['transaction_date'],
+          localData['transaction_date'],
+          normalized['created_at'],
+          localData['created_at'],
+        ]) ??
+        createdAt;
+    final updatedAt = _firstNonEmptyString([
+          normalized['updated_at'],
+          localData['updated_at'],
+        ]) ??
+        now;
+    final note = _firstNonEmptyString([
+      normalized['note'],
+      normalized['description'],
+      localData['note'],
+      localData['description'],
+    ]);
+    final referenceId = _firstNonEmptyString([
+      normalized['reference_id'],
+      normalized['sale_id'],
+      localData['reference_id'],
+      localData['sale_id'],
+    ]);
+
+    normalized['id'] = recordId;
+    normalized['customer_id'] ??= localData['customer_id'];
+    normalized['user_id'] ??= localData['user_id'];
+    normalized['transaction_type'] ??= localData['transaction_type'];
+    normalized['amount'] ??= localData['amount'];
+    normalized['balance'] = _toDouble(normalized['balance']) ??
+        _toDouble(localData['balance']) ??
+        0.0;
+    normalized['transaction_date'] = transactionDate;
+    normalized['created_at'] = createdAt;
+    normalized['updated_at'] = updatedAt;
+
+    if (note == null) {
+      normalized.remove('note');
+    } else {
+      normalized['note'] = note;
+    }
+
+    if (referenceId == null) {
+      normalized.remove('reference_id');
+    } else {
+      normalized['reference_id'] = referenceId;
+    }
+
+    normalized.remove('description');
+    normalized.remove('sale_id');
+
+    return normalized;
+  }
+
+  String? _firstNonEmptyString(List<dynamic> values) {
+    for (final value in values) {
+      if (value is String && value.trim().isNotEmpty) {
+        return value;
+      }
+    }
+    return null;
+  }
+
+  double? _toDouble(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is num) {
+      return value.toDouble();
+    }
+    return double.tryParse(value.toString());
   }
 
   Future<void> _markRecordAsSynced(String tableName, String recordId) async {
@@ -216,14 +346,8 @@ class SyncService {
   }
 
   // PULL: Fetch latest data from Supabase
-  Future<SyncResult> _pullFromServer() async {
+  Future<SyncResult> _pullFromServer(String userId) async {
     try {
-      final userId = _supabase.auth.currentUser?.id;
-      if (userId == null) {
-        print('No user logged in, skipping pull');
-        return SyncResult.success();
-      }
-
       print('Pulling latest data from server for user $userId...');
       int totalPulled = 0;
 
@@ -289,7 +413,8 @@ class SyncService {
           where: 'user_id = ?',
           whereArgs: [userId],
         );
-        final purchaseIds = purchasesResults.map((row) => row['id'] as String).toList();
+        final purchaseIds =
+            purchasesResults.map((row) => row['id'] as String).toList();
 
         if (purchaseIds.isEmpty) {
           // No purchases for user, skip sync
@@ -410,7 +535,13 @@ class SyncService {
     required String recordId,
     Map<String, dynamic>? data,
   }) async {
+    final userId = data?['user_id'] as String? ?? _currentUserId;
+    if (userId == null || userId.isEmpty) {
+      throw Exception('No authenticated user for sync queue.');
+    }
+
     await _queueDao.addToQueue(
+      userId: userId,
       operation: operation,
       tableName: tableName,
       recordId: recordId,
@@ -420,6 +551,29 @@ class SyncService {
 
   // Trigger immediate sync
   Future<SyncResult> syncNow() async {
+    return await syncAll();
+  }
+
+  // Trigger a full manual backup, including retrying previously failed items.
+  Future<SyncResult> backupAllData() async {
+    if (_isSyncing) {
+      return SyncResult.error('Sync already in progress');
+    }
+
+    if (!await _connectivity.checkOnline()) {
+      return SyncResult.offline();
+    }
+
+    final userId = _currentUserId;
+    if (userId == null) {
+      return SyncResult.error('No authenticated user. Please login again.');
+    }
+
+    final retriedCount = await _queueDao.resetAllFailedToPending(userId);
+    if (retriedCount > 0) {
+      print('Reset $retriedCount failed sync operations to pending');
+    }
+
     return await syncAll();
   }
 
@@ -433,12 +587,17 @@ class SyncService {
 
   // Get sync status
   Future<Map<String, dynamic>> getSyncStatus() async {
-    final pendingCount = await _queueDao.getPendingCount();
-    final failedCount = await _queueDao.getFailedCount();
+    final userId = _currentUserId;
+    final pendingCount =
+        userId == null ? 0 : await _queueDao.getPendingCount(userId);
+    final failedCount =
+        userId == null ? 0 : await _queueDao.getFailedCount(userId);
+    final legacyCount = await _queueDao.getLegacyQueueCount();
 
     return {
       'pending': pendingCount,
       'failed': failedCount,
+      'legacy_pending': legacyCount,
       'is_online': _connectivity.isOnline,
       'is_syncing': _isSyncing,
     };
@@ -452,6 +611,11 @@ class SyncService {
     if (!_dashboardRefreshController.isClosed) {
       _dashboardRefreshController.add(null);
     }
+  }
+
+  /// Public wrapper for RealtimeService to trigger dashboard refresh.
+  void notifyDashboardRefreshFromRealtime() {
+    _notifyDashboardRefresh();
   }
 
   void dispose() {

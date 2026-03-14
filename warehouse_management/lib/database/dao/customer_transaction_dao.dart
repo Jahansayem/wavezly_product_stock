@@ -11,7 +11,8 @@ class CustomerTransactionDao extends BaseDao<CustomerTransaction> {
   Database get _db => DatabaseConfig.database;
 
   // Broadcast stream controller for reactive transaction updates (per customer)
-  final Map<String, StreamController<List<CustomerTransaction>>> _transactionControllers = {};
+  final Map<String, StreamController<List<CustomerTransaction>>>
+      _transactionControllers = {};
 
   @override
   CustomerTransaction fromMap(Map<String, dynamic> map) {
@@ -27,8 +28,10 @@ class CustomerTransactionDao extends BaseDao<CustomerTransaction> {
   }
 
   // Insert transaction
-  Future<void> insertTransaction(CustomerTransaction transaction, String userId) async {
-    print('💾 [CustomerTransactionDao] insertTransaction START - customerId: ${transaction.customerId}, amount: ${transaction.amount}');
+  Future<void> insertTransaction(
+      CustomerTransaction transaction, String userId) async {
+    print(
+        '💾 [CustomerTransactionDao] insertTransaction START - customerId: ${transaction.customerId}, amount: ${transaction.amount}');
 
     final map = toMap(transaction);
     map['id'] = transaction.id;
@@ -37,18 +40,25 @@ class CustomerTransactionDao extends BaseDao<CustomerTransaction> {
     map['is_synced'] = 0;
     map['last_synced_at'] = null;
 
-    // Map model fields to database columns
-    map['note'] = transaction.description; // Map description to note column
-    map['transaction_date'] = transaction.createdAt?.toIso8601String() ?? DateTime.now().toIso8601String();
+    // Keep both legacy and current column names populated locally.
+    map['description'] = transaction.description;
+    map['note'] = transaction.description;
+    map['sale_id'] = transaction.saleId;
+    map['reference_id'] = transaction.saleId;
+    map['balance'] = transaction.balance ?? 0.0;
+    map['transaction_date'] = transaction.createdAt?.toIso8601String() ??
+        DateTime.now().toIso8601String();
     map['updated_at'] = DateTime.now().toIso8601String();
 
-    print('💾 [CustomerTransactionDao] Inserting into SQLite table: $tableName');
+    print(
+        '💾 [CustomerTransactionDao] Inserting into SQLite table: $tableName');
     await _db.insert(
       tableName,
       map,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    print('✅ [CustomerTransactionDao] Insert successful for transaction ${transaction.id}');
+    print(
+        '✅ [CustomerTransactionDao] Insert successful for transaction ${transaction.id}');
 
     // Notify stream listeners for this customer
     if (transaction.customerId != null) {
@@ -59,15 +69,22 @@ class CustomerTransactionDao extends BaseDao<CustomerTransaction> {
   }
 
   // Update transaction
-  Future<void> updateTransaction(String id, CustomerTransaction transaction, String userId) async {
+  Future<void> updateTransaction(
+      String id, CustomerTransaction transaction, String userId) async {
     final map = toMap(transaction);
+    map['user_id'] = userId;
     map['is_synced'] = 0;
     map['last_synced_at'] = null;
     map['updated_at'] = DateTime.now().toIso8601String();
 
-    // Map model fields to database columns
+    // Keep both legacy and current column names populated locally.
+    map['description'] = transaction.description;
     map['note'] = transaction.description;
-    map['transaction_date'] = transaction.createdAt?.toIso8601String() ?? DateTime.now().toIso8601String();
+    map['sale_id'] = transaction.saleId;
+    map['reference_id'] = transaction.saleId;
+    map['balance'] = transaction.balance ?? 0.0;
+    map['transaction_date'] = transaction.createdAt?.toIso8601String() ??
+        DateTime.now().toIso8601String();
 
     await _db.update(
       tableName,
@@ -110,12 +127,15 @@ class CustomerTransactionDao extends BaseDao<CustomerTransaction> {
 
   // Get customer transactions (Stream for reactive UI)
   Stream<List<CustomerTransaction>> getCustomerTransactions(String customerId) {
-    print('🔍 CustomerTransactionDao.getCustomerTransactions called for customerId: $customerId');
+    print(
+        '🔍 CustomerTransactionDao.getCustomerTransactions called for customerId: $customerId');
 
     // Create broadcast controller if needed for this customer
     if (!_transactionControllers.containsKey(customerId)) {
-      print('✨ Creating new broadcast stream controller for customer $customerId');
-      _transactionControllers[customerId] = StreamController<List<CustomerTransaction>>.broadcast(
+      print(
+          '✨ Creating new broadcast stream controller for customer $customerId');
+      _transactionControllers[customerId] =
+          StreamController<List<CustomerTransaction>>.broadcast(
         onListen: () {
           print('👂 LISTENER ATTACHED for customer $customerId');
           _refreshTransactions(customerId);
@@ -178,7 +198,8 @@ class CustomerTransactionDao extends BaseDao<CustomerTransaction> {
     _transactionControllers.clear();
   }
 
-  Future<List<CustomerTransaction>> _queryTransactions(String customerId) async {
+  Future<List<CustomerTransaction>> _queryTransactions(
+      String customerId) async {
     print('🔍 _queryTransactions executing for customerId: $customerId');
 
     try {
@@ -228,8 +249,38 @@ class CustomerTransactionDao extends BaseDao<CustomerTransaction> {
     await markAsSynced(id, _db);
   }
 
+  Future<void> updateTransactionBalance(String id, double balance) async {
+    final results = await _db.query(
+      tableName,
+      columns: ['customer_id'],
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+
+    await _db.update(
+      tableName,
+      {
+        'balance': balance,
+        'updated_at': DateTime.now().toIso8601String(),
+        'is_synced': 0,
+        'last_synced_at': null,
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (results.isNotEmpty) {
+      final customerId = results.first['customer_id'] as String?;
+      if (customerId != null) {
+        await notifyTransactionsChanged(customerId);
+      }
+    }
+  }
+
   // Get unsynced transactions
-  Future<List<CustomerTransaction>> getUnsyncedTransactions(String userId) async {
+  Future<List<CustomerTransaction>> getUnsyncedTransactions(
+      String userId) async {
     final results = await _db.query(
       tableName,
       where: 'user_id = ? AND is_synced = ?',
@@ -264,7 +315,8 @@ class CustomerTransactionDao extends BaseDao<CustomerTransaction> {
       // RECEIVED decreases balance (we pay customer)
       final totalDue = totalGiven - totalReceived;
 
-      print('✅ [CustomerTransactionDao] Calculated total_due for $customerId: $totalDue (given: $totalGiven, received: $totalReceived)');
+      print(
+          '✅ [CustomerTransactionDao] Calculated total_due for $customerId: $totalDue (given: $totalGiven, received: $totalReceived)');
       return totalDue;
     } catch (e) {
       print('❌ [CustomerTransactionDao] Error calculating total_due: $e');
@@ -274,7 +326,8 @@ class CustomerTransactionDao extends BaseDao<CustomerTransaction> {
 
   /// Get recent transactions with customer details (for history view)
   /// Returns transaction details joined with customer info, ordered by date DESC
-  Future<List<Map<String, dynamic>>> getRecentTransactions({int limit = 50}) async {
+  Future<List<Map<String, dynamic>>> getRecentTransactions(
+      {int limit = 50}) async {
     try {
       final results = await _db.rawQuery(
         '''
@@ -295,7 +348,8 @@ class CustomerTransactionDao extends BaseDao<CustomerTransaction> {
         [limit],
       );
 
-      print('✅ [CustomerTransactionDao] Retrieved ${results.length} recent transactions');
+      print(
+          '✅ [CustomerTransactionDao] Retrieved ${results.length} recent transactions');
       return results;
     } catch (e) {
       print('❌ [CustomerTransactionDao] Error getting recent transactions: $e');
