@@ -3,13 +3,17 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:wavezly/config/database_config.dart';
 import 'package:wavezly/features/auth/screens/login_screen.dart';
 import 'package:wavezly/functions/confirm_dialog.dart';
 import 'package:wavezly/models/user_profile.dart';
 import 'package:wavezly/screens/cash_counter_screen.dart';
 import 'package:wavezly/screens/profile_edit_screen.dart';
 import 'package:wavezly/services/auth_service.dart';
+import 'package:wavezly/services/dashboard_service.dart';
 import 'package:wavezly/services/user_service.dart';
+import 'package:wavezly/sync/sync_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -20,17 +24,58 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  static const String _appLockEnabledKey = 'app_lock_enabled';
+
   final AuthService _authService = AuthService();
   final UserService _userService = UserService();
+  final SyncService _syncService = SyncService();
+  final DashboardService _dashboardService = DashboardService();
 
   UserProfile? _currentUser;
   bool _isProfileLoading = true;
   bool _isLoggingOut = false;
+  bool _isHalkhataSettingsExpanded = false;
+  bool _isAppLockEnabled = false;
+  bool _isBackingUp = false;
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
+    _loadAppPreferences();
+  }
+
+  Future<String?> _readAppSetting(String key) async {
+    final db = DatabaseConfig.database;
+    final result = await db.query(
+      'app_settings',
+      columns: ['value'],
+      where: 'key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+
+    if (result.isEmpty) return null;
+    return result.first['value'] as String?;
+  }
+
+  Future<void> _writeAppSetting(String key, String value) async {
+    final db = DatabaseConfig.database;
+    await db.insert(
+      'app_settings',
+      {'key': key, 'value': value},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> _loadAppPreferences() async {
+    try {
+      final enabled = await _readAppSetting(_appLockEnabledKey);
+      if (!mounted) return;
+      setState(() => _isAppLockEnabled = enabled == '1');
+    } catch (_) {
+      // Keep the default values if preferences cannot be loaded.
+    }
   }
 
   Future<void> _loadProfile() async {
@@ -195,6 +240,143 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  void _toggleHalkhataSettings() {
+    setState(() {
+      _isHalkhataSettingsExpanded = !_isHalkhataSettingsExpanded;
+    });
+  }
+
+  Future<void> _handleAppLockToggle(bool enabled) async {
+    final previousValue = _isAppLockEnabled;
+    setState(() => _isAppLockEnabled = enabled);
+
+    try {
+      await _writeAppSetting(_appLockEnabledKey, enabled ? '1' : '0');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: ColorPalette.nileBlue,
+          content: Text(
+            enabled
+                ? 'অ্যাপ লক চালু করা হয়েছে।'
+                : 'অ্যাপ লক বন্ধ করা হয়েছে।',
+            style: _bodyStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isAppLockEnabled = previousValue);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: ColorPalette.mandy,
+          content: Text(
+            'অ্যাপ লক সেটিংস সংরক্ষণ করা যায়নি।',
+            style: _bodyStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleDataBackup() async {
+    if (_isBackingUp) return;
+
+    final status = await _syncService.getSyncStatus();
+    if ((status['is_syncing'] as bool? ?? false) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            'ডাটা ব্যাকআপ চলছে। অনুগ্রহ করে অপেক্ষা করুন।',
+            style: _bodyStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isBackingUp = true);
+    final result = await _syncService.backupAllData();
+    if (!mounted) return;
+    setState(() => _isBackingUp = false);
+
+    if (!result.success) {
+      final message = result.error == 'Device is offline'
+          ? 'ইন্টারনেট সংযোগ ছাড়া ব্যাকআপ করা যাবে না।'
+          : 'ডাটা ব্যাকআপ সম্পন্ন করা যায়নি।';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: ColorPalette.mandy,
+          content: Text(
+            message,
+            style: _bodyStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    await _dashboardService.saveLastBackupTime(DateTime.now());
+    if (!mounted) return;
+
+    final message = result.syncedCount > 0
+        ? 'ডাটা ব্যাকআপ সম্পন্ন হয়েছে। ${result.syncedCount} টি রেকর্ড সিঙ্ক হয়েছে।'
+        : 'ডাটা ব্যাকআপ সম্পন্ন হয়েছে। নতুন কোনো পরিবর্তন ছিল না।';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: ColorPalette.emerald600,
+        content: Text(
+          message,
+          style: _bodyStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAppResetConfirmation() {
+    showConfirmDialog(
+      context,
+      'অ্যাপ রিসেট করলে আপনার সকল লোকাল ডাটা মুছে যেতে পারে। আপনি কি নিশ্চিত?',
+      'না',
+      'রিসেট',
+      () => Navigator.of(context).pop(),
+      () async {
+        Navigator.of(context).pop();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: ColorPalette.red600,
+            content: Text(
+              'অ্যাপ রিসেট এখনো চালু হয়নি। পরে যুক্ত করা হবে।',
+              style: _bodyStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _handleLogout() async {
     showConfirmDialog(
       context,
@@ -324,6 +506,81 @@ class _SettingsPageState extends State<SettingsPage> {
           icon: Icons.add_box_outlined,
           iconColor: ColorPalette.blue600,
           onTap: () => _showComingSoon('শর্টকাট'),
+        ),
+      ];
+
+  List<_SettingsAction> get _halkhataAppSettingsMenu => [
+        _SettingsAction(
+          label: 'বিকাশ/নগদ কিউ আর',
+          icon: Icons.qr_code_2_rounded,
+          iconColor: ColorPalette.gray700,
+          onTap: () => _showComingSoon('বিকাশ/নগদ কিউ আর'),
+          isNested: true,
+        ),
+        _SettingsAction(
+          label: 'কাস্টম ক্যাটাগরি',
+          icon: Icons.grid_view_rounded,
+          iconColor: ColorPalette.gray700,
+          onTap: () => _showComingSoon('কাস্টম ক্যাটাগরি'),
+          isNested: true,
+        ),
+        _SettingsAction(
+          label: 'দশমিক পয়েন্ট',
+          icon: Icons.tag_rounded,
+          iconColor: ColorPalette.gray700,
+          onTap: () => _showComingSoon('দশমিক পয়েন্ট'),
+          isNested: true,
+        ),
+        _SettingsAction(
+          label: 'ডাটা ব্যাকআপ',
+          icon: Icons.cloud_upload_rounded,
+          iconColor: ColorPalette.gray700,
+          onTap: _handleDataBackup,
+          trailing: _isBackingUp
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : null,
+          isNested: true,
+        ),
+        _SettingsAction(
+          label: 'রিসাইকেল বিন',
+          icon: Icons.delete_outline_rounded,
+          iconColor: ColorPalette.gray700,
+          onTap: () => _showComingSoon('রিসাইকেল বিন'),
+          isNested: true,
+        ),
+        _SettingsAction(
+          label: 'অ্যাপ লক',
+          icon: Icons.lock_outline_rounded,
+          iconColor: ColorPalette.gray700,
+          onTap: () => _handleAppLockToggle(!_isAppLockEnabled),
+          trailing: Switch.adaptive(
+            value: _isAppLockEnabled,
+            activeThumbColor: ColorPalette.blue600,
+            onChanged: _handleAppLockToggle,
+          ),
+          isNested: true,
+          hideDefaultTrailing: true,
+        ),
+        _SettingsAction(
+          label: 'ডাটা ডাউনলোড',
+          subtitle: 'অ্যাপের সকল তথ্য ডাউনলোড',
+          icon: Icons.file_download_outlined,
+          iconColor: ColorPalette.gray700,
+          onTap: () => _showComingSoon('ডাটা ডাউনলোড'),
+          isNested: true,
+        ),
+        _SettingsAction(
+          label: 'অ্যাপ রিসেট',
+          subtitle: 'রিসেট করলে অ্যাপের সকল তথ্য মুছে যাবে',
+          icon: Icons.restart_alt_rounded,
+          iconColor: ColorPalette.red600,
+          onTap: _showAppResetConfirmation,
+          isNested: true,
+          isDestructive: true,
         ),
       ];
 
@@ -701,6 +958,14 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildSettingsGroup(String title, List<_SettingsAction> actions) {
+    final tiles = <Widget>[];
+    for (final action in actions) {
+      tiles.add(_buildSettingsTile(action));
+      if (_isHalkhataSettingsTrigger(action) && _isHalkhataSettingsExpanded) {
+        tiles.add(_buildNestedSettingsMenu());
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -725,24 +990,102 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         ),
         const SizedBox(height: 10),
-        ...actions.map(_buildSettingsTile),
+        ...tiles,
       ],
+    );
+  }
+
+  bool _isHalkhataSettingsTrigger(_SettingsAction action) {
+    return action.icon == Icons.phone_android_rounded;
+  }
+
+  Widget _buildNestedSettingsMenu() {
+    return Container(
+      margin: const EdgeInsets.only(left: 12, right: 2, bottom: 12),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: ColorPalette.gray200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        children: _halkhataAppSettingsMenu
+            .map(_buildSettingsTile)
+            .toList(growable: false),
+      ),
     );
   }
 
   Widget _buildSettingsTile(_SettingsAction action) {
     final enabled = action.onTap != null;
+    final isExpandableTrigger = _isHalkhataSettingsTrigger(action);
+    final effectiveOnTap =
+        isExpandableTrigger ? _toggleHalkhataSettings : action.onTap;
+    final tilePadding = action.isNested
+        ? const EdgeInsets.symmetric(horizontal: 12, vertical: 12)
+        : const EdgeInsets.symmetric(horizontal: 14, vertical: 14);
+    final tileBottomPadding = action.isNested ? 8.0 : 10.0;
+    final iconBackground = action.isDestructive
+        ? ColorPalette.red100
+        : action.iconColor.withValues(alpha: 0.12);
+    final labelColor = action.isDestructive
+        ? ColorPalette.red600
+        : enabled
+            ? ColorPalette.gray700
+            : ColorPalette.gray600;
+    final subtitleColor =
+        action.isDestructive ? ColorPalette.red500 : ColorPalette.gray500;
+
+    Widget trailingWidget;
+    if (isExpandableTrigger) {
+      trailingWidget = AnimatedRotation(
+        turns: _isHalkhataSettingsExpanded ? 0.5 : 0,
+        duration: const Duration(milliseconds: 180),
+        child: const Icon(
+          Icons.keyboard_arrow_down_rounded,
+          color: ColorPalette.gray500,
+        ),
+      );
+    } else if (action.trailingText != null) {
+      trailingWidget = Text(
+        action.trailingText!,
+        style: _bodyStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: ColorPalette.gray400,
+        ),
+      );
+    } else if (action.trailing != null) {
+      trailingWidget = action.trailing!;
+    } else if (action.hideDefaultTrailing) {
+      trailingWidget = const SizedBox.shrink();
+    } else {
+      trailingWidget = Icon(
+        Icons.arrow_forward_ios_rounded,
+        size: action.isNested ? 16 : 14,
+        color: action.isDestructive
+            ? ColorPalette.red500
+            : ColorPalette.gray400,
+      );
+    }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.only(bottom: tileBottomPadding),
       child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
-          onTap: action.onTap,
+          onTap: effectiveOnTap,
           borderRadius: BorderRadius.circular(14),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            padding: tilePadding,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: ColorPalette.gray200),
@@ -760,7 +1103,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   width: 30,
                   height: 30,
                   decoration: BoxDecoration(
-                    color: action.iconColor.withValues(alpha: 0.12),
+                    color: iconBackground,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   alignment: Alignment.center,
@@ -772,31 +1115,32 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    action.label,
-                    style: _bodyStyle(
-                      fontWeight: FontWeight.w700,
-                      color:
-                          enabled ? ColorPalette.gray700 : ColorPalette.gray600,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        action.label,
+                        style: _bodyStyle(
+                          fontWeight: FontWeight.w700,
+                          color: labelColor,
+                        ),
+                      ),
+                      if (action.subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          action.subtitle!,
+                          style: _bodyStyle(
+                            fontSize: 12,
+                            color: subtitleColor,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                if (action.trailingText != null)
-                  Text(
-                    action.trailingText!,
-                    style: _bodyStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: ColorPalette.gray400,
-                    ),
-                  )
-                else
-                  action.trailing ??
-                      const Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 14,
-                        color: ColorPalette.gray400,
-                      ),
+                if (action.trailing != null && action.hideDefaultTrailing)
+                  const SizedBox(width: 8),
+                trailingWidget,
               ],
             ),
           ),
@@ -808,19 +1152,27 @@ class _SettingsPageState extends State<SettingsPage> {
 
 class _SettingsAction {
   final String label;
+  final String? subtitle;
   final IconData icon;
   final Color iconColor;
   final VoidCallback? onTap;
   final String? trailingText;
   final Widget? trailing;
+  final bool isNested;
+  final bool isDestructive;
+  final bool hideDefaultTrailing;
 
   const _SettingsAction({
     required this.label,
     required this.icon,
     required this.iconColor,
+    this.subtitle,
     this.onTap,
     this.trailingText,
     this.trailing,
+    this.isNested = false,
+    this.isDestructive = false,
+    this.hideDefaultTrailing = false,
   });
 }
 
