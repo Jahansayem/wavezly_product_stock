@@ -1,11 +1,13 @@
 import 'dart:io';
+
 import 'package:path/path.dart' as path;
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../config/supabase_config.dart';
+import 'package:wavezly/config/supabase_config.dart';
 
 class ImageStorageService {
   final _supabase = SupabaseConfig.client;
-  static const String _bucketName = 'product-images';
+  static const String _productBucketName = 'product-images';
+  static const String _profileBucketName = 'profile-images';
   static const int _maxFileSizeBytes = 5 * 1024 * 1024; // 5MB
 
   /// Uploads an image to Supabase Storage
@@ -13,50 +15,26 @@ class ImageStorageService {
   /// Throws exceptions on validation or upload failures
   Future<String> uploadProductImage(File imageFile) async {
     try {
-      // Validate file size
-      final fileSize = await imageFile.length();
-      if (fileSize > _maxFileSizeBytes) {
-        throw Exception('Image size exceeds 5MB limit');
-      }
-
-      // Validate file format
-      final extension = path.extension(imageFile.path).toLowerCase();
-      final allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
-      if (!allowedExtensions.contains(extension)) {
-        throw Exception('Invalid file format. Use JPG, PNG, or WebP');
-      }
-
-      // Get current user ID
-      final userId = _supabase.auth.currentUser?.id;
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
-
-      // Generate unique filename with UUID
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'product_${timestamp}_${_generateUuid()}$extension';
-      final filePath = '$userId/$fileName';
-
-      // Upload to Supabase Storage
-      await _supabase.storage
-          .from(_bucketName)
-          .upload(
-            filePath,
-            imageFile,
-            fileOptions: FileOptions(
-              cacheControl: '3600',
-              upsert: false,
-            ),
-          );
-
-      // Get public URL
-      final publicUrl = _supabase.storage
-          .from(_bucketName)
-          .getPublicUrl(filePath);
-
-      return publicUrl;
+      return _uploadImage(
+        imageFile: imageFile,
+        bucketName: _productBucketName,
+        prefix: 'product',
+      );
     } catch (e) {
       throw Exception('Failed to upload image: $e');
+    }
+  }
+
+  /// Uploads a profile image to Supabase Storage.
+  Future<String> uploadProfileImage(File imageFile) async {
+    try {
+      return _uploadImage(
+        imageFile: imageFile,
+        bucketName: _profileBucketName,
+        prefix: 'profile',
+      );
+    } catch (e) {
+      throw Exception('Failed to upload profile image: $e');
     }
   }
 
@@ -66,22 +44,31 @@ class ImageStorageService {
     try {
       if (imageUrlOrPath.isEmpty) return;
 
-      // Extract file path from URL if needed
-      String filePath = imageUrlOrPath;
-      if (imageUrlOrPath.contains('product-images/')) {
-        final parts = imageUrlOrPath.split('product-images/');
-        if (parts.length > 1) {
-          filePath = parts[1].split('?')[0]; // Remove query params if present
-        }
-      }
+      final filePath = _extractFilePath(
+        imageUrlOrPath: imageUrlOrPath,
+        bucketName: _productBucketName,
+      );
 
-      // Delete from storage
-      await _supabase.storage
-          .from(_bucketName)
-          .remove([filePath]);
+      await _supabase.storage.from(_productBucketName).remove([filePath]);
     } catch (e) {
       // Log error but don't throw - deletion failure shouldn't block operations
       print('Failed to delete image: $e');
+    }
+  }
+
+  /// Deletes a profile image from Supabase Storage.
+  Future<void> deleteProfileImage(String imageUrlOrPath) async {
+    try {
+      if (imageUrlOrPath.isEmpty) return;
+
+      final filePath = _extractFilePath(
+        imageUrlOrPath: imageUrlOrPath,
+        bucketName: _profileBucketName,
+      );
+
+      await _supabase.storage.from(_profileBucketName).remove([filePath]);
+    } catch (e) {
+      print('Failed to delete profile image: $e');
     }
   }
 
@@ -106,6 +93,84 @@ class ImageStorageService {
     } catch (e) {
       throw Exception('Failed to replace image: $e');
     }
+  }
+
+  /// Replaces an existing profile image with a new one.
+  Future<String> replaceProfileImage({
+    required File newImageFile,
+    String? oldImageUrl,
+  }) async {
+    try {
+      final newImageUrl = await uploadProfileImage(newImageFile);
+
+      if (oldImageUrl != null && oldImageUrl.isNotEmpty) {
+        deleteProfileImage(oldImageUrl).catchError((error) {
+          print('Warning: Could not delete old profile image: $error');
+        });
+      }
+
+      return newImageUrl;
+    } catch (e) {
+      throw Exception('Failed to replace profile image: $e');
+    }
+  }
+
+  Future<String> _uploadImage({
+    required File imageFile,
+    required String bucketName,
+    required String prefix,
+  }) async {
+    await _validateImageFile(imageFile);
+
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) {
+      throw Exception('User not authenticated');
+    }
+
+    final extension = path.extension(imageFile.path).toLowerCase();
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final fileName = '${prefix}_${timestamp}_${_generateUuid()}$extension';
+    final filePath = '$userId/$fileName';
+
+    await _supabase.storage.from(bucketName).upload(
+          filePath,
+          imageFile,
+          fileOptions: const FileOptions(
+            cacheControl: '3600',
+            upsert: false,
+          ),
+        );
+
+    return _supabase.storage.from(bucketName).getPublicUrl(filePath);
+  }
+
+  Future<void> _validateImageFile(File imageFile) async {
+    final fileSize = await imageFile.length();
+    if (fileSize > _maxFileSizeBytes) {
+      throw Exception('Image size exceeds 5MB limit');
+    }
+
+    final extension = path.extension(imageFile.path).toLowerCase();
+    final allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+    if (!allowedExtensions.contains(extension)) {
+      throw Exception('Invalid file format. Use JPG, PNG, or WebP');
+    }
+  }
+
+  String _extractFilePath({
+    required String imageUrlOrPath,
+    required String bucketName,
+  }) {
+    if (!imageUrlOrPath.contains('$bucketName/')) {
+      return imageUrlOrPath;
+    }
+
+    final parts = imageUrlOrPath.split('$bucketName/');
+    if (parts.length <= 1) {
+      return imageUrlOrPath;
+    }
+
+    return parts[1].split('?')[0];
   }
 
   /// Simple UUID generator (sufficient for file naming)

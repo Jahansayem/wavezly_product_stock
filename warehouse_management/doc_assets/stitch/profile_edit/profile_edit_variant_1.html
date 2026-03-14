@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+
+<html lang="bn"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>প্রোফাইল এডিট - Halkhata</title>
+<!-- Tailwind CSS v3 CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style data-purpose="custom-typography">
+    /* Using a standard sans-serif stack that renders Bengali well */
+    body {
+      font-family: 'Inter', 'Noto Sans Bengali', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    }
+  </style>
+<style data-purpose="ui-components">
+    .app-bar-shadow {
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    /* Custom style for the circular add button on profile picture */
+    .profile-add-btn {
+      position: absolute;
+      bottom: -4px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #1D4ED8; /* Blue accent */
+      border: 2px solid white;
+    }
+    /* Styling for form focus states to match brand */
+    .form-input-focus:focus {
+      border-color: #FFC107;
+      ring-color: #FFC107;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+<!-- BEGIN: App Bar -->
+<header class="bg-[#FFC107] px-4 py-4 flex items-center sticky top-0 z-50">
+<button aria-label="Go back" class="mr-4">
+<svg class="h-6 w-6 text-gray-800" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<h1 class="text-xl font-bold text-gray-800">প্রোফাইল এডিট</h1>
+</header>
+<!-- END: App Bar -->
+<!-- BEGIN: Main Content -->
+<main class="flex-grow p-4 md:max-w-md md:mx-auto w-full">
+<!-- BEGIN: Profile Picture Section -->
+<section class="flex flex-col items-center mt-6 mb-8" data-purpose="profile-picture-upload">
+<div class="relative">
+<div class="w-32 h-32 bg-[#FFF9E6] border-2 border-[#FFC107] rounded-2xl flex items-center justify-center overflow-hidden">
+<!-- Placeholder Gallery Icon -->
+<svg class="h-12 w-12 text-[#FFC107]" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
+</svg>
+</div>
+<!-- Add Icon Button -->
+<button aria-label="Add Photo" class="profile-add-btn w-8 h-8 rounded-full flex items-center justify-center text-white shadow-md">
+<svg class="h-5 w-5" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
+</svg>
+</button>
+</div>
+<p class="mt-4 text-gray-700 font-medium">ছবি যোগ করুন</p>
+</section>
+<!-- END: Profile Picture Section -->
+<!-- BEGIN: Edit Profile Form -->
+<form class="space-y-6" data-purpose="profile-edit-form">
+<!-- Name Field -->
+<div class="space-y-2">
+<label class="block text-gray-800 font-medium" for="full-name">নাম <span class="text-red-500">*</span></label>
+<input class="w-full p-4 border border-gray-300 rounded-lg focus:ring-[#FFC107] focus:border-[#FFC107] outline-none transition-all" id="full-name" placeholder="আপনার নাম লিখুন" type="text" value="MD Jahan Sayem"/>
+</div>
+<!-- Address Field -->
+<div class="space-y-2">
+<label class="block text-gray-800 font-medium" for="address">ঠিকানা</label>
+<input class="w-full p-4 border border-gray-300 rounded-lg focus:ring-[#FFC107] focus:border-[#FFC107] outline-none transition-all" id="address" placeholder="ঠিকানা" type="text"/>
+</div>
+<!-- Email Field -->
+<div class="space-y-2">
+<label class="block text-gray-800 font-medium" for="email">ইমেইল</label>
+<input class="w-full p-4 border border-gray-300 rounded-lg focus:ring-[#FFC107] focus:border-[#FFC107] outline-none transition-all" id="email" placeholder="ইমেইল" type="email"/>
+</div>
+<!-- Birthday Field -->
+<div class="space-y-2">
+<label class="block text-gray-800 font-medium" for="birthday">জন্মদিন নির্বাচন করুন</label>
+<div class="relative">
+<input class="w-full p-4 border border-gray-300 rounded-lg focus:ring-[#FFC107] focus:border-[#FFC107] outline-none bg-white cursor-pointer" id="birthday" placeholder="জন্মদিন নির্বাচন করুন" readonly="" type="text"/>
+<div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+<svg class="h-6 w-6 text-gray-500" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+</div>
+<!-- Gender Field -->
+<div class="space-y-2">
+<label class="block text-gray-800 font-medium" for="gender">লিঙ্গ নির্বাচন করুন</label>
+<div class="relative">
+<select class="w-full p-4 border border-gray-300 rounded-lg focus:ring-[#FFC107] focus:border-[#FFC107] outline-none appearance-none bg-white cursor-pointer" id="gender">
+<option disabled="" selected="" value="">লিঙ্গ নির্বাচন করুন</option>
+<option value="male">পুরুষ</option>
+<option value="female">মহিলা</option>
+<option value="other">অন্যান্য</option>
+</select>
+<div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+<svg class="h-5 w-5 text-gray-500" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+</div>
+</form>
+<!-- END: Edit Profile Form -->
+</main>
+<!-- END: Main Content -->
+<!-- BEGIN: Bottom Action Area -->
+<footer class="p-4 bg-white border-t border-gray-100 sticky bottom-0">
+<div class="md:max-w-md md:mx-auto w-full">
+<button class="w-full bg-[#1D4ED8] hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-colors shadow-lg active:scale-[0.98] transform" type="submit">
+        আপডেট
+      </button>
+</div>
+</footer>
+<!-- END: Bottom Action Area -->
+</body></html>

@@ -1,12 +1,13 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import 'package:wavezly/features/auth/screens/login_screen.dart';
 import 'package:wavezly/functions/confirm_dialog.dart';
 import 'package:wavezly/models/user_profile.dart';
 import 'package:wavezly/screens/cash_counter_screen.dart';
+import 'package:wavezly/screens/profile_edit_screen.dart';
 import 'package:wavezly/services/auth_service.dart';
 import 'package:wavezly/services/user_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
@@ -68,12 +69,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
   String get _displayRole {
     final role = _currentUser?.role.trim().toUpperCase();
-    if (role == 'OWNER') {
-      return 'OWNER';
-    }
-    if (role == 'STAFF') {
-      return 'STAFF';
-    }
+    if (role == 'OWNER') return 'OWNER';
+    if (role == 'STAFF') return 'STAFF';
     return 'USER';
   }
 
@@ -82,7 +79,7 @@ class _SettingsPageState extends State<SettingsPage> {
     if (phone != null && phone.isNotEmpty) {
       return phone;
     }
-    return 'ফোন নম্বর যোগ করা হয়নি';
+    return 'ফোন নম্বর যোগ করা হয়নি';
   }
 
   String get _avatarText {
@@ -91,6 +88,31 @@ class _SettingsPageState extends State<SettingsPage> {
       return 'হ';
     }
     return name.characters.first.toUpperCase();
+  }
+
+  String? get _avatarUrl {
+    final avatarUrl = _currentUser?.avatarUrl?.trim();
+    if (avatarUrl == null || avatarUrl.isEmpty) {
+      return null;
+    }
+    return avatarUrl;
+  }
+
+  double get _profileCompletion {
+    final profile = _currentUser;
+    if (profile == null) return 0;
+
+    final completedFields = <bool>[
+      profile.name.trim().isNotEmpty,
+      profile.phone?.trim().isNotEmpty ?? false,
+      profile.address?.trim().isNotEmpty ?? false,
+      profile.email?.trim().isNotEmpty ?? false,
+      profile.birthday != null,
+      profile.gender?.trim().isNotEmpty ?? false,
+      profile.avatarUrl?.trim().isNotEmpty ?? false,
+    ].where((filled) => filled).length;
+
+    return completedFields / 7;
   }
 
   void _showComingSoon(String label) {
@@ -107,6 +129,37 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _openProfileEdit() async {
+    final profile = _currentUser;
+    if (_isProfileLoading || profile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: ColorPalette.mandy,
+          content: Text(
+            'প্রোফাইল তথ্য এখনো প্রস্তুত নয়।',
+            style: _bodyStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProfileEditScreen(initialProfile: profile),
+      ),
+    );
+
+    if (updated == true && mounted) {
+      await _loadProfile();
+    }
   }
 
   Future<void> _openCashCounter() async {
@@ -153,7 +206,6 @@ class _SettingsPageState extends State<SettingsPage> {
         Navigator.of(context).pop();
 
         if (!mounted) return;
-
         setState(() => _isLoggingOut = true);
 
         try {
@@ -179,7 +231,7 @@ class _SettingsPageState extends State<SettingsPage> {
             SnackBar(
               backgroundColor: ColorPalette.mandy,
               content: Text(
-                'লগআউট সময় শেষ হয়েছে। আবার চেষ্টা করুন।',
+                'লগআউট সময় শেষ হয়েেছে। আবার চেষ্টা করুন।',
                 style: _bodyStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
@@ -416,14 +468,18 @@ class _SettingsPageState extends State<SettingsPage> {
                   height: 22,
                   child: CircularProgressIndicator(strokeWidth: 2.4),
                 )
-              : Text(
-                  _avatarText,
-                  style: _headingStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w700,
-                    color: ColorPalette.gray700,
-                  ),
-                ),
+              : _avatarUrl != null
+                  ? ClipOval(
+                      child: CachedNetworkImage(
+                        imageUrl: _avatarUrl!,
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        placeholder: (context, _) => _buildAvatarFallback(),
+                        errorWidget: (context, _, __) => _buildAvatarFallback(),
+                      ),
+                    )
+                  : _buildAvatarFallback(),
         ),
         const SizedBox(width: 14),
         Expanded(
@@ -462,7 +518,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         const SizedBox(width: 10),
         OutlinedButton(
-          onPressed: () => _showComingSoon('প্রোফাইল এডিট'),
+          onPressed: _openProfileEdit,
           style: OutlinedButton.styleFrom(
             side: const BorderSide(color: ColorPalette.blue600),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -491,7 +547,23 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Widget _buildAvatarFallback() {
+    return Text(
+      _avatarText,
+      style: _headingStyle(
+        fontSize: 26,
+        fontWeight: FontWeight.w700,
+        color: ColorPalette.gray700,
+      ),
+    );
+  }
+
   Widget _buildProfileStatusCard() {
+    final completion = _profileCompletion;
+    final percentLabel = '${(completion * 100).round()}%';
+    final progressColor =
+        completion >= 1 ? ColorPalette.emerald600 : ColorPalette.red500;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -504,10 +576,10 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             Text(
-              '0%',
+              percentLabel,
               style: _bodyStyle(
                 fontWeight: FontWeight.w800,
-                color: ColorPalette.red600,
+                color: progressColor,
               ),
             ),
           ],
@@ -515,11 +587,11 @@ class _SettingsPageState extends State<SettingsPage> {
         const SizedBox(height: 6),
         ClipRRect(
           borderRadius: BorderRadius.circular(999),
-          child: const LinearProgressIndicator(
-            value: 0,
+          child: LinearProgressIndicator(
+            value: completion,
             minHeight: 6,
             backgroundColor: ColorPalette.gray200,
-            valueColor: AlwaysStoppedAnimation<Color>(ColorPalette.red500),
+            valueColor: AlwaysStoppedAnimation<Color>(progressColor),
           ),
         ),
         const SizedBox(height: 8),
