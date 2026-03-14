@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:wavezly/config/database_config.dart';
+import 'package:wavezly/localization/app_locale_controller.dart';
 import 'package:wavezly/config/supabase_config.dart';
 import 'package:wavezly/services/notification_service.dart';
 import 'package:wavezly/sync/connectivity_service.dart';
@@ -14,6 +15,7 @@ void main() async {
 
   // Initialize date formatting for intl package
   await initializeDateFormatting('en', null);
+  await initializeDateFormatting('bn', null);
 
   // Initialize SQLite database FIRST (for offline support)
   print('Initializing local database...');
@@ -22,6 +24,9 @@ void main() async {
   // Initialize Supabase
   print('Initializing Supabase...');
   await SupabaseConfig.initialize();
+
+  // Initialize persisted app language
+  await AppLocaleController.instance.initialize();
 
   // Initialize OneSignal push notifications
   print('Initializing OneSignal...');
@@ -64,7 +69,7 @@ void main() async {
   );
 
   print('App initialization complete');
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 //TODO Text overflow right way

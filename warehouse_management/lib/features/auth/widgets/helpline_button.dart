@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wavezly/app/app_theme.dart';
+import 'package:wavezly/localization/app_strings.dart';
 
-/// Helpline button with blue border and headset icon
-///
-/// Container with blue border, rounded (12px)
-/// Row: Icon (headset_mic) + Text("হেল্প লাইন")
-/// Hover effect: blue.shade50 background (desktop)
 class HelplineButton extends StatefulWidget {
   final VoidCallback? onTap;
 
@@ -23,6 +19,8 @@ class _HelplineButtonState extends State<HelplineButton> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
@@ -39,7 +37,9 @@ class _HelplineButtonState extends State<HelplineButton> {
               width: 1.5,
             ),
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-            color: _isHovered ? AppTheme.secondaryBlue.withOpacity(0.05) : Colors.transparent,
+            color: _isHovered
+                ? AppTheme.secondaryBlue.withOpacity(0.05)
+                : Colors.transparent,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -51,7 +51,7 @@ class _HelplineButtonState extends State<HelplineButton> {
               ),
               const SizedBox(width: 6),
               Text(
-                'হেল্প লাইন',
+                strings.helpline,
                 style: AppTheme.labelSemibold.copyWith(
                   color: AppTheme.secondaryBlue,
                 ),

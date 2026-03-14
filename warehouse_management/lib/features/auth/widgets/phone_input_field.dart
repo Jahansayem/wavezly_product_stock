@@ -1,15 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wavezly/app/app_theme.dart';
+import 'package:wavezly/localization/app_strings.dart';
 
-/// Combined phone input field with Bangladesh flag prefix
-///
-/// CRITICAL: Combined input with left prefix + right field
-/// Structure:
-/// - Outer container with single border
-/// - Left prefix: Bangladesh flag circle + "+88" + dropdown icon + divider
-/// - Right field: TextField with no border (handled by outer container)
-/// - Focus state: Yellow border (1px ring)
 class PhoneInputField extends StatefulWidget {
   final TextEditingController controller;
   final ValueChanged<String>? onChanged;
@@ -46,6 +39,8 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+
     return Container(
       decoration: BoxDecoration(
         border: Border.all(
@@ -58,7 +53,6 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
       ),
       child: Row(
         children: [
-          // Left prefix section (flag, +88, dropdown)
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: 12,
@@ -75,10 +69,8 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Bangladesh flag circle
                 _buildBangladeshFlag(),
                 const SizedBox(width: 8),
-                // Country code
                 Text(
                   '+88',
                   style: AppTheme.bodyRegular.copyWith(
@@ -87,7 +79,6 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
                   ),
                 ),
                 const SizedBox(width: 4),
-                // Dropdown icon
                 Icon(
                   Icons.keyboard_arrow_down,
                   color: AppTheme.textSecondary,
@@ -96,8 +87,6 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
               ],
             ),
           ),
-
-          // Right input section
           Expanded(
             child: TextField(
               controller: widget.controller,
@@ -108,10 +97,10 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
               ),
               inputFormatters: [
                 FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(11), // 01XXXXXXXXX
+                LengthLimitingTextInputFormatter(11),
               ],
               decoration: InputDecoration(
-                hintText: 'মোবাইল নং',
+                hintText: strings.mobileNumberHint,
                 hintStyle: AppTheme.bodyRegular.copyWith(
                   fontSize: 15,
                   color: AppTheme.textSecondary,
@@ -132,14 +121,12 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
     );
   }
 
-  /// Build Bangladesh flag as circular icon
-  /// Green background with red center dot
   Widget _buildBangladeshFlag() {
     return Container(
       width: 24,
       height: 24,
       decoration: const BoxDecoration(
-        color: Color(0xFF006A4E), // Bangladesh green
+        color: Color(0xFF006A4E),
         shape: BoxShape.circle,
       ),
       child: Center(
@@ -147,7 +134,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
           width: 10,
           height: 10,
           decoration: const BoxDecoration(
-            color: Color(0xFFF42A41), // Bangladesh red
+            color: Color(0xFFF42A41),
             shape: BoxShape.circle,
           ),
         ),

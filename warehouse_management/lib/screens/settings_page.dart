@@ -7,6 +7,8 @@ import 'package:sqflite/sqflite.dart';
 import 'package:wavezly/config/database_config.dart';
 import 'package:wavezly/features/auth/screens/login_screen.dart';
 import 'package:wavezly/functions/confirm_dialog.dart';
+import 'package:wavezly/localization/app_locale_controller.dart';
+import 'package:wavezly/localization/app_strings.dart';
 import 'package:wavezly/models/user_profile.dart';
 import 'package:wavezly/screens/app_training_screen.dart';
 import 'package:wavezly/screens/cash_counter_screen.dart';
@@ -38,6 +40,717 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _isHalkhataSettingsExpanded = false;
   bool _isAppLockEnabled = false;
   bool _isBackingUp = false;
+
+  AppStrings get _strings => AppStrings.of(context);
+  AppLocaleController get _localeController => AppLocaleController.instance;
+
+  Future<void> _showLanguageSelector() async {
+    final strings = _strings;
+    final selectedCode = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        final currentCode = _localeController.languageCode;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  strings.languageSheetTitle,
+                  style: _headingStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: ColorPalette.gray800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  strings.languageSheetSubtitle,
+                  style: _bodyStyle(color: ColorPalette.gray500),
+                ),
+                const SizedBox(height: 16),
+                _buildLanguageOption(
+                  context: context,
+                  languageCode: 'bn',
+                  label: strings.bangla,
+                  isSelected: currentCode == 'bn',
+                ),
+                const SizedBox(height: 12),
+                _buildLanguageOption(
+                  context: context,
+                  languageCode: 'en',
+                  label: strings.english,
+                  isSelected: currentCode == 'en',
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (selectedCode == null ||
+        selectedCode == _localeController.languageCode) {
+      return;
+    }
+
+    await _localeController.setLanguageCode(selectedCode);
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Widget _buildLanguageOption({
+    required BuildContext context,
+    required String languageCode,
+    required String label,
+    required bool isSelected,
+  }) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: () => Navigator.of(context).pop(languageCode),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected ? ColorPalette.blue600 : ColorPalette.gray200,
+              width: isSelected ? 1.5 : 1,
+            ),
+            color: isSelected
+                ? ColorPalette.blue600.withValues(alpha: 0.06)
+                : Colors.white,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.translate_rounded,
+                color: isSelected ? ColorPalette.blue600 : ColorPalette.gray500,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: _bodyStyle(
+                    fontWeight: FontWeight.w700,
+                    color: ColorPalette.gray800,
+                  ),
+                ),
+              ),
+              if (isSelected)
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: ColorPalette.blue600,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<_SettingsAction> get _localizedAppSettings => [
+        _SettingsAction(
+          label: _strings.halkhataAppSettings,
+          icon: Icons.phone_android_rounded,
+          iconColor: ColorPalette.blue600,
+          onTap: () => _showComingSoon(_strings.appSettings),
+          trailing: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: ColorPalette.gray500,
+          ),
+        ),
+        _SettingsAction(
+          label: _strings.cashCounter,
+          icon: Icons.calculate_rounded,
+          iconColor: ColorPalette.emerald600,
+          onTap: _openCashCounter,
+        ),
+        _SettingsAction(
+          label: _strings.subscription,
+          icon: Icons.workspace_premium_rounded,
+          iconColor: ColorPalette.warningAmber,
+          onTap: () => _showComingSoon(_strings.subscription),
+        ),
+        _SettingsAction(
+          label: _strings.webApp,
+          icon: Icons.language_rounded,
+          iconColor: ColorPalette.blue600,
+          onTap: () => _showComingSoon(_strings.webApp),
+          trailing: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: ColorPalette.gray500,
+          ),
+        ),
+        _SettingsAction(
+          label: _strings.appTraining,
+          icon: Icons.play_circle_outline_rounded,
+          iconColor: ColorPalette.blue600,
+          onTap: () => _showComingSoon(_strings.appTraining),
+        ),
+        _SettingsAction(
+          label: _strings.language,
+          icon: Icons.translate_rounded,
+          iconColor: ColorPalette.blue600,
+          onTap: _showLanguageSelector,
+          trailingText:
+              _strings.currentLanguageLabel(_localeController.languageCode),
+        ),
+        _SettingsAction(
+          label: _strings.currency,
+          icon: Icons.currency_exchange_rounded,
+          iconColor: ColorPalette.blue600,
+          trailingText: 'BDT | ৳',
+        ),
+        _SettingsAction(
+          label: _strings.businessCard,
+          icon: Icons.badge_outlined,
+          iconColor: ColorPalette.blue600,
+          onTap: () => _showComingSoon(_strings.businessCard),
+        ),
+        _SettingsAction(
+          label: _strings.addShortcut,
+          icon: Icons.add_box_outlined,
+          iconColor: ColorPalette.blue600,
+          onTap: () => _showComingSoon(_strings.addShortcut),
+        ),
+      ];
+
+  List<_SettingsAction> get _localizedHalkhataAppSettingsMenu => [
+        _SettingsAction(
+          label: _strings.bkashNagadQr,
+          icon: Icons.qr_code_2_rounded,
+          iconColor: ColorPalette.gray700,
+          onTap: () => _showComingSoon(_strings.bkashNagadQr),
+          isNested: true,
+        ),
+        _SettingsAction(
+          label: _strings.customCategory,
+          icon: Icons.grid_view_rounded,
+          iconColor: ColorPalette.gray700,
+          onTap: () => _showComingSoon(_strings.customCategory),
+          isNested: true,
+        ),
+        _SettingsAction(
+          label: _strings.decimalPoint,
+          icon: Icons.tag_rounded,
+          iconColor: ColorPalette.gray700,
+          onTap: () => _showComingSoon(_strings.decimalPoint),
+          isNested: true,
+        ),
+        _SettingsAction(
+          label: _strings.dataBackup,
+          icon: Icons.cloud_upload_rounded,
+          iconColor: ColorPalette.gray700,
+          onTap: _handleLocalizedDataBackup,
+          trailing: _isBackingUp
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : null,
+          isNested: true,
+        ),
+        _SettingsAction(
+          label: _strings.recycleBin,
+          icon: Icons.delete_outline_rounded,
+          iconColor: ColorPalette.gray700,
+          onTap: () => _showComingSoon(_strings.recycleBin),
+          isNested: true,
+        ),
+        _SettingsAction(
+          label: _strings.appLock,
+          icon: Icons.lock_outline_rounded,
+          iconColor: ColorPalette.gray700,
+          onTap: () => _handleLocalizedAppLockToggle(!_isAppLockEnabled),
+          trailing: Switch.adaptive(
+            value: _isAppLockEnabled,
+            activeThumbColor: ColorPalette.blue600,
+            onChanged: _handleLocalizedAppLockToggle,
+          ),
+          isNested: true,
+          hideDefaultTrailing: true,
+        ),
+        _SettingsAction(
+          label: _strings.dataDownload,
+          subtitle: _strings.dataDownloadSubtitle,
+          icon: Icons.file_download_outlined,
+          iconColor: ColorPalette.gray700,
+          onTap: () => _showComingSoon(_strings.dataDownload),
+          isNested: true,
+        ),
+        _SettingsAction(
+          label: _strings.appReset,
+          subtitle: _strings.appResetSubtitle,
+          icon: Icons.restart_alt_rounded,
+          iconColor: ColorPalette.red600,
+          onTap: _showLocalizedAppResetConfirmation,
+          isNested: true,
+          isDestructive: true,
+        ),
+      ];
+
+  List<_SettingsAction> get _localizedOtherSettings => [
+        _SettingsAction(
+          label: _strings.featureRequest,
+          icon: Icons.lightbulb_outline_rounded,
+          iconColor: ColorPalette.blue600,
+          onTap: () => _showComingSoon(_strings.featureRequest),
+        ),
+        _SettingsAction(
+          label: _strings.growthPartner,
+          icon: Icons.groups_2_outlined,
+          iconColor: ColorPalette.blue600,
+          onTap: () => _showComingSoon(_strings.growthPartner),
+        ),
+        _SettingsAction(
+          label: _strings.facebookCommunity,
+          icon: Icons.facebook_rounded,
+          iconColor: ColorPalette.blue600,
+          onTap: () => _showComingSoon(_strings.facebookCommunity),
+        ),
+      ];
+
+  Future<void> _handleLocalizedAppLockToggle(bool enabled) async {
+    final previousValue = _isAppLockEnabled;
+    setState(() => _isAppLockEnabled = enabled);
+
+    try {
+      await _writeAppSetting(_appLockEnabledKey, enabled ? '1' : '0');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: ColorPalette.nileBlue,
+          content: Text(
+            enabled
+                ? _strings.appLockEnabledMessage
+                : _strings.appLockDisabledMessage,
+            style: _bodyStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isAppLockEnabled = previousValue);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: ColorPalette.mandy,
+          content: Text(
+            _strings.appLockSaveFailed,
+            style: _bodyStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleLocalizedDataBackup() async {
+    if (_isBackingUp) return;
+
+    final status = await _syncService.getSyncStatus();
+    if ((status['is_syncing'] as bool? ?? false) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            _strings.backupInProgress,
+            style: _bodyStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isBackingUp = true);
+    final result = await _syncService.backupAllData();
+    if (!mounted) return;
+    setState(() => _isBackingUp = false);
+
+    if (!result.success) {
+      final message = result.error == 'Device is offline'
+          ? _strings.backupOffline
+          : _strings.backupFailed;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: ColorPalette.mandy,
+          content: Text(
+            message,
+            style: _bodyStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    await _dashboardService.saveLastBackupTime(DateTime.now());
+    if (!mounted) return;
+
+    final message = result.syncedCount > 0
+        ? _strings.backupSuccessCount(result.syncedCount)
+        : _strings.backupSuccessNoChanges;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: ColorPalette.emerald600,
+        content: Text(
+          message,
+          style: _bodyStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showLocalizedAppResetConfirmation() {
+    showConfirmDialog(
+      context,
+      _strings.resetConfirmation,
+      _strings.no,
+      _strings.reset,
+      () => Navigator.of(context).pop(),
+      () async {
+        Navigator.of(context).pop();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: ColorPalette.red600,
+            content: Text(
+              _strings.appResetNotAvailable,
+              style: _bodyStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _handleLocalizedLogout() async {
+    showConfirmDialog(
+      context,
+      _strings.logoutConfirmation,
+      _strings.no,
+      _strings.yes,
+      () => Navigator.of(context).pop(),
+      () async {
+        Navigator.of(context).pop();
+
+        if (!mounted) return;
+        setState(() => _isLoggingOut = true);
+
+        try {
+          await _authService.signOut().timeout(
+            const Duration(seconds: 8),
+            onTimeout: () {
+              throw TimeoutException('Logout request timed out');
+            },
+          );
+
+          if (!mounted) return;
+
+          await Future.delayed(const Duration(milliseconds: 500));
+          if (!mounted) return;
+
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+        } on TimeoutException {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: ColorPalette.mandy,
+              content: Text(
+                _strings.logoutTimeout,
+                style: _bodyStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          );
+        } catch (_) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: ColorPalette.mandy,
+              content: Text(
+                _strings.logoutFailed,
+                style: _bodyStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          );
+        } finally {
+          if (mounted) {
+            setState(() => _isLoggingOut = false);
+          }
+        }
+      },
+    );
+  }
+
+  Widget _buildLocalizedProfileSection() {
+    final infoColor =
+        _isProfileLoading ? ColorPalette.gray400 : ColorPalette.gray600;
+
+    return Row(
+      children: [
+        Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white,
+            border: Border.all(color: ColorPalette.gray200, width: 2),
+          ),
+          alignment: Alignment.center,
+          child: _isProfileLoading
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2.4),
+                )
+              : _avatarUrl != null
+                  ? ClipOval(
+                      child: CachedNetworkImage(
+                        imageUrl: _avatarUrl!,
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        placeholder: (context, _) => _buildAvatarFallback(),
+                        errorWidget: (context, _, __) => _buildAvatarFallback(),
+                      ),
+                    )
+                  : _buildAvatarFallback(),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _displayName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _headingStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: ColorPalette.gray800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                _displayRole,
+                style: _bodyStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: ColorPalette.gray500,
+                  letterSpacing: 1.0,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                _displayPhone,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _bodyStyle(color: infoColor),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        OutlinedButton(
+          onPressed: _openProfileEdit,
+          style: OutlinedButton.styleFrom(
+            side: const BorderSide(color: ColorPalette.blue600),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          child: Text(
+            _strings.edit,
+            style: _bodyStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: ColorPalette.blue600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLocalizedProfileStatusCard() {
+    final completion = _profileCompletion;
+    final percentLabel = '${(completion * 100).round()}%';
+    final progressColor =
+        completion >= 1 ? ColorPalette.emerald600 : ColorPalette.red500;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                _strings.profileStatus,
+                style: _bodyStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            Text(
+              percentLabel,
+              style: _bodyStyle(
+                fontWeight: FontWeight.w800,
+                color: progressColor,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            value: completion,
+            minHeight: 6,
+            backgroundColor: ColorPalette.gray200,
+            valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          _strings.completeProfileForCard,
+          style: _bodyStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: ColorPalette.blue600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLocalizedSubscriptionCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFFFFFBEB),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.workspace_premium_rounded,
+              color: ColorPalette.warningAmber,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _strings.subscription,
+                  style: _bodyStyle(fontSize: 12, color: ColorPalette.gray500),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _strings.subscriptionPending,
+                  style: _headingStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: ColorPalette.gray800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _strings.subscriptionDetail,
+                  style: _bodyStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: ColorPalette.gray600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocalizedSwitchShopButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: () => _showComingSoon(_strings.switchShop),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFFFC107),
+          foregroundColor: Colors.black,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Text(
+          _strings.switchShop,
+          style: _bodyStyle(
+            fontWeight: FontWeight.w700,
+            color: Colors.black,
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -110,7 +823,7 @@ class _SettingsPageState extends State<SettingsPage> {
     if (name != null && name.isNotEmpty) {
       return name;
     }
-    return 'হালখাতা ব্যবহারকারী';
+    return _strings.userFallbackName;
   }
 
   String get _displayRole {
@@ -167,7 +880,7 @@ class _SettingsPageState extends State<SettingsPage> {
         behavior: SnackBarBehavior.floating,
         backgroundColor: ColorPalette.nileBlue,
         content: Text(
-          '$label শীঘ্রই যুক্ত হবে।',
+          _strings.comingSoon(label),
           style: _bodyStyle(
             color: Colors.white,
             fontWeight: FontWeight.w600,
@@ -266,9 +979,7 @@ class _SettingsPageState extends State<SettingsPage> {
           behavior: SnackBarBehavior.floating,
           backgroundColor: ColorPalette.nileBlue,
           content: Text(
-            enabled
-                ? 'অ্যাপ লক চালু করা হয়েছে।'
-                : 'অ্যাপ লক বন্ধ করা হয়েছে।',
+            enabled ? 'অ্যাপ লক চালু করা হয়েছে।' : 'অ্যাপ লক বন্ধ করা হয়েছে।',
             style: _bodyStyle(
               color: Colors.white,
               fontWeight: FontWeight.w600,
@@ -629,7 +1340,7 @@ class _SettingsPageState extends State<SettingsPage> {
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(
-              'সেটিংস',
+              _strings.settingsTitle,
               style: _headingStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -644,24 +1355,30 @@ class _SettingsPageState extends State<SettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildProfileSection(),
+                  _buildLocalizedProfileSection(),
                   const SizedBox(height: 16),
                   _buildSectionDivider(),
                   const SizedBox(height: 16),
-                  _buildProfileStatusCard(),
+                  _buildLocalizedProfileStatusCard(),
                   const SizedBox(height: 14),
-                  _buildSubscriptionCard(),
+                  _buildLocalizedSubscriptionCard(),
                   const SizedBox(height: 14),
-                  _buildSwitchShopButton(),
+                  _buildLocalizedSwitchShopButton(),
                   const SizedBox(height: 20),
-                  _buildSettingsGroup('অ্যাপ সেটিংস', _appSettings),
+                  _buildSettingsGroup(
+                    _strings.appSettingsSection,
+                    _localizedAppSettings,
+                  ),
                   const SizedBox(height: 20),
-                  _buildSettingsGroup('অন্যান্য', _otherSettings),
+                  _buildSettingsGroup(
+                    _strings.otherSection,
+                    _localizedOtherSettings,
+                  ),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _isLoggingOut ? null : _handleLogout,
+                      onPressed: _isLoggingOut ? null : _handleLocalizedLogout,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFF04438),
                         foregroundColor: Colors.white,
@@ -673,7 +1390,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                       child: Text(
-                        'লগ আউট',
+                        _strings.logout,
                         style: _bodyStyle(
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
@@ -698,7 +1415,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'লগআউট হচ্ছে...',
+                    _strings.loggingOut,
                     style: _bodyStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
@@ -1024,7 +1741,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
       child: Column(
-        children: _halkhataAppSettingsMenu
+        children: _localizedHalkhataAppSettingsMenu
             .map(_buildSettingsTile)
             .toList(growable: false),
       ),
@@ -1081,9 +1798,8 @@ class _SettingsPageState extends State<SettingsPage> {
       trailingWidget = Icon(
         Icons.arrow_forward_ios_rounded,
         size: action.isNested ? 16 : 14,
-        color: action.isDestructive
-            ? ColorPalette.red500
-            : ColorPalette.gray400,
+        color:
+            action.isDestructive ? ColorPalette.red500 : ColorPalette.gray400,
       );
     }
 

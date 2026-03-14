@@ -15,16 +15,20 @@ dependencies:
   double_back_to_close_app: ^2.1.0
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   flutter_svg: ^2.0.10
   fluttertoast: ^8.2.8
   google_fonts: ^6.1.0
   http: ^1.1.0  # HTTP client for SMS API calls
   image_picker: ^1.0.7
-  intl: ^0.19.0
+  intl: ^0.20.2
   math_expressions: ^2.4.0
   mobile_scanner: ^5.2.3
   path: ^1.9.0
+  pdf: ^3.11.3
   permission_handler: ^11.3.0
+  printing: ^5.14.2
   shared_preferences: ^2.2.0
   sqflite: ^2.3.0  # Offline SQLite caching
   supabase_flutter: ^2.5.10

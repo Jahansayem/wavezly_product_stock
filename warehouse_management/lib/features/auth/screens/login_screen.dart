@@ -2,22 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:wavezly/app/app_theme.dart';
 import 'package:wavezly/config/supabase_config.dart';
-import 'package:wavezly/features/auth/widgets/language_toggle.dart';
-import 'package:wavezly/features/auth/widgets/helpline_button.dart';
-import 'package:wavezly/features/auth/widgets/phone_input_field.dart';
-import 'package:wavezly/features/auth/widgets/info_banner.dart';
-import 'package:wavezly/features/auth/widgets/primary_button.dart';
-import 'package:wavezly/services/sms_service.dart';
 import 'package:wavezly/features/auth/screens/otp_verification_screen.dart';
 import 'package:wavezly/features/auth/screens/pin_verification_screen.dart';
+import 'package:wavezly/features/auth/widgets/helpline_button.dart';
+import 'package:wavezly/features/auth/widgets/info_banner.dart';
+import 'package:wavezly/features/auth/widgets/language_toggle.dart';
+import 'package:wavezly/features/auth/widgets/phone_input_field.dart';
+import 'package:wavezly/features/auth/widgets/primary_button.dart';
+import 'package:wavezly/localization/app_strings.dart';
+import 'package:wavezly/services/sms_service.dart';
 
-/// New pixel-perfect Bangla login screen
-///
-/// Matches Tailwind design from code.html with:
-/// - Hind Siliguri font for Bangla text
-/// - Responsive design (phone full-screen, tablet/desktop centered)
-/// - Yellow/blue color scheme
-/// - Component-based architecture
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -34,7 +28,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Listen to phone input changes to enable/disable CTA button
     _phoneController.addListener(() {
       setState(() {
         _isPhoneValid = _phoneController.text.isNotEmpty;
@@ -48,47 +41,40 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  /// Check if user already exists in the system
-  /// Returns true if user exists, false if new user
-  /// Uses RPC function to bypass RLS (no auth during login)
   Future<bool> _checkUserExists(String phone) async {
     try {
-      // Ensure phone has country code (88)
       final phoneWithCountryCode = phone.startsWith('88') ? phone : '88$phone';
 
-      debugPrint('🔍 Checking if user exists: $phoneWithCountryCode');
+      debugPrint('Checking if user exists: $phoneWithCountryCode');
 
-      // Use RPC function that bypasses RLS (SECURITY DEFINER)
-      final response = await SupabaseConfig.client
-          .rpc('check_phone_exists', params: {'phone_number': phoneWithCountryCode});
+      final response = await SupabaseConfig.client.rpc('check_phone_exists',
+          params: {'phone_number': phoneWithCountryCode});
 
       final exists = response == true;
-      debugPrint(exists ? '✅ User exists' : '🆕 New user');
+      debugPrint(exists ? 'User exists' : 'New user');
 
       return exists;
     } catch (e) {
-      debugPrint('❌ Error checking user existence: $e');
-      // On error, treat as existing user (safer - sends to PIN screen)
-      // Worst case: new user just uses "forgot PIN" flow
+      debugPrint('Error checking user existence: $e');
       return true;
     }
   }
 
-  /// Validate phone number format
   bool _validatePhoneFormat(String phone) {
-    // Must be 11 digits starting with 01
     return phone.length == 11 && phone.startsWith('01');
   }
 
   Future<void> _handleSubmit() async {
-    if (!_isPhoneValid) return;
+    if (!_isPhoneValid) {
+      return;
+    }
 
+    final strings = AppStrings.of(context);
     final phone = _phoneController.text.trim();
 
-    // Validate phone format
     if (!_validatePhoneFormat(phone)) {
       Fluttertoast.showToast(
-        msg: 'সঠিক মোবাইল নম্বর দিন (01XXXXXXXXX)',
+        msg: strings.invalidPhoneFormat,
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
       );
@@ -100,20 +86,10 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // Add country code
       final phoneWithCountryCode = '88$phone';
-
-      // ✨ NEW: Check if user already exists
       final userExists = await _checkUserExists(phone);
 
       if (userExists) {
-        // EXISTING USER: Skip OTP, go directly to PIN verification
-        debugPrint('╔═══════════════════════════════════════════════════╗');
-        debugPrint('║ 👤 EXISTING USER DETECTED                        ║');
-        debugPrint('║ Phone: $phoneWithCountryCode                      ║');
-        debugPrint('║ Target: PinVerificationScreen                    ║');
-        debugPrint('╚═══════════════════════════════════════════════════╝');
-
         if (mounted) {
           Navigator.push(
             context,
@@ -125,21 +101,10 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } else {
-        // NEW USER: Send OTP and proceed to OTP verification
-        debugPrint('╔═══════════════════════════════════════════════════╗');
-        debugPrint('║ 🆕 NEW USER DETECTED - SENDING OTP               ║');
-        debugPrint('║ Phone: $phoneWithCountryCode                      ║');
-        debugPrint('╚═══════════════════════════════════════════════════╝');
-
-        // Generate OTP
         final otp = _smsService.generateOTP();
-
-        // Send OTP
         final response = await _smsService.sendOTP(phone, otp);
 
         if (response.success) {
-          debugPrint('✅ OTP sent successfully');
-
           if (mounted) {
             Navigator.push(
               context,
@@ -151,7 +116,6 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           }
         } else {
-          // Failed to send OTP
           setState(() {
             _isSendingOtp = false;
           });
@@ -165,14 +129,14 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (e) {
-      debugPrint('❌ Error in submit: $e');
+      debugPrint('Error in submit: $e');
 
       setState(() {
         _isSendingOtp = false;
       });
 
       Fluttertoast.showToast(
-        msg: 'সমস্যা হয়েছে। আবার চেষ্টা করুন',
+        msg: strings.genericRetryError,
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
         backgroundColor: Colors.red,
@@ -187,9 +151,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleHelpline() {
-    // TODO: Implement helpline functionality
     Fluttertoast.showToast(
-      msg: 'Helpline tapped',
+      msg: AppStrings.of(context).helplineTapped,
       toastLength: Toast.LENGTH_SHORT,
       gravity: ToastGravity.BOTTOM,
     );
@@ -197,6 +160,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -205,20 +170,19 @@ class _LoginScreenState extends State<LoginScreen> {
             final isTablet = AppTheme.isTablet(constraints.maxWidth);
 
             return Container(
-              // Outer container - gray background for tablet/desktop
               decoration: isTablet
                   ? const BoxDecoration(color: AppTheme.backgroundGray)
                   : const BoxDecoration(color: Colors.white),
               child: Center(
                 child: Container(
-                  // Inner container - white card for tablet/desktop
                   constraints: isTablet
                       ? const BoxConstraints(maxWidth: AppTheme.maxLoginWidth)
                       : null,
                   decoration: isTablet
                       ? BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusLg),
                           boxShadow: AppTheme.softShadow,
                         )
                       : null,
@@ -231,28 +195,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Header (Language toggle + Helpline button)
                           _buildHeader(),
                           const SizedBox(height: AppTheme.spacing2xl),
-
-                          // Decorative bars
                           _buildDecorativeBars(),
                           const SizedBox(height: AppTheme.spacing2xl),
-
-                          // Title
-                          _buildTitle(),
+                          _buildTitle(strings),
                           const SizedBox(height: AppTheme.spacing3xl),
-
-                          // Form section
-                          _buildFormSection(),
-
-                          // Spacer to push CTA button to bottom
+                          _buildFormSection(strings),
                           SizedBox(
                             height: isTablet ? 40 : 60,
                           ),
-
-                          // Bottom CTA button
-                          _buildCTAButton(),
+                          _buildCTAButton(strings),
                         ],
                       ),
                     ),
@@ -266,7 +219,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  /// Header with language toggle and helpline button
   Widget _buildHeader() {
     return Row(
       children: [
@@ -277,7 +229,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  /// Decorative yellow bars (left-aligned, different widths)
   Widget _buildDecorativeBars() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -312,45 +263,35 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  /// Title text
-  Widget _buildTitle() {
+  Widget _buildTitle(AppStrings strings) {
     return Text(
-      'আপনার হালখাতা অ্যাকাউন্টে\nলগ ইন করুন',
+      strings.loginTitle,
       style: AppTheme.titleBold,
     );
   }
 
-  /// Form section (label + phone input + info banner)
-  Widget _buildFormSection() {
+  Widget _buildFormSection(AppStrings strings) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Label
         Text(
-          'মোবাইল নম্বর',
+          strings.mobileNumberLabel,
           style: AppTheme.labelMedium,
         ),
         const SizedBox(height: AppTheme.spacingMd),
-
-        // Phone input field
         PhoneInputField(
           controller: _phoneController,
-          onChanged: (value) {
-            // State updates handled by controller listener
-          },
+          onChanged: (value) {},
         ),
         const SizedBox(height: AppTheme.spacingLg),
-
-        // Info banner
         const InfoBanner(),
       ],
     );
   }
 
-  /// Bottom CTA button
-  Widget _buildCTAButton() {
+  Widget _buildCTAButton(AppStrings strings) {
     return PrimaryButton(
-      text: 'এগিয়ে যান',
+      text: strings.continueText,
       enabled: _isPhoneValid && !_isSendingOtp,
       isLoading: _isSendingOtp,
       onPressed: _handleSubmit,
