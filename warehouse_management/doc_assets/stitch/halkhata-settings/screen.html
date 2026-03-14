@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+
+<html lang="bn"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Halkhata Settings Page</title>
+<!-- Tailwind CSS v3 CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+<style data-purpose="custom-fonts">
+    @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap');
+    body {
+      font-family: 'Hind Siliguri', sans-serif;
+      background-color: #F8F9FA;
+    }
+  </style>
+<style data-purpose="custom-layout">
+    /* Ensure the body is scrollable and looks like a mobile app */
+    .app-container {
+      max-width: 480px;
+      margin: 0 auto;
+      background: #FFFFFF;
+      min-height: 100vh;
+      padding-bottom: 2rem;
+    }
+    .sticky-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+  </style>
+</head>
+<body class="bg-gray-100">
+<div class="app-container shadow-xl">
+<!-- BEGIN: Header -->
+<header class="sticky-header bg-[#FFC107] px-4 py-4 flex items-center shadow-md">
+<button aria-label="Back" class="mr-4 text-black text-xl">
+<i class="fas fa-arrow-left"></i>
+</button>
+<h1 class="text-xl font-bold text-black">সেটিংস</h1>
+</header>
+<!-- END: Header -->
+<main class="p-4 space-y-6">
+<!-- BEGIN: Profile Section -->
+<section class="flex items-center justify-between" data-purpose="user-profile">
+<div class="flex items-center space-x-4">
+<div class="relative">
+<!-- Placeholder for User Avatar -->
+<div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden border-2 border-gray-100">
+<i class="fas fa-user text-3xl text-gray-400"></i>
+</div>
+</div>
+<div>
+<h2 class="text-lg font-bold text-gray-800">MD Jahan Sayem</h2>
+<p class="text-xs font-semibold text-gray-500 tracking-wider">OWNER</p>
+<p class="text-sm text-gray-600">+8801724879113</p>
+</div>
+</div>
+<button class="border border-blue-600 text-blue-600 px-4 py-1 rounded text-sm font-medium">
+          এডিট করুন
+        </button>
+</section>
+<!-- END: Profile Section -->
+<hr class="border-t-4 border-gray-100 -mx-4"/>
+<!-- BEGIN: Profile Status Progress -->
+<section data-purpose="profile-completion">
+<div class="flex justify-between items-center mb-1">
+<span class="text-sm font-bold text-gray-700">প্রোফাইল স্ট্যাটাস:</span>
+<span class="text-sm font-extrabold text-red-600">0 %</span>
+</div>
+<div class="w-full bg-gray-200 rounded-full h-1.5 mb-2">
+<div class="bg-red-500 h-1.5 rounded-full w-0"></div>
+</div>
+<p class="text-xs text-blue-600 font-medium">
+          ফ্রি বিজনেস কার্ড পেতে প্রোফাইল তথ্য ১০০% কমপ্লিট করুন
+        </p>
+</section>
+<!-- END: Profile Status Progress -->
+<!-- BEGIN: Subscription Card -->
+<section class="border border-yellow-200 rounded-xl p-4 bg-white shadow-sm flex items-center justify-between" data-purpose="subscription-info">
+<div class="flex items-center space-x-3">
+<div class="bg-yellow-50 p-3 rounded-full">
+<i class="fas fa-crown text-yellow-500 text-xl"></i>
+</div>
+<div>
+<p class="text-xs text-gray-500">সাবস্ক্রিপশন</p>
+<p class="text-sm font-bold text-gray-800">29 December 2026</p>
+</div>
+</div>
+<div class="space-y-1 text-right">
+<div class="flex items-center justify-end space-x-2 text-xs font-medium text-gray-700">
+<span class="bg-yellow-100 p-1 rounded-full text-[10px]"><i class="fas fa-star text-yellow-600"></i></span>
+<span>23 AI ক্রেডিট</span>
+<i class="fas fa-chevron-right text-[10px] text-gray-400"></i>
+</div>
+<div class="flex items-center justify-end space-x-2 text-xs font-medium text-gray-700">
+<span class="bg-yellow-100 p-1 px-1.5 rounded-full text-[10px]"><i class="fas fa-phone text-yellow-600"></i></span>
+<span>3 মিনিট</span>
+<i class="fas fa-chevron-right text-[10px] text-gray-400"></i>
+</div>
+<div class="flex items-center justify-end space-x-2 text-xs font-medium text-gray-700">
+<span class="bg-yellow-100 p-1 px-1.5 rounded-full text-[10px]"><i class="fas fa-comment text-yellow-600"></i></span>
+<span>30 এস এম এস</span>
+<i class="fas fa-chevron-right text-[10px] text-gray-400"></i>
+</div>
+</div>
+</section>
+<!-- END: Subscription Card -->
+<!-- BEGIN: Action Button -->
+<section>
+<button class="w-full bg-[#FFC107] hover:bg-yellow-500 text-black font-bold py-3 rounded-lg shadow-sm transition-colors">
+          দোকান পরিবর্তন করুন
+        </button>
+</section>
+<!-- END: Action Button -->
+<!-- BEGIN: App Settings Menu -->
+<section data-purpose="settings-menu-app">
+<div class="flex items-center space-x-2 mb-3">
+<h3 class="text-xs font-bold text-gray-500 whitespace-nowrap">অ্যপ সেটিংস</h3>
+<div class="h-px bg-gray-300 w-full"></div>
+</div>
+<div class="space-y-2">
+<!-- Accordion Style Item -->
+<div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg shadow-sm">
+<div class="flex items-center space-x-3">
+<i class="fas fa-mobile-screen-button text-blue-800"></i>
+<span class="text-sm font-semibold text-gray-700">হিসাবী অ্যাপ সেটিংস</span>
+</div>
+<i class="fas fa-chevron-down text-gray-500"></i>
+</div>
+<!-- List Item: Subscription -->
+<div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg shadow-sm">
+<div class="flex items-center space-x-3">
+<div class="w-6 h-6 bg-blue-100 flex items-center justify-center rounded">
+<span class="text-blue-700 text-xs font-bold">৳</span>
+</div>
+<span class="text-sm font-semibold text-gray-700">সাবস্ক্রিপশন</span>
+</div>
+<i class="fas fa-arrow-right text-gray-400"></i>
+</div>
+<!-- Accordion Style Item -->
+<div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg shadow-sm">
+<div class="flex items-center space-x-3">
+<i class="fas fa-laptop-code text-blue-800"></i>
+<span class="text-sm font-semibold text-gray-700">হিসাবী ওয়েব অ্যাপ</span>
+</div>
+<i class="fas fa-chevron-down text-gray-500"></i>
+</div>
+<!-- List Item -->
+<div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg shadow-sm">
+<div class="flex items-center space-x-3">
+<i class="fab fa-youtube text-blue-600"></i>
+<span class="text-sm font-semibold text-gray-700">অ্যাপ ট্রেনিং</span>
+</div>
+<i class="fas fa-arrow-right text-gray-400"></i>
+</div>
+<!-- List Item: Language -->
+<div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg shadow-sm">
+<div class="flex items-center space-x-3">
+<i class="fas fa-language text-blue-800"></i>
+<span class="text-sm font-semibold text-gray-700">ভাষা</span>
+</div>
+<span class="text-xs text-gray-400">বাংলা</span>
+</div>
+<!-- List Item: Currency -->
+<div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg shadow-sm">
+<div class="flex items-center space-x-3">
+<i class="fas fa-arrows-rotate text-blue-800"></i>
+<span class="text-sm font-semibold text-gray-700">কারেন্সি</span>
+</div>
+<span class="text-xs text-gray-400">BDT | ৳</span>
+</div>
+<!-- List Item -->
+<div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg shadow-sm">
+<div class="flex items-center space-x-3">
+<i class="fas fa-address-card text-blue-800"></i>
+<span class="text-sm font-semibold text-gray-700">বিজনেস কার্ড</span>
+</div>
+<i class="fas fa-arrow-right text-gray-400"></i>
+</div>
+<!-- List Item -->
+<div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg shadow-sm">
+<div class="flex items-center space-x-3">
+<i class="fas fa-square-plus text-blue-800"></i>
+<span class="text-sm font-semibold text-gray-700">শর্টকাট এড করুন</span>
+</div>
+<i class="fas fa-arrow-right text-gray-400"></i>
+</div>
+</div>
+</section>
+<!-- END: App Settings Menu -->
+<!-- BEGIN: Others Menu -->
+<section data-purpose="settings-menu-others">
+<div class="flex items-center space-x-2 mb-3">
+<h3 class="text-xs font-bold text-gray-500 whitespace-nowrap">অন্যান্য</h3>
+<div class="h-px bg-gray-300 w-full"></div>
+</div>
+<div class="space-y-2">
+<!-- List Item -->
+<div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg shadow-sm">
+<div class="flex items-center space-x-3">
+<i class="fas fa-lightbulb text-blue-800"></i>
+<span class="text-sm font-semibold text-gray-700">ফিচার অনুরোধ</span>
+</div>
+<i class="fas fa-arrow-right text-gray-400"></i>
+</div>
+<!-- List Item -->
+<div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg shadow-sm">
+<div class="flex items-center space-x-3">
+<i class="fas fa-user-group text-blue-800"></i>
+<span class="text-sm font-semibold text-gray-700">হিসাবী গ্রোথ পার্টনার</span>
+</div>
+<i class="fas fa-arrow-right text-gray-400"></i>
+</div>
+<!-- List Item -->
+<div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg shadow-sm">
+<div class="flex items-center space-x-3">
+<i class="fab fa-facebook text-blue-600"></i>
+<span class="text-sm font-semibold text-gray-700">ফেসবুক কমিউনিটি</span>
+</div>
+<i class="fas fa-arrow-right text-gray-400"></i>
+</div>
+<!-- List Item -->
+<div class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg shadow-sm">
+<div class="flex items-center space-x-3">
+<i class="fas fa-headset text-blue-800"></i>
+<span class="text-sm font-semibold text-gray-700">হেল্প &amp; সাপোর্ট</span>
+</div>
+<i class="fas fa-arrow-right text-gray-400"></i>
+</div>
+</div>
+</section>
+<!-- END: Others Menu -->
+<!-- BEGIN: Footer Actions -->
+<footer class="text-center pt-4 pb-8" data-purpose="footer-actions">
+<p class="text-xs text-gray-400 mb-4 tracking-wider">ভার্সন: 4.0.5</p>
+<button class="w-full bg-[#F44336] hover:bg-red-600 text-white font-bold py-3 rounded-full shadow-lg transition-colors">
+          লগ আউট
+        </button>
+</footer>
+<!-- END: Footer Actions -->
+</main>
+</div>
+</body></html>
