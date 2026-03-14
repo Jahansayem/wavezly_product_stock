@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+
+<html lang="bn"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#FFB300",
+                        "primary-dark": "#FFA000",
+                        "background-light": "#FFFFFF",
+                        "background-dark": "#111827",
+                        "accent-orange": "#ec5b13",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                    boxShadow: {
+                        'soft': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Public Sans', sans-serif; }
+        .tab-active { border-bottom: 3px solid #FFB300; color: #111827; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .material-symbols-rounded { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-background-dark font-display text-gray-800">
+<div class="relative flex h-screen max-w-md mx-auto flex-col bg-slate-50 dark:bg-background-dark overflow-hidden shadow-2xl">
+<!-- Top Bar -->
+<div class="flex items-center bg-primary px-4 py-6 justify-between border-b border-primary-dark/20 shadow-sm relative z-10">
+<div class="flex items-center gap-3">
+<button class="text-gray-900 p-1">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h2 class="text-gray-900 text-lg font-bold leading-tight tracking-tight">মেয়াদোত্তীর্ণ পণ্য</h2>
+</div>
+<button class="text-gray-900 p-1">
+<span class="material-symbols-outlined">help</span>
+</button>
+</div>
+<!-- Search Bar with Barcode Scan -->
+<div class="px-4 py-4 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-gray-800">
+<div class="relative flex items-center">
+<div class="absolute left-3 text-gray-400">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="w-full bg-gray-100 dark:bg-gray-800 border-none rounded-xl py-3 pl-10 pr-12 text-sm focus:ring-2 focus:ring-primary/50 text-gray-900 dark:text-gray-100 placeholder:text-gray-400" placeholder="পণ্য খুঁজুন (নাম বা বারকোড)" type="text"/>
+<div class="absolute right-3 text-primary">
+<span class="material-symbols-outlined">barcode_scanner</span>
+</div>
+</div>
+</div>
+<!-- Tabs -->
+<div class="bg-white dark:bg-slate-900">
+<div class="flex border-b border-gray-100 dark:border-gray-800">
+<button class="flex-1 py-3 text-sm font-bold tab-active">মেয়াদ প্রায় শেষ</button>
+<button class="flex-1 py-3 text-sm font-bold text-gray-400 dark:text-gray-500">মেয়াদোত্তীর্ণ</button>
+</div>
+</div>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto p-4 space-y-4">
+<!-- Product Card 1 -->
+<div class="bg-white dark:bg-slate-900 rounded-xl p-3 shadow-soft border border-gray-100 dark:border-gray-800">
+<div class="flex gap-4">
+<div class="w-20 h-20 bg-gray-50 dark:bg-gray-800 rounded-lg shrink-0 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Packet of powdered milk product" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9o_79XcIv7W7_QNl14efnm5MdWjAGEPRdxFFMbwEAyiPBnYOBJ6t57lhySw3U3O7snI0_VYV3rDD28L746z4JWOpPe9WrotkLcmVuD9XSG8wLKQ4FTx-ejzVZPk9RE6f_zQd34V0whlGUwNbvGJXX6XkWTPTtsal2WjXrAV8UHQDDT_vp8zqQabCmE7mgq0-fNI1f2lAmMMGNFBMGgRPGoRiTl1ZAtDCulBRCIpzHhqcFjwO2dy_r3sGSjr2687FJp8wfIFHAeIU"/>
+</div>
+<div class="flex-1">
+<h3 class="text-gray-900 dark:text-gray-100 font-bold text-sm">ডানো মিল্ক পাউডার ৫০০০ গ্রাম</h3>
+<div class="mt-2 space-y-1">
+<div class="flex items-center gap-1.5 text-xs text-orange-600 dark:text-orange-400 font-medium">
+<span class="material-symbols-rounded text-sm">event</span>
+                            মেয়াদ শেষ হবে: ১৫ অক্টোবর, ২০২৪
+                        </div>
+<div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+<span class="material-symbols-rounded text-sm">inventory_2</span>
+                            বর্তমান স্টক: ১২ পিস
+                        </div>
+</div>
+</div>
+</div>
+<div class="flex gap-2 mt-4">
+<button class="flex-1 bg-primary/10 text-primary-dark py-2.5 rounded-lg text-xs font-bold transition-colors hover:bg-primary/20">
+                    Update Stock
+                </button>
+<button class="flex-1 py-2.5 rounded-lg text-xs font-bold shadow-md bg-primary text-gray-900 hover:bg-primary-dark">
+                    Manage Item
+                </button>
+</div>
+</div>
+<!-- Product Card 2 -->
+<div class="bg-white dark:bg-slate-900 rounded-xl p-3 shadow-soft border border-gray-100 dark:border-gray-800">
+<div class="flex gap-4">
+<div class="w-20 h-20 bg-gray-50 dark:bg-gray-800 rounded-lg shrink-0 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Pack of chocolate biscuits" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDKV9kv9luyq5qfSO0U5lZMgJka2hSt_xNkbTb6mAJWSrtfERP1rX35wcrMGLAfID12P0Wp-BVdVEsC6jCsDZsKro9O19HP3I9ircwnPl4OkKUV-z6qUuyaNO6hG7Qge2hEJoJs3w01lufg9Klmh8HRF1bfH_ruzgXNSO6gsHqBNKd1sYFJxphYs8Pg2jlLdHfU3kep0ybCoxsilXxC7HLLmJVgoDcBp565He68srpV3NAqjJeIiMZZyiCDitHCRDBCz-X5adEJogM"/>
+</div>
+<div class="flex-1">
+<h3 class="text-gray-900 dark:text-gray-100 font-bold text-sm">ওরিও বিস্কুট ফ্যামিলি প্যাক</h3>
+<div class="mt-2 space-y-1">
+<div class="flex items-center gap-1.5 text-xs text-orange-600 dark:text-orange-400 font-medium">
+<span class="material-symbols-rounded text-sm">event</span>
+                            মেয়াদ শেষ হবে: ০২ অক্টোবর, ২০২৪
+                        </div>
+<div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+<span class="material-symbols-rounded text-sm">inventory_2</span>
+                            বর্তমান স্টক: ৪৫ পিস
+                        </div>
+</div>
+</div>
+</div>
+<div class="flex gap-2 mt-4">
+<button class="flex-1 bg-primary/10 text-primary-dark py-2.5 rounded-lg text-xs font-bold transition-colors hover:bg-primary/20">
+                    Update Stock
+                </button>
+<button class="flex-1 py-2.5 rounded-lg text-xs font-bold shadow-md bg-primary text-gray-900 hover:bg-primary-dark">
+                    Manage Item
+                </button>
+</div>
+</div>
+<!-- Product Card 3 (Closer to expiry) -->
+<div class="bg-orange-50 dark:bg-orange-900/10 rounded-xl p-3 shadow-soft border border-orange-200 dark:border-orange-800/30">
+<div class="flex gap-4">
+<div class="w-20 h-20 bg-white dark:bg-gray-800 rounded-lg shrink-0 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Bottle of cooking sunflower oil" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA-h6UmMQkdt_T9raAyYEw2jpc-zSQcK_Y6EMvwGagzT-2VUnCWpVtGFjIjJtdyFUUPfiBPJ-XpGxegnWB6PH4IYsl9AGgOFSM0BXfL7gEGnEWs8rrs1EHUTIKEvQ-kaALvR6gRzEAcSZ2asYl_hMTFoWVHHHnhRHt22ff__JZsdMnSwYErZjcmd-7JYvt0BJjLQCmq1W2tFzo97zUz3bEnalBSVYOG3rGyPfiO6aFCRzruHOC1OnuD7voy-WAqdl6Gh-c_S5nanIg"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="text-gray-900 dark:text-gray-100 font-bold text-sm">তীর সয়াবিন তেল ৫ লিটার</h3>
+<span class="bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 text-[10px] px-2 py-0.5 rounded-full font-bold">৩ দিন বাকি</span>
+</div>
+<div class="mt-2 space-y-1">
+<div class="flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400 font-bold">
+<span class="material-symbols-rounded text-sm">warning</span>
+                            মেয়াদ শেষ হবে: ২৭ সেপ্টেম্বর, ২০২৪
+                        </div>
+<div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+<span class="material-symbols-rounded text-sm">inventory_2</span>
+                            বর্তমান স্টক: ৮ পিস
+                        </div>
+</div>
+</div>
+</div>
+<div class="flex gap-2 mt-4">
+<button class="flex-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 py-2.5 rounded-lg text-xs font-bold">
+                    Clearance Sale
+                </button>
+<button class="flex-1 py-2.5 rounded-lg text-xs font-bold shadow-md bg-primary text-gray-900 hover:bg-primary-dark">
+                    Remove Stock
+                </button>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<div class="border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-slate-900 px-4 pb-8 pt-2 z-50">
+<div class="flex justify-between items-center">
+<a class="flex flex-col items-center gap-1 text-gray-400" href="#">
+<span class="material-symbols-rounded">home</span>
+<p class="text-[10px] font-medium">হোম</p>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary-dark" href="#">
+<span class="material-symbols-rounded" style="font-variation-settings: 'FILL' 1;">receipt_long</span>
+<p class="text-[10px] font-bold">হিসাব</p>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-400" href="#">
+<span class="material-symbols-rounded">bar_chart</span>
+<p class="text-[10px] font-medium">রিপোর্ট</p>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-400" href="#">
+<span class="material-symbols-rounded">settings</span>
+<p class="text-[10px] font-medium">সেটিংস</p>
+</a>
+</div>
+</div>
+</div>
+</body></html>

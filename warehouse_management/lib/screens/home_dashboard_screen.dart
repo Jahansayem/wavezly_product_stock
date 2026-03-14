@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wavezly/services/dashboard_service.dart';
-import 'package:wavezly/utils/color_palette.dart';
-import 'package:wavezly/screens/sales_screen.dart';
-import 'package:wavezly/screens/sales_book_screen.dart';
-import 'package:wavezly/screens/customers_page.dart';
-import 'package:wavezly/screens/settings_page.dart';
-import 'package:wavezly/screens/reports_page.dart';
-import 'package:wavezly/screens/inventory_screen_wrapper.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:wavezly/screens/bakirkhata.dart';
+import 'package:wavezly/screens/cashbox_screen_v2.dart';
+import 'package:wavezly/screens/expiry_handling_screen.dart';
+import 'package:wavezly/screens/expense_management_screen_v3.dart';
+import 'package:wavezly/screens/notifications_screen.dart';
 import 'package:wavezly/screens/product_list_screen.dart';
 import 'package:wavezly/screens/purchase_book_screen.dart';
-import 'package:wavezly/screens/stock_book_screen_v2.dart';
-import 'package:wavezly/screens/expense_management_screen_v3.dart';
-import 'package:wavezly/screens/cashbox_screen_v2.dart';
-import 'package:wavezly/screens/user_list_screen_v1.dart';
+import 'package:wavezly/screens/reports_page.dart';
+import 'package:wavezly/screens/sales_book_screen.dart';
 import 'package:wavezly/screens/select_product_buying_screen.dart';
-import 'package:wavezly/screens/notifications_screen.dart';
+import 'package:wavezly/screens/settings_page.dart';
+import 'package:wavezly/screens/stock_book_screen_v2.dart';
+import 'package:wavezly/screens/user_list_screen_v1.dart';
+import 'package:wavezly/services/dashboard_service.dart';
 import 'package:wavezly/services/local_notification_cache_service.dart';
+import 'package:wavezly/sync/sync_service.dart';
+import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/utils/number_formatter.dart';
 import 'package:wavezly/widgets/gradient_app_bar.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 // ============================================================================
 // Stitch Design Colors - #26A69A primary, Yellow offer banner
@@ -44,8 +46,10 @@ class HomeDashboardScreen extends StatefulWidget {
 
 class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   final DashboardService _dashboardService = DashboardService();
+  final SyncService _syncService = SyncService();
   DashboardSummary? _summary;
   bool _isLoading = false; // Start with false - we use local-first approach
+  bool _isBackingUp = false;
   bool _isDayView = true;
   String? _shopName;
   int _badgeRefreshToken = 0; // Token to trigger badge refresh
@@ -176,7 +180,118 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     }
   }
 
-  Widget _buildAppBarTitle({String? subtitle}) {
+  String? _formatBackupTimestamp(String? rawTimestamp) {
+    if (rawTimestamp == null || rawTimestamp.isEmpty) {
+      return null;
+    }
+
+    final parsed = DateTime.tryParse(rawTimestamp)?.toLocal();
+    if (parsed == null) {
+      return null;
+    }
+
+    final formatted = DateFormat('dd MMM, hh:mm a').format(parsed);
+    return 'Last backup: ${NumberFormatter.englishToBengali(formatted)}';
+  }
+
+  Future<void> _handleDataBackup() async {
+    if (_isBackingUp) return;
+
+    final status = await _syncService.getSyncStatus();
+    final legacyQueueCount = status['legacy_pending'] as int? ?? 0;
+    if ((status['is_syncing'] as bool? ?? false) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sync is already running. Please wait.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isBackingUp = true);
+
+    final result = await _syncService.backupAllData();
+    if (!mounted) return;
+
+    setState(() => _isBackingUp = false);
+
+    if (!result.success) {
+      final message = result.error == 'Device is offline'
+          ? 'No internet connection. Connect to the internet and try again.'
+          : result.error ?? 'Backup failed. Please try again.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+      return;
+    }
+
+    await _dashboardService.saveLastBackupTime(DateTime.now());
+    await _loadDashboardData(silent: true);
+    if (!mounted) return;
+
+    final latestStatus = await _syncService.getSyncStatus();
+    final remainingLegacyQueue =
+        latestStatus['legacy_pending'] as int? ?? legacyQueueCount;
+
+    final baseMessage = result.syncedCount > 0
+        ? 'Backup complete. ${result.syncedCount} change(s) synced with Supabase.'
+        : 'Backup complete. Everything is already up to date.';
+    final successMessage = remainingLegacyQueue > 0
+        ? '$baseMessage $remainingLegacyQueue legacy queue item(s) were skipped because they do not belong to the current account.'
+        : baseMessage;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(successMessage)),
+    );
+  }
+
+  Widget _buildBackupButton() {
+    final label = _isBackingUp ? 'Backing up...' : 'Data Backup';
+
+    return Material(
+      color: Colors.black.withOpacity(0.06),
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: _isBackingUp ? null : _handleDataBackup,
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_isBackingUp)
+                const SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.black87),
+                  ),
+                )
+              else
+                const Icon(
+                  Icons.cloud_upload_outlined,
+                  size: 12,
+                  color: Colors.black87,
+                ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: GoogleFonts.anekBangla(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppBarTitle() {
+    final backupLabel = _formatBackupTimestamp(_summary?.lastBackupTime);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -189,17 +304,24 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             color: Colors.black87,
           ),
         ),
-        if (subtitle != null) ...[
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: GoogleFonts.anekBangla(
-              fontSize: 10,
-              fontWeight: FontWeight.w400,
-              color: Colors.black54,
-            ),
-          ),
-        ],
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            _buildBackupButton(),
+            if (backupLabel != null)
+              Text(
+                backupLabel,
+                style: GoogleFonts.anekBangla(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.black54,
+                ),
+              ),
+          ],
+        ),
       ],
     );
   }
@@ -237,7 +359,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                 onPressed: () async {
                   await Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                    MaterialPageRoute(
+                        builder: (_) => const NotificationsScreen()),
                   );
                   // Refresh badge count after returning
                   if (mounted) {
@@ -253,7 +376,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                   right: 8,
                   child: Container(
                     padding: const EdgeInsets.all(4),
-                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    constraints:
+                        const BoxConstraints(minWidth: 16, minHeight: 16),
                     decoration: const BoxDecoration(
                       color: Colors.red,
                       shape: BoxShape.circle,
@@ -290,9 +414,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     return Scaffold(
       backgroundColor: ColorPalette.gray100, // Stitch: #F3F4F6
       appBar: GradientAppBar(
-        title: _buildAppBarTitle(
-          subtitle: _summary?.lastBackupTime ?? 'Last sync: Not configured',
-        ),
+        title: _buildAppBarTitle(),
         actions: _buildAppBarActions(),
       ),
       body: SingleChildScrollView(
@@ -319,146 +441,167 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                 title: 'খাতা সমূহ',
                 items: [
                   _GridItemData(
-                              icon: Icons.menu_book,
-                              label: 'কেনা খাতা',
-                              bgColor: ColorPalette.orange100,
-                              iconColor: ColorPalette.orange600,
-                              onTap: () => Navigator.push(context,
-                                MaterialPageRoute(builder: (_) => const PurchaseBookScreen())),
-                            ),
-                            _GridItemData(
-                              icon: Icons.receipt_long,
-                              label: 'বেচা খাতা',
-                              bgColor: ColorPalette.blue100,
-                              iconColor: ColorPalette.blue600,
-                              onTap: () => Navigator.push(context,
-                                MaterialPageRoute(builder: (_) => const SalesBookScreen())),
-                            ),
-                            _GridItemData(
-                              icon: Icons.pending_actions,
-                              label: 'বাকির খাতা',
-                              bgColor: ColorPalette.red100,
-                              iconColor: ColorPalette.red600,
-                              onTap: () => Navigator.push(context,
-                                MaterialPageRoute(builder: (_) => const CustomersPage())),
-                            ),
-                            _GridItemData(
-                              icon: Icons.payments,
-                              label: 'খরচের খাতা',
-                              bgColor: ColorPalette.teal100,
-                              iconColor: ColorPalette.teal600,
-                              onTap: () => Navigator.push(context,
-                                MaterialPageRoute(builder: (_) => const ExpenseManagementScreenV3())),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        // Section: আপনার ব্যবসার জন্য
-                        _SectionCard(
-                          title: 'আপনার ব্যবসার জন্য',
-                          items: [
-                            _GridItemData(
-                              icon: Icons.groups,
-                              label: 'যোগাযোগ',
-                              bgColor: ColorPalette.indigo100,
-                              iconColor: ColorPalette.indigo600,
-                              onTap: () => Navigator.push(context,
-                                MaterialPageRoute(builder: (_) => const CustomersPage())),
-                            ),
-                            _GridItemData(
-                              icon: Icons.inventory_2,
-                              label: 'প্রোডাক্ট লিস্ট',
-                              bgColor: ColorPalette.amber100,
-                              iconColor: ColorPalette.amber600,
-                              onTap: () => Navigator.push(context,
-                                MaterialPageRoute(builder: (_) => const ProductListScreen())),
-                            ),
-                            _GridItemData(
-                              icon: Icons.warehouse,
-                              label: 'স্টকের হিসাব',
-                              bgColor: ColorPalette.lime100,
-                              iconColor: ColorPalette.lime600,
-                              onTap: () => Navigator.push(context,
-                                MaterialPageRoute(builder: (_) => const StockBookScreenV2())),
-                            ),
-                            _GridItemData(
-                              icon: Icons.analytics,
-                              label: 'ব্যবসার রিপোর্ট',
-                              bgColor: ColorPalette.sky100,
-                              iconColor: ColorPalette.sky600,
-                              onTap: () => Navigator.push(context,
-                                MaterialPageRoute(builder: (_) => const ReportsPage())),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        // Section: অন্যান্য (8 items)
-                        _SectionCard(
-                          title: 'অন্যান্য',
-                          crossAxisCount: 4,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 24,
-                          items: [
-                            _GridItemData(
-                              icon: Icons.point_of_sale,
-                              label: 'ক্যাশবক্স',
-                              bgColor: ColorPalette.emerald50,
-                              iconColor: ColorPalette.emerald600,
-                              onTap: () => Navigator.push(context,
-                                MaterialPageRoute(builder: (_) => const CashboxScreenV2())),
-                            ),
-                            _GridItemData(
-                              icon: Icons.admin_panel_settings,
-                              label: 'অ্যাপ অ্যাক্সেস',
-                              bgColor: ColorPalette.purple100,
-                              iconColor: ColorPalette.purple600,
-                              onTap: () => Navigator.push(context,
-                                MaterialPageRoute(builder: (_) => const UserListScreenV1())),
-                            ),
-                            _GridItemData(
-                              icon: Icons.campaign,
-                              label: 'মার্কেটিং',
-                              bgColor: ColorPalette.rose100,
-                              iconColor: ColorPalette.rose600,
-                              onTap: () {},
-                            ),
-                            _GridItemData(
-                              icon: Icons.smartphone,
-                              label: 'টপ আপ',
-                              bgColor: ColorPalette.violet100,
-                              iconColor: ColorPalette.violet600,
-                              onTap: () {},
-                            ),
-                            _GridItemData(
-                              icon: Icons.verified,
-                              label: 'ওয়ারেন্টি',
-                              bgColor: ColorPalette.fuchsia100,
-                              iconColor: ColorPalette.fuchsia600,
-                              onTap: () {},
-                            ),
-                            _GridItemData(
-                              icon: Icons.event_busy,
-                              label: 'মেয়াদোত্তীর্ণ',
-                              bgColor: ColorPalette.red100,
-                              iconColor: ColorPalette.red600,
-                              onTap: () {},
-                            ),
-                            _GridItemData(
-                              icon: Icons.print,
-                              label: 'প্রিন্টার',
-                              bgColor: ColorPalette.cyan100,
-                              iconColor: ColorPalette.cyan600,
-                              onTap: () {},
-                            ),
-                            _GridItemData(
-                              icon: Icons.account_balance_wallet,
-                              label: 'পুঁজি',
-                              bgColor: ColorPalette.yellow100,
-                              iconColor: ColorPalette.yellow600,
-                              onTap: () {},
-                            ),
-                          ],
-                        ),
+                    icon: Icons.menu_book,
+                    label: 'কেনা খাতা',
+                    bgColor: ColorPalette.orange100,
+                    iconColor: ColorPalette.orange600,
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const PurchaseBookScreen())),
+                  ),
+                  _GridItemData(
+                    icon: Icons.receipt_long,
+                    label: 'বেচা খাতা',
+                    bgColor: ColorPalette.blue100,
+                    iconColor: ColorPalette.blue600,
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const SalesBookScreen())),
+                  ),
+                  _GridItemData(
+                    icon: Icons.pending_actions,
+                    label: 'বাকির খাতা',
+                    bgColor: ColorPalette.red100,
+                    iconColor: ColorPalette.red600,
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const CustomersPage())),
+                  ),
+                  _GridItemData(
+                    icon: Icons.payments,
+                    label: 'খরচের খাতা',
+                    bgColor: ColorPalette.teal100,
+                    iconColor: ColorPalette.teal600,
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ExpenseManagementScreenV3())),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Section: আপনার ব্যবসার জন্য
+              _SectionCard(
+                title: 'আপনার ব্যবসার জন্য',
+                items: [
+                  _GridItemData(
+                    icon: Icons.groups,
+                    label: 'যোগাযোগ',
+                    bgColor: ColorPalette.indigo100,
+                    iconColor: ColorPalette.indigo600,
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const CustomersPage())),
+                  ),
+                  _GridItemData(
+                    icon: Icons.inventory_2,
+                    label: 'প্রোডাক্ট লিস্ট',
+                    bgColor: ColorPalette.amber100,
+                    iconColor: ColorPalette.amber600,
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ProductListScreen())),
+                  ),
+                  _GridItemData(
+                    icon: Icons.warehouse,
+                    label: 'স্টকের হিসাব',
+                    bgColor: ColorPalette.lime100,
+                    iconColor: ColorPalette.lime600,
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const StockBookScreenV2())),
+                  ),
+                  _GridItemData(
+                    icon: Icons.analytics,
+                    label: 'ব্যবসার রিপোর্ট',
+                    bgColor: ColorPalette.sky100,
+                    iconColor: ColorPalette.sky600,
+                    onTap: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const ReportsPage())),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Section: অন্যান্য (8 items)
+              _SectionCard(
+                title: 'অন্যান্য',
+                crossAxisCount: 4,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 24,
+                items: [
+                  _GridItemData(
+                    icon: Icons.point_of_sale,
+                    label: 'ক্যাশবক্স',
+                    bgColor: ColorPalette.emerald50,
+                    iconColor: ColorPalette.emerald600,
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const CashboxScreenV2())),
+                  ),
+                  _GridItemData(
+                    icon: Icons.admin_panel_settings,
+                    label: 'অ্যাপ অ্যাক্সেস',
+                    bgColor: ColorPalette.purple100,
+                    iconColor: ColorPalette.purple600,
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const UserListScreenV1())),
+                  ),
+                  _GridItemData(
+                    icon: Icons.campaign,
+                    label: 'মার্কেটিং',
+                    bgColor: ColorPalette.rose100,
+                    iconColor: ColorPalette.rose600,
+                    onTap: () {},
+                  ),
+                  _GridItemData(
+                    icon: Icons.smartphone,
+                    label: 'টপ আপ',
+                    bgColor: ColorPalette.violet100,
+                    iconColor: ColorPalette.violet600,
+                    onTap: () {},
+                  ),
+                  _GridItemData(
+                    icon: Icons.verified,
+                    label: 'ওয়ারেন্টি',
+                    bgColor: ColorPalette.fuchsia100,
+                    iconColor: ColorPalette.fuchsia600,
+                    onTap: () {},
+                  ),
+                  _GridItemData(
+                    icon: Icons.event_busy,
+                    label: 'মেয়াদোত্তীর্ণ',
+                    bgColor: ColorPalette.red100,
+                    iconColor: ColorPalette.red600,
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ExpiryHandlingScreen())),
+                  ),
+                  _GridItemData(
+                    icon: Icons.print,
+                    label: 'প্রিন্টার',
+                    bgColor: ColorPalette.cyan100,
+                    iconColor: ColorPalette.cyan600,
+                    onTap: () {},
+                  ),
+                  _GridItemData(
+                    icon: Icons.account_balance_wallet,
+                    label: 'পুঁজি',
+                    bgColor: ColorPalette.yellow100,
+                    iconColor: ColorPalette.yellow600,
+                    onTap: () {},
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
               // Support card
               _SupportCard(onLiveChatTap: _launchWhatsApp),
@@ -471,7 +614,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         onPurchaseTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const SelectProductBuyingScreen()),
+            MaterialPageRoute(
+                builder: (_) => const SelectProductBuyingScreen()),
           );
         },
         onHomeTap: () {
@@ -531,7 +675,9 @@ class _SummaryCard extends StatelessWidget {
                 Expanded(
                   child: _SummaryItem(
                     label: 'ব্যালেন্স',
-                    value: isLoading ? '...' : '${formatNumber(summary?.balance ?? 0)} ৳',
+                    value: isLoading
+                        ? '...'
+                        : '${formatNumber(summary?.balance ?? 0)} ৳',
                     valueColor: ColorPalette.red500,
                     isLarge: true,
                   ),
@@ -581,7 +727,9 @@ class _SummaryCard extends StatelessWidget {
                 Expanded(
                   child: _SummaryItem(
                     label: 'বাকি দিয়েছি',
-                    value: isLoading ? '...' : '${formatNumber(summary?.duesGiven ?? 0)} ৳',
+                    value: isLoading
+                        ? '...'
+                        : '${formatNumber(summary?.duesGiven ?? 0)} ৳',
                     valueColor: ColorPalette.red500,
                   ),
                 ),
@@ -589,7 +737,9 @@ class _SummaryCard extends StatelessWidget {
                 Expanded(
                   child: _SummaryItem(
                     label: 'স্টক সংখ্যা',
-                    value: isLoading ? '...' : formatNumber((summary?.stockCount ?? 0).toDouble()),
+                    value: isLoading
+                        ? '...'
+                        : formatNumber((summary?.stockCount ?? 0).toDouble()),
                     valueColor: ColorPalette.green500,
                     isLarge: true,
                   ),
@@ -751,7 +901,7 @@ class _OfferBanner extends StatelessWidget {
           gradient: const LinearGradient(
             colors: [
               ColorPalette.offerYellowStart, // #FBBF24
-              ColorPalette.offerYellowEnd,   // #F59E0B
+              ColorPalette.offerYellowEnd, // #F59E0B
             ],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
@@ -1130,7 +1280,8 @@ class _SupportCard extends StatelessWidget {
           ElevatedButton(
             onPressed: onLiveChatTap,
             style: ElevatedButton.styleFrom(
-              backgroundColor: ColorPalette.navBlue, // Blue to match reference design
+              backgroundColor:
+                  ColorPalette.navBlue, // Blue to match reference design
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               shape: RoundedRectangleBorder(
@@ -1228,13 +1379,15 @@ class _BottomNavBar extends StatelessWidget {
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: ColorPalette.tealAccent.withOpacity(0.1),
+                                  color:
+                                      ColorPalette.tealAccent.withOpacity(0.1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
                                   Icons.home,
                                   size: 28,
-                                  color: ColorPalette.tealAccent, // Stitch: #26A69A
+                                  color: ColorPalette
+                                      .tealAccent, // Stitch: #26A69A
                                 ),
                               ),
                             ),
