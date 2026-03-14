@@ -8,6 +8,7 @@ import 'package:wavezly/config/database_config.dart';
 import 'package:wavezly/features/auth/screens/login_screen.dart';
 import 'package:wavezly/functions/confirm_dialog.dart';
 import 'package:wavezly/models/user_profile.dart';
+import 'package:wavezly/screens/app_training_screen.dart';
 import 'package:wavezly/screens/cash_counter_screen.dart';
 import 'package:wavezly/screens/profile_edit_screen.dart';
 import 'package:wavezly/services/auth_service.dart';
@@ -237,6 +238,13 @@ class _SettingsPageState extends State<SettingsPage> {
           },
         ),
       ),
+    );
+  }
+
+  Future<void> _openAppTraining() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AppTrainingScreen()),
     );
   }
 
@@ -1026,8 +1034,11 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildSettingsTile(_SettingsAction action) {
     final enabled = action.onTap != null;
     final isExpandableTrigger = _isHalkhataSettingsTrigger(action);
-    final effectiveOnTap =
-        isExpandableTrigger ? _toggleHalkhataSettings : action.onTap;
+    final effectiveOnTap = isExpandableTrigger
+        ? _toggleHalkhataSettings
+        : action.icon == Icons.play_circle_outline_rounded
+            ? _openAppTraining
+            : action.onTap;
     final tilePadding = action.isNested
         ? const EdgeInsets.symmetric(horizontal: 12, vertical: 12)
         : const EdgeInsets.symmetric(horizontal: 14, vertical: 14);
