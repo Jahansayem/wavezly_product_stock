@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wavezly/models/product.dart';
 import 'package:wavezly/screens/barcode_scanner_screen.dart';
@@ -171,65 +172,75 @@ class _ExpiryHandlingScreenState extends State<ExpiryHandlingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: ColorPalette.slate50,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildSearchBar(),
-            _buildTabs(),
-            Expanded(
-              child: StreamBuilder<List<Product>>(
-                stream: _productService.getAllProducts(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting &&
-                      !(snapshot.hasData && snapshot.data!.isNotEmpty)) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: ColorPalette.warningAmber,
-                      ),
-                    );
-                  }
-
-                  final products = _filterProducts(snapshot.data ?? const []);
-
-                  if (products.isEmpty) {
-                    return _EmptyState(
-                      isSearching: _searchQuery.isNotEmpty,
-                      isExpiredTab: _selectedTab == ExpiryFilterTab.expired,
-                    );
-                  }
-
-                  return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                    itemCount: products.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final product = products[index];
-                      return _ExpiryProductCard(
-                        product: product,
-                        isExpiredTab: _selectedTab == ExpiryFilterTab.expired,
-                        dayBadge: _buildDayBadge(product.expiryDate!),
-                        expiryLabel: _formatExpiryDate(product.expiryDate),
-                        onManage: () => _openProduct(product),
-                        onUpdateStock: () => _openProduct(product),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Color(0xFFFFB300),
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: ColorPalette.slate50,
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: Column(
+            children: [
+              _buildHeader(),
+              _buildSearchBar(),
+              _buildTabs(),
+              Expanded(
+                child: StreamBuilder<List<Product>>(
+                  stream: _productService.getAllProducts(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting &&
+                        !(snapshot.hasData && snapshot.data!.isNotEmpty)) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: ColorPalette.warningAmber,
+                        ),
                       );
-                    },
-                  );
-                },
+                    }
+
+                    final products = _filterProducts(snapshot.data ?? const []);
+
+                    if (products.isEmpty) {
+                      return _EmptyState(
+                        isSearching: _searchQuery.isNotEmpty,
+                        isExpiredTab: _selectedTab == ExpiryFilterTab.expired,
+                      );
+                    }
+
+                    return ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                      itemCount: products.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final product = products[index];
+                        return _ExpiryProductCard(
+                          product: product,
+                          isExpiredTab: _selectedTab == ExpiryFilterTab.expired,
+                          dayBadge: _buildDayBadge(product.expiryDate!),
+                          expiryLabel: _formatExpiryDate(product.expiryDate),
+                          onManage: () => _openProduct(product),
+                          onUpdateStock: () => _openProduct(product),
+                        );
+                      },
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildHeader() {
+    final topPadding = MediaQuery.of(context).padding.top;
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      padding: EdgeInsets.fromLTRB(16, topPadding + 12, 16, 16),
       decoration: const BoxDecoration(
         color: Color(0xFFFFB300),
         boxShadow: [
