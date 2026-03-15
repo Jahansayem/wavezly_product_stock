@@ -47,6 +47,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/app_training/
+    - assets/help_support/
   fonts:
     - family: Nunito
       fonts:

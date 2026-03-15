@@ -12,6 +12,7 @@ import 'package:wavezly/localization/app_strings.dart';
 import 'package:wavezly/models/user_profile.dart';
 import 'package:wavezly/screens/app_training_screen.dart';
 import 'package:wavezly/screens/cash_counter_screen.dart';
+import 'package:wavezly/screens/help_support_screen.dart';
 import 'package:wavezly/screens/profile_edit_screen.dart';
 import 'package:wavezly/services/auth_service.dart';
 import 'package:wavezly/services/dashboard_service.dart';
@@ -43,6 +44,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
   AppStrings get _strings => AppStrings.of(context);
   AppLocaleController get _localeController => AppLocaleController.instance;
+  String get _helpSupportLabel =>
+      _strings.isEnglish ? 'Help & Support' : 'হেল্প & সাপোর্ট';
 
   Future<void> _showLanguageSelector() async {
     final strings = _strings;
@@ -300,6 +303,12 @@ class _SettingsPageState extends State<SettingsPage> {
       ];
 
   List<_SettingsAction> get _localizedOtherSettings => [
+        _SettingsAction(
+          label: _helpSupportLabel,
+          icon: Icons.support_agent_rounded,
+          iconColor: ColorPalette.blue600,
+          onTap: _openHelpSupport,
+        ),
         _SettingsAction(
           label: _strings.featureRequest,
           icon: Icons.lightbulb_outline_rounded,
@@ -958,6 +967,13 @@ class _SettingsPageState extends State<SettingsPage> {
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const AppTrainingScreen()),
+    );
+  }
+
+  Future<void> _openHelpSupport() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const HelpSupportScreen()),
     );
   }
 
