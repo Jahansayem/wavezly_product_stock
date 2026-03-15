@@ -5,6 +5,10 @@ import '../../config/database_config.dart';
 import 'base_dao.dart';
 
 class CustomerDao extends BaseDao<Customer> {
+  static final CustomerDao _instance = CustomerDao._internal();
+  factory CustomerDao() => _instance;
+  CustomerDao._internal();
+
   @override
   String get tableName => 'customers';
 
@@ -108,8 +112,10 @@ class CustomerDao extends BaseDao<Customer> {
       _currentUserId = userId;
     }
 
+    final shouldRefreshNow = _customersController != null;
+
     // Create broadcast controller if needed
-    if (_customersController == null) {
+    if (!shouldRefreshNow) {
       print('✨ Creating new broadcast stream controller');
       _customersController = StreamController<List<Customer>>.broadcast(
         onListen: () {
@@ -122,6 +128,10 @@ class CustomerDao extends BaseDao<Customer> {
       );
     } else {
       print('♻️ Reusing existing stream controller');
+    }
+
+    if (shouldRefreshNow) {
+      _refreshCustomers(userId);
     }
 
     return _customersController!.stream;
