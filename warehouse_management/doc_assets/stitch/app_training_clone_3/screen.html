@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+
+<html lang="bn"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>হালখাতা - অ্যাপ ট্রেনিং</title>
+<!-- Tailwind CSS CDN with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style data-purpose="typography">
+    @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap');
+    body {
+      font-family: 'Hind Siliguri', sans-serif;
+    }
+  </style>
+<style data-purpose="custom-layout">
+    /* Custom vertical line for the timeline */
+    .timeline-line {
+      position: absolute;
+      left: 20px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background-color: #22c55e; /* green-500 */
+      z-index: 0;
+    }
+    .timeline-dot {
+      z-index: 10;
+      background-color: #22c55e;
+      border: 2px solid white;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+<!-- BEGIN: MainHeader -->
+<header class="bg-[#FFC107] p-4 flex items-center sticky top-0 z-50 shadow-sm" data-purpose="app-header">
+<button aria-label="Back" class="mr-4 text-black">
+<svg class="h-6 w-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<h1 class="text-xl font-bold text-black">অ্যাপ ট্রেনিং</h1>
+</header>
+<!-- END: MainHeader -->
+<main class="p-4">
+<!-- BEGIN: HeroSection -->
+<section class="mb-6" data-purpose="hero-heading">
+<h2 class="text-xl font-bold text-gray-800 leading-tight">
+        হালখাতা অ্যাপ কিভাবে ব্যবহার করবেন বুঝতে পারছেন না?
+      </h2>
+</section>
+<!-- END: HeroSection -->
+<!-- BEGIN: SupportCard -->
+<section class="mb-8" data-purpose="support-contact">
+<div class="bg-white rounded-xl p-4 shadow-sm flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<!-- Support Icon Placeholder -->
+<div class="bg-blue-50 p-2 rounded-full">
+<svg class="h-6 w-6 text-blue-500" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<div>
+<p class="text-sm text-gray-500">যেকোনো প্রয়োজনে কল করুন</p>
+<p class="text-lg font-bold text-gray-800">+৮৮০৯৬৩৮০১১১৯৯</p>
+</div>
+</div>
+<a class="bg-green-600 p-3 rounded-full text-white shadow-md active:scale-95 transition-transform" href="tel:+8809638011199">
+<svg class="h-6 w-6" fill="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57a1.02 1.02 0 00-1.02.24l-2.2 2.2a15.045 15.045 0 01-6.59-6.59l2.2-2.21c.28-.26.36-.65.25-1C8.7 6.45 8.5 5.25 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"></path>
+</svg>
+</a>
+</div>
+</section>
+<!-- END: SupportCard -->
+<!-- BEGIN: TrainingSteps -->
+<section class="relative" data-purpose="training-timeline">
+<!-- Vertical line runs behind the steps -->
+<div class="timeline-line"></div>
+<div class="space-y-4">
+<!-- Step Item -->
+<div class="relative flex items-center group">
+<div class="timeline-dot w-4 h-4 rounded-full flex-shrink-0"></div>
+<div class="ml-6 flex-grow bg-white rounded-lg p-4 shadow-sm flex items-center justify-between border border-transparent hover:border-green-500 transition-colors">
+<span class="text-gray-800 font-medium">হালখাতার উপকারিতা দেখুন</span>
+<svg class="h-5 w-5 text-gray-400" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+<!-- Step Item -->
+<div class="relative flex items-center group">
+<div class="timeline-dot w-4 h-4 rounded-full flex-shrink-0"></div>
+<div class="ml-6 flex-grow bg-white rounded-lg p-4 shadow-sm flex items-center justify-between">
+<span class="text-gray-800 font-medium">পণ্য যুক্ত করে ব্যবসাকে গুছিয়ে নিন</span>
+<svg class="h-5 w-5 text-gray-400" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+<!-- Step Item -->
+<div class="relative flex items-center group">
+<div class="timeline-dot w-4 h-4 rounded-full flex-shrink-0"></div>
+<div class="ml-6 flex-grow bg-white rounded-lg p-4 shadow-sm flex items-center justify-between">
+<span class="text-gray-800 font-medium">সহজেই পণ্য বিক্রি করুন</span>
+<svg class="h-5 w-5 text-gray-400" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+<!-- Step Item -->
+<div class="relative flex items-center group">
+<div class="timeline-dot w-4 h-4 rounded-full flex-shrink-0"></div>
+<div class="ml-6 flex-grow bg-white rounded-lg p-4 shadow-sm flex items-center justify-between">
+<span class="text-gray-800 font-medium">পার্টি-অনুযায়ী সকল পার্টির হিসাব রাখুন</span>
+<svg class="h-5 w-5 text-gray-400" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+<!-- Step Item -->
+<div class="relative flex items-center group">
+<div class="timeline-dot w-4 h-4 rounded-full flex-shrink-0"></div>
+<div class="ml-6 flex-grow bg-white rounded-lg p-4 shadow-sm flex items-center justify-between">
+<span class="text-gray-800 font-medium">সহজেই প্রতিটি বিক্রির হিসাব রাখুন</span>
+<svg class="h-5 w-5 text-gray-400" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+<!-- Step Item -->
+<div class="relative flex items-center group">
+<div class="timeline-dot w-4 h-4 rounded-full flex-shrink-0"></div>
+<div class="ml-6 flex-grow bg-white rounded-lg p-4 shadow-sm flex items-center justify-between">
+<span class="text-gray-800 font-medium">সহজেই খাত-অনুযায়ী মোট খরচের হিসাব রাখুন</span>
+<svg class="h-5 w-5 text-gray-400" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+<!-- Step Item -->
+<div class="relative flex items-center group">
+<div class="timeline-dot w-4 h-4 rounded-full flex-shrink-0"></div>
+<div class="ml-6 flex-grow bg-white rounded-lg p-4 shadow-sm flex items-center justify-between">
+<span class="text-gray-800 font-medium">সহজেই পণ্য কেনা শুরু করুন</span>
+<svg class="h-5 w-5 text-gray-400" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+<!-- Step Item -->
+<div class="relative flex items-center group">
+<div class="timeline-dot w-4 h-4 rounded-full flex-shrink-0"></div>
+<div class="ml-6 flex-grow bg-white rounded-lg p-4 shadow-sm flex items-center justify-between">
+<span class="text-gray-800 font-medium">সহজেই সকল কেনার হিসাব রাখুন</span>
+<svg class="h-5 w-5 text-gray-400" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+<!-- Step Item -->
+<div class="relative flex items-center group">
+<div class="timeline-dot w-4 h-4 rounded-full flex-shrink-0"></div>
+<div class="ml-6 flex-grow bg-white rounded-lg p-4 shadow-sm flex items-center justify-between">
+<span class="text-gray-800 font-medium">ব্যবসার যাবতীয় ব্যবসায়িক রিপোর্ট দেখুন</span>
+<svg class="h-5 w-5 text-gray-400" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+<!-- Step Item -->
+<div class="relative flex items-center group">
+<div class="timeline-dot w-4 h-4 rounded-full flex-shrink-0"></div>
+<div class="ml-6 flex-grow bg-white rounded-lg p-4 shadow-sm flex items-center justify-between">
+<span class="text-gray-800 font-medium">হিসাব রাখার পাশাপাশি অনলাইন ব্যবসা করুন</span>
+<svg class="h-5 w-5 text-gray-400" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+<!-- Step Item -->
+<div class="relative flex items-center group">
+<div class="timeline-dot w-4 h-4 rounded-full flex-shrink-0"></div>
+<div class="ml-6 flex-grow bg-white rounded-lg p-4 shadow-sm flex items-center justify-between">
+<span class="text-gray-800 font-medium">টপ আপ এর মাধ্যমে বাড়তি আয় করুন</span>
+<svg class="h-5 w-5 text-gray-400" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+<!-- Step Item -->
+<div class="relative flex items-center group">
+<div class="timeline-dot w-4 h-4 rounded-full flex-shrink-0"></div>
+<div class="ml-6 flex-grow bg-white rounded-lg p-4 shadow-sm flex items-center justify-between">
+<span class="text-gray-800 font-medium">কর্মচারী বা পার্টনারকে অ্যাপ অ্যাক্সেস দিন</span>
+<svg class="h-5 w-5 text-gray-400" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+<!-- Step Item -->
+<div class="relative flex items-center group">
+<div class="timeline-dot w-4 h-4 rounded-full flex-shrink-0"></div>
+<div class="ml-6 flex-grow bg-white rounded-lg p-4 shadow-sm flex items-center justify-between">
+<span class="text-gray-800 font-medium">কাস্টমার/কর্মচারী/সাপ্লায়ারকে এক স্ক্রিন থেকে যোগাযোগ করুন</span>
+<svg class="h-5 w-5 text-gray-400" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+<!-- Step Item -->
+<div class="relative flex items-center group">
+<div class="timeline-dot w-4 h-4 rounded-full flex-shrink-0"></div>
+<div class="ml-6 flex-grow bg-white rounded-lg p-4 shadow-sm flex items-center justify-between">
+<span class="text-gray-800 font-medium">সহজেই কাস্টমার বা সাপ্লায়ারকে সহজেই এসএমএস পাঠান</span>
+<svg class="h-5 w-5 text-gray-400" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+<!-- Step Item -->
+<div class="relative flex items-center group">
+<div class="timeline-dot w-4 h-4 rounded-full flex-shrink-0"></div>
+<div class="ml-6 flex-grow bg-white rounded-lg p-4 shadow-sm flex items-center justify-between">
+<span class="text-gray-800 font-medium">কেনা, বেচার রসিদ প্রিন্ট করুন</span>
+<svg class="h-5 w-5 text-gray-400" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+<!-- Last Step Item -->
+<div class="relative flex items-center group">
+<div class="timeline-dot w-4 h-4 rounded-full flex-shrink-0"></div>
+<div class="ml-6 flex-grow bg-white rounded-lg p-4 shadow-sm flex items-center justify-between">
+<span class="text-gray-800 font-medium">সহজেই সকল মজুদের হিসাব রাখুন</span>
+<svg class="h-5 w-5 text-gray-400" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+</div>
+</section>
+<!-- END: TrainingSteps -->
+<!-- Extra spacing for bottom scroll -->
+<div class="h-10"></div>
+</main>
+<script data-purpose="active-states">
+    // Script to add active state to cards for better mobile feel
+    document.querySelectorAll('.bg-white.rounded-lg').forEach(card => {
+      card.addEventListener('touchstart', () => card.classList.add('bg-gray-50'));
+      card.addEventListener('touchend', () => card.classList.remove('bg-gray-50'));
+    });
+  </script>
+</body></html>

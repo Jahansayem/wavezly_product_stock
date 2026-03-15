@@ -194,7 +194,7 @@ class _SettingsPageState extends State<SettingsPage> {
           label: _strings.appTraining,
           icon: Icons.play_circle_outline_rounded,
           iconColor: ColorPalette.blue600,
-          onTap: () => _showComingSoon(_strings.appTraining),
+          onTap: _openAppTraining,
         ),
         _SettingsAction(
           label: _strings.language,
@@ -1200,7 +1200,7 @@ class _SettingsPageState extends State<SettingsPage> {
           label: 'অ্যাপ ট্রেনিং',
           icon: Icons.play_circle_outline_rounded,
           iconColor: ColorPalette.blue600,
-          onTap: () => _showComingSoon('অ্যাপ ট্রেনিং'),
+          onTap: _openAppTraining,
         ),
         const _SettingsAction(
           label: 'ভাষা',
@@ -1751,11 +1751,8 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildSettingsTile(_SettingsAction action) {
     final enabled = action.onTap != null;
     final isExpandableTrigger = _isHalkhataSettingsTrigger(action);
-    final effectiveOnTap = isExpandableTrigger
-        ? _toggleHalkhataSettings
-        : action.icon == Icons.play_circle_outline_rounded
-            ? _openAppTraining
-            : action.onTap;
+    final effectiveOnTap =
+        isExpandableTrigger ? _toggleHalkhataSettings : action.onTap;
     final tilePadding = action.isNested
         ? const EdgeInsets.symmetric(horizontal: 12, vertical: 12)
         : const EdgeInsets.symmetric(horizontal: 14, vertical: 14);

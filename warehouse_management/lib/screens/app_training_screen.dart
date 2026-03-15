@@ -1,46 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:wavezly/utils/color_palette.dart';
 
-class AppTrainingScreen extends StatefulWidget {
+class AppTrainingScreen extends StatelessWidget {
   const AppTrainingScreen({super.key});
 
-  @override
-  State<AppTrainingScreen> createState() => _AppTrainingScreenState();
-}
+  static final Uri _supportCallUri = Uri.parse('tel:+8809638011199');
 
-class _AppTrainingScreenState extends State<AppTrainingScreen> {
-  static const List<String> _filters = [
-    'সব',
-    'বেসিক',
-    'অ্যাডভান্সড',
-    'নতুন ফিচার',
-  ];
-
-  final TextEditingController _searchController = TextEditingController();
-
-  String _selectedFilter = _filters.first;
-  String _searchQuery = '';
-
-  List<_TrainingItem> get _visibleItems {
-    final query = _searchQuery.trim();
-    return _trainingItems.where((item) {
-      final matchesFilter =
-          _selectedFilter == 'সব' || item.category == _selectedFilter;
-      final matchesSearch = query.isEmpty ||
-          item.title.contains(query) ||
-          item.subtitle.contains(query);
-      return matchesFilter && matchesSearch;
-    }).toList(growable: false);
+  Future<void> _callSupport(BuildContext context) async {
+    final launched = await launchUrl(_supportCallUri);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: ColorPalette.nileBlue,
+          content: Text(
+            'কল করা যাচ্ছে না। পরে আবার চেষ্টা করুন।',
+            style: _bodyStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+    }
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _showUnavailableMessage([String? label]) {
+  void _showComingSoonMessage(BuildContext context, [String? label]) {
     final message = label == null
         ? 'এই ট্রেনিংটি শীঘ্রই চালু হবে।'
         : '$label শীঘ্রই চালু হবে।';
@@ -61,483 +48,261 @@ class _AppTrainingScreenState extends State<AppTrainingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final spacing = width < 360 ? 10.0 : 12.0;
-    final cardAspectRatio = width < 360 ? 0.70 : 0.74;
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F6F6),
+      backgroundColor: const Color(0xFFF3F4F6),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFFFC107),
+        surfaceTintColor: Colors.transparent,
+        elevation: 2,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          'অ্যাপ ট্রেনিং',
+          style: _bodyStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Colors.black,
+          ),
+        ),
+        actions: [
+          IconButton(
+            onPressed: () => _showComingSoonMessage(context, 'সাহায্য'),
+            icon: const Icon(Icons.help_outline_rounded, color: Colors.black),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            _TrainingHeader(onHelpPressed: _showUnavailableMessage),
-            Expanded(
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-                      child: _buildSearchField(),
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: 42,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _filters.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 10),
-                        itemBuilder: (context, index) {
-                          final filter = _filters[index];
-                          final isSelected = filter == _selectedFilter;
-                          return _TrainingFilterChip(
-                            label: filter,
-                            isSelected: isSelected,
-                            onTap: () {
-                              if (isSelected) return;
-                              setState(() => _selectedFilter = filter);
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  if (_visibleItems.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: _buildEmptyState(),
-                    )
-                  else
-                    SliverPadding(
-                      padding: EdgeInsets.fromLTRB(16, 16, 16, spacing + 8),
-                      sliver: SliverGrid(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final item = _visibleItems[index];
-                            return _TrainingCard(
-                              item: item,
-                              onTap: () => _showUnavailableMessage(item.title),
-                            );
-                          },
-                          childCount: _visibleItems.length,
-                        ),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: spacing,
-                          crossAxisSpacing: spacing,
-                          childAspectRatio: cardAspectRatio,
-                        ),
-                      ),
-                    ),
-                ],
+        top: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'হালখাতা অ্যাপ কিভাবে ব্যবহার করবেন বুঝতে পারছেন না?',
+                style: _bodyStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: ColorPalette.gray800,
+                  height: 1.25,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 20),
+              _SupportCard(
+                onCallTap: () => _callSupport(context),
+              ),
+              const SizedBox(height: 24),
+              _TrainingTimeline(
+                steps: _trainingSteps,
+                onStepTap: (label) => _showComingSoonMessage(context, label),
+              ),
+            ],
+          ),
         ),
       ),
-      bottomNavigationBar: const _TrainingBottomNav(),
     );
   }
+}
 
-  Widget _buildSearchField() {
+class _SupportCard extends StatelessWidget {
+  const _SupportCard({required this.onCallTap});
+
+  final VoidCallback onCallTap;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      height: 50,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ColorPalette.gray200),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: TextField(
-        controller: _searchController,
-        onChanged: (value) => setState(() => _searchQuery = value),
-        style: _bodyStyle(
-          fontSize: 15,
-          color: ColorPalette.gray800,
-        ),
-        decoration: InputDecoration(
-          hintText: 'ট্রেনিং ভিডিও খুঁজুন',
-          hintStyle: _bodyStyle(
-            fontSize: 15,
-            color: ColorPalette.gray400,
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: Color(0xFFEFF6FF),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.support_agent_rounded,
+              color: Color(0xFF3B82F6),
+              size: 24,
+            ),
           ),
-          prefixIcon: const Icon(
-            Icons.search_rounded,
-            color: ColorPalette.gray500,
-          ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 14),
-          suffixIcon: _searchQuery.isEmpty
-              ? null
-              : IconButton(
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() => _searchQuery = '');
-                  },
-                  icon: const Icon(
-                    Icons.close_rounded,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'যেকোনো প্রয়োজনে কল করুন',
+                  style: _bodyStyle(
+                    fontSize: 13,
                     color: ColorPalette.gray500,
                   ),
                 ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: const BoxDecoration(
-              color: ColorPalette.yellow50,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.search_off_rounded,
-              color: ColorPalette.orange600,
-              size: 34,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'কোনো ট্রেনিং পাওয়া যায়নি',
-            style: _bodyStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: ColorPalette.gray800,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'অন্য শব্দ দিয়ে খুঁজে দেখুন বা অন্য ক্যাটাগরি বেছে নিন।',
-            style: _bodyStyle(
-              color: ColorPalette.gray500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TrainingHeader extends StatelessWidget {
-  const _TrainingHeader({required this.onHelpPressed});
-
-  final VoidCallback onHelpPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
-      decoration: const BoxDecoration(
-        color: Color(0xFFFACC15),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(
-              Icons.arrow_back_rounded,
-              color: ColorPalette.gray900,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              'অ্যাপ ট্রেনিং',
-              style: _bodyStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: ColorPalette.gray900,
-              ),
-            ),
-          ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.28),
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              onPressed: onHelpPressed,
-              icon: const Icon(
-                Icons.help_outline_rounded,
-                color: ColorPalette.gray900,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TrainingFilterChip extends StatelessWidget {
-  const _TrainingFilterChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFEC5B13) : Colors.white,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color:
-                  isSelected ? const Color(0xFFEC5B13) : ColorPalette.gray200,
-            ),
-          ),
-          child: Text(
-            label,
-            style: _bodyStyle(
-              fontSize: 13,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-              color: isSelected ? Colors.white : ColorPalette.gray600,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TrainingCard extends StatelessWidget {
-  const _TrainingCard({
-    required this.item,
-    required this.onTap,
-  });
-
-  final _TrainingItem item;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFF1F5F9)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.035),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AspectRatio(
-                aspectRatio: 16 / 9,
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(18),
-                  ),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.asset(item.imageAsset, fit: BoxFit.cover),
-                      Container(color: Colors.black.withValues(alpha: 0.22)),
-                      Center(
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFEC5B13),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.play_arrow_rounded,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        right: 8,
-                        bottom: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.72),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            item.duration,
-                            style: _bodyStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: 2),
+                Text(
+                  '+৮৮০৯৬৩৮০১১১৯৯',
+                  style: _bodyStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: ColorPalette.gray800,
                   ),
                 ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: _bodyStyle(
-                          height: 1.3,
-                          fontWeight: FontWeight.w700,
-                          color: ColorPalette.gray800,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        item.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: _bodyStyle(
-                          fontSize: 12,
-                          color: ColorPalette.gray500,
-                        ),
-                      ),
-                    ],
-                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Material(
+            color: const Color(0xFF16A34A),
+            shape: const CircleBorder(),
+            child: InkWell(
+              onTap: onCallTap,
+              customBorder: const CircleBorder(),
+              child: const Padding(
+                padding: EdgeInsets.all(12),
+                child: Icon(
+                  Icons.call_rounded,
+                  color: Colors.white,
+                  size: 22,
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-class _TrainingBottomNav extends StatelessWidget {
-  const _TrainingBottomNav();
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: ColorPalette.gray200)),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x12000000),
-              blurRadius: 12,
-              offset: Offset(0, -4),
-            ),
-          ],
-        ),
-        child: const Row(
-          children: [
-            Expanded(
-              child: _TrainingNavItem(
-                icon: Icons.home_rounded,
-                label: 'হোম',
-              ),
-            ),
-            Expanded(
-              child: _TrainingNavItem(
-                icon: Icons.receipt_long_rounded,
-                label: 'লেনদেন',
-              ),
-            ),
-            Expanded(
-              child: _TrainingNavItem(
-                icon: Icons.school_rounded,
-                label: 'ট্রেনিং',
-                isActive: true,
-              ),
-            ),
-            Expanded(
-              child: _TrainingNavItem(
-                icon: Icons.menu_rounded,
-                label: 'মেনু',
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TrainingNavItem extends StatelessWidget {
-  const _TrainingNavItem({
-    required this.icon,
-    required this.label,
-    this.isActive = false,
+class _TrainingTimeline extends StatelessWidget {
+  const _TrainingTimeline({
+    required this.steps,
+    required this.onStepTap,
   });
 
-  final IconData icon;
-  final String label;
-  final bool isActive;
+  final List<String> steps;
+  final ValueChanged<String> onStepTap;
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? const Color(0xFFEC5B13) : ColorPalette.gray400;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    return Stack(
       children: [
-        Icon(icon, color: color, size: 24),
-        const SizedBox(height: 3),
-        Text(
-          label,
-          style: _bodyStyle(
-            fontSize: 10,
-            fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
-            color: color,
+        Positioned(
+          left: 7,
+          top: 0,
+          bottom: 0,
+          child: Container(
+            width: 2,
+            color: const Color(0xFF22C55E),
+          ),
+        ),
+        Column(
+          children: List.generate(steps.length, (index) {
+            final isHighlighted = index == 0;
+            return Padding(
+              padding:
+                  EdgeInsets.only(bottom: index == steps.length - 1 ? 0 : 14),
+              child: _TrainingStepTile(
+                label: steps[index],
+                isHighlighted: isHighlighted,
+                onTap: () => onStepTap(steps[index]),
+              ),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+}
+
+class _TrainingStepTile extends StatelessWidget {
+  const _TrainingStepTile({
+    required this.label,
+    required this.isHighlighted,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isHighlighted;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            color: const Color(0xFF22C55E),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2),
+          ),
+        ),
+        const SizedBox(width: 20),
+        Expanded(
+          child: Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isHighlighted
+                        ? const Color(0xFF22C55E)
+                        : Colors.transparent,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: _bodyStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: ColorPalette.gray800,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: ColorPalette.gray400,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ],
@@ -545,77 +310,35 @@ class _TrainingNavItem extends StatelessWidget {
   }
 }
 
-class _TrainingItem {
-  const _TrainingItem({
-    required this.title,
-    required this.subtitle,
-    required this.duration,
-    required this.category,
-    required this.imageAsset,
-  });
-
-  final String title;
-  final String subtitle;
-  final String duration;
-  final String category;
-  final String imageAsset;
-}
-
-const List<_TrainingItem> _trainingItems = [
-  _TrainingItem(
-    title: 'কীভাবে নতুন হিসাব শুরু করবেন',
-    subtitle: 'মডিউল ১ • ৫৬টি ভিউ',
-    duration: '১০:১৫',
-    category: 'বেসিক',
-    imageAsset: 'assets/app_training/training_start.png',
-  ),
-  _TrainingItem(
-    title: 'কাস্টমার ও বাকি যোগ করার নিয়ম',
-    subtitle: 'মডিউল ২ • ৮২টি ভিউ',
-    duration: '০৫:৩০',
-    category: 'বেসিক',
-    imageAsset: 'assets/app_training/customer_due.png',
-  ),
-  _TrainingItem(
-    title: 'প্রতিদিনের রিপোর্ট দেখার উপায়',
-    subtitle: 'মডিউল ৩ • ৪৪টি ভিউ',
-    duration: '০৮:৪৫',
-    category: 'বেসিক',
-    imageAsset: 'assets/app_training/daily_report.png',
-  ),
-  _TrainingItem(
-    title: 'বাকি আদায়ে এসএমএস পাঠানো',
-    subtitle: 'মডিউল ৪ • ১২০টি ভিউ',
-    duration: '০৪:২০',
-    category: 'নতুন ফিচার',
-    imageAsset: 'assets/app_training/sms_due.png',
-  ),
-  _TrainingItem(
-    title: 'স্টক ম্যানেজমেন্ট অ্যাডভান্সড টিপস',
-    subtitle: 'মডিউল ৫ • ৩০টি ভিউ',
-    duration: '১২:০০',
-    category: 'অ্যাডভান্সড',
-    imageAsset: 'assets/app_training/advanced_stock.png',
-  ),
-  _TrainingItem(
-    title: 'কিউআর কোড পেমেন্ট সেটআপ',
-    subtitle: 'মডিউল ৬ • ৯৫টি ভিউ',
-    duration: '০৭:১৫',
-    category: 'নতুন ফিচার',
-    imageAsset: 'assets/app_training/qr_setup.png',
-  ),
+const List<String> _trainingSteps = [
+  'হালখাতার উপকারিতা দেখুন',
+  'পণ্য যুক্ত করে ব্যবসাকে গুছিয়ে নিন',
+  'সহজেই পণ্য বিক্রি করুন',
+  'পার্টি-অনুযায়ী সকল পার্টির হিসাব রাখুন',
+  'সহজেই প্রতিটি বিক্রির হিসাব রাখুন',
+  'সহজেই খাত-অনুযায়ী মোট খরচের হিসাব রাখুন',
+  'সহজেই পণ্য কেনা শুরু করুন',
+  'সহজেই সকল কেনার হিসাব রাখুন',
+  'ব্যবসার যাবতীয় ব্যবসায়িক রিপোর্ট দেখুন',
+  'হিসাব রাখার পাশাপাশি অনলাইন ব্যবসা করুন',
+  'টপ অ্যাপ এর মাধ্যমে বাড়তি আয় করুন',
+  'কর্মচারী বা পার্টনারকে অ্যাপ অ্যাক্সেস দিন',
+  'কাস্টমার/কর্মচারী/সাপ্লায়ারকে এক স্ক্রিন থেকে যোগাযোগ করুন',
+  'সহজেই কাস্টমার বা সাপ্লায়ারকে সহজেই এসএমএস পাঠান',
+  'কেনা, বেচার রসিদ প্রিন্ট করুন',
+  'সহজেই সকল মজুদের হিসাব রাখুন',
 ];
 
 TextStyle _bodyStyle({
   double fontSize = 14,
   FontWeight fontWeight = FontWeight.w500,
-  double? height,
   Color color = ColorPalette.gray700,
+  double height = 1.2,
 }) {
   return GoogleFonts.hindSiliguri(
     fontSize: fontSize,
     fontWeight: fontWeight,
-    height: height,
     color: color,
+    height: height,
   );
 }
