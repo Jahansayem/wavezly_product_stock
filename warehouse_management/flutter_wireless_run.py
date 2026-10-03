@@ -39,6 +39,22 @@ def tool_path(name: str) -> Optional[str]:
     return shutil.which(name)
 
 
+def find_java_home() -> Optional[str]:
+    candidates = []
+    configured = os.environ.get("JAVA_HOME")
+    if configured:
+        candidates.append(configured)
+    program_files = os.environ.get("ProgramFiles", r"C:\Program Files")
+    candidates.append(os.path.join(program_files, "Android", "Android Studio", "jbr"))
+    adoptium = os.path.join(program_files, "Eclipse Adoptium")
+    if os.path.isdir(adoptium):
+        candidates.extend(os.path.join(adoptium, name) for name in sorted(os.listdir(adoptium), reverse=True))
+    for candidate in candidates:
+        if os.path.isfile(os.path.join(candidate, "bin", "java.exe")):
+            return candidate
+    return None
+
+
 def run(cmd: List[str], *, env=None, capture=True, input_text: Optional[str] = None) -> subprocess.CompletedProcess:
     return subprocess.run(
         cmd,
@@ -143,11 +159,23 @@ def adb_connect(env: dict, ip: str, port: int) -> bool:
 
 
 def flutter_run(device_serial: str, extra_flutter_args: List[str]) -> int:
-    args = ["flutter", "run", "-d", device_serial] + extra_flutter_args
+    flutter = tool_path("flutter")
+    java_home = find_java_home()
+    if not flutter:
+        print("[!] Flutter was not found in PATH.")
+        return 2
+    if not java_home:
+        print("[!] No usable JDK was found. Install JDK 17 or newer.")
+        print("    JAVA_HOME currently points to an incomplete or missing installation.")
+        return 3
+    env = os.environ.copy()
+    env["JAVA_HOME"] = java_home
+    env["PATH"] = os.path.join(java_home, "bin") + os.pathsep + env.get("PATH", "")
+    args = [flutter, "run", "-d", device_serial] + extra_flutter_args
     print("\nRunning:", " ".join(args), "\n")
-    if os.name == "nt":
-        return subprocess.call([os.environ.get("COMSPEC", "cmd.exe"), "/c"] + args)
-    return subprocess.call(args)
+    if os.name == "nt" and flutter.lower().endswith((".bat", ".cmd")):
+        return subprocess.call([os.environ.get("COMSPEC", "cmd.exe"), "/d", "/c", *args], env=env)
+    return subprocess.call(args, env=env)
 
 
 def windows_allow_mdns_firewall(adb_exe: str) -> None:
