@@ -44,3 +44,14 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Unrelated sibling projects sharing this folder (not part of this repo)
+/laravel-stripe-saas-billing/
+/subscription-dashboard/
+/subscription-dashboard.zip
+/.codex/
+
+# Tool-generated clutter
+warehouse_management/.serena/
+warehouse_management/nul
+warehouse_management/.pipeflutter_*_input
