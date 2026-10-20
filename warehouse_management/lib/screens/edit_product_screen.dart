@@ -34,17 +34,24 @@ class _EditProductScreenState extends State<EditProductScreen> {
       final updatedProduct = Product(
         id: widget.docID,
         name: result.name,
-        cost: result.purchasePrice ?? result.salePrice,
+        cost: result.purchasePrice,
+        salePrice: result.salePrice,
+        wholesalePrice: result.wholesalePrice,
         quantity: result.stockQty,
         group: result.categoryId,
         description: result.details,
+        barcode: result.barcode,
         stockAlertEnabled: result.stockAlertEnabled,
         minStockLevel: result.minStockLevel,
         image: result.imagePaths.isNotEmpty ? result.imagePaths.first : null,
       );
 
-      // Update in database
-      await _productService.updateProduct(widget.docID, updatedProduct);
+      // Update in database with new image file (if selected)
+      await _productService.updateProduct(
+        widget.docID,
+        updatedProduct,
+        newImageFile: result.imageFile,
+      );
 
       if (mounted) {
         // Show success message
@@ -62,7 +69,11 @@ class _EditProductScreenState extends State<EditProductScreen> {
         // Return to previous screen with success result
         Navigator.pop(context, true);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // Log full error details for debugging
+      print('❌ [EditProductScreen] Product update failed: $e');
+      print('Stack trace: $stackTrace');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -72,4 +72,75 @@ class NumberFormatter {
   static String formatIntToBengali(int number) {
     return englishToBengali(number.toString());
   }
+
+  /// Format currency with ৳ symbol and Bengali digits (with decimals)
+  /// Example: 1234.56 → "৳১,২৩৪.৫৬"
+  static String formatCurrency(double amount) {
+    // Format with thousand separators and 2 decimal places
+    final parts = amount.toStringAsFixed(2).split('.');
+    final integerPart = parts[0];
+    final decimalPart = parts.length > 1 ? parts[1] : '00';
+
+    // Add thousand separators
+    String formatted = '';
+    int count = 0;
+    for (int i = integerPart.length - 1; i >= 0; i--) {
+      if (count > 0 && count % 3 == 0) {
+        formatted = ',$formatted';
+      }
+      formatted = '${integerPart[i]}$formatted';
+      count++;
+    }
+
+    final withDecimals = '$formatted.$decimalPart';
+    return '৳${englishToBengali(withDecimals)}';
+  }
+
+  /// Format currency with ৳ symbol and Bengali digits (integer only)
+  /// Example: 1234 → "৳১,২৩৪"
+  static String formatCurrencyInt(double amount) {
+    final integerPart = amount.round().toString();
+
+    // Add thousand separators
+    String formatted = '';
+    int count = 0;
+    for (int i = integerPart.length - 1; i >= 0; i--) {
+      if (count > 0 && count % 3 == 0) {
+        formatted = ',$formatted';
+      }
+      formatted = '${integerPart[i]}$formatted';
+      count++;
+    }
+
+    return '৳${englishToBengali(formatted)}';
+  }
+
+  /// Format date with Bangla numerals and month names
+  /// Example: DateTime(2025, 1, 15) → "১৫ জানু"
+  static String formatBanglaDate(DateTime date) {
+    final months = {
+      1: 'জানু',
+      2: 'ফেব',
+      3: 'মার্চ',
+      4: 'এপ্রিল',
+      5: 'মে',
+      6: 'জুন',
+      7: 'জুলাই',
+      8: 'আগ',
+      9: 'সেপ্ট',
+      10: 'অক্টো',
+      11: 'নভে',
+      12: 'ডিসে',
+    };
+
+    final day = formatIntToBengali(date.day);
+    final month = months[date.month] ?? '';
+
+    return '$day $month';
+  }
+
+  /// Format full date with year: "১৫ জানু ২০২৬"
+  static String formatBanglaDateFull(DateTime date) {
+    return '${formatBanglaDate(date)} ${formatIntToBengali(date.year)}';
+  }
 }

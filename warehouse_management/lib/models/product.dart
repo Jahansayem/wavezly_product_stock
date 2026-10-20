@@ -3,6 +3,8 @@ class Product {
         this.id,
         this.name,
         this.cost,
+        this.salePrice,
+        this.wholesalePrice,
         this.group,
         this.location,
         this.company,
@@ -18,6 +20,8 @@ class Product {
     String? id;
     String? name;
     double? cost;
+    double? salePrice;
+    double? wholesalePrice;
     String? group;
     String? location;
     String? company;
@@ -33,6 +37,8 @@ class Product {
         id: json["id"] as String?,
         name: json["name"] as String?,
         cost: (json["cost"] as num?)?.toDouble(),
+        salePrice: (json["sale_price"] as num?)?.toDouble(),
+        wholesalePrice: (json["wholesale_price"] as num?)?.toDouble(),
         group: json["product_group"] as String?,
         location: json["location"] as String?,
         company: json["company"] as String?,
@@ -70,6 +76,8 @@ class Product {
     Map<String, dynamic> toMap() => {
         "name": name,
         "cost": cost,
+        "sale_price": salePrice,
+        "wholesale_price": wholesalePrice,
         "product_group": group,
         "location": location,
         "company": company,
@@ -78,7 +86,7 @@ class Product {
         "description": description,
         "barcode": barcode,
         "expiry_date": expiryDate?.toIso8601String().split('T')[0],
-        "stock_alert_enabled": stockAlertEnabled,
+        "stock_alert_enabled": stockAlertEnabled == null ? null : (stockAlertEnabled! ? 1 : 0),
         "min_stock_level": minStockLevel,
     };
 }

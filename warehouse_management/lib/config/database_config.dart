@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,7 +12,7 @@ import 'supabase_config.dart';
 class DatabaseConfig {
   static Database? _database;
   static const String _databaseName = 'wavezly.db';
-  static const int _databaseVersion = 12;
+  static const int _databaseVersion = 13;
 
   static Future<void> initialize() async {
     if (_database != null) return;
@@ -308,16 +310,20 @@ class DatabaseConfig {
 
     if (oldVersion < 12) {
       // Align purchase tables with Supabase schema to prevent SQL column mismatch errors
-      await _addColumnIfMissing(db, 'purchases', 'paid_amount', 'REAL DEFAULT 0');
-      await _addColumnIfMissing(db, 'purchases', 'due_amount', 'REAL DEFAULT 0');
+      await _addColumnIfMissing(
+          db, 'purchases', 'paid_amount', 'REAL DEFAULT 0');
+      await _addColumnIfMissing(
+          db, 'purchases', 'due_amount', 'REAL DEFAULT 0');
       await _addColumnIfMissing(db, 'purchases', 'cash_given', 'REAL');
       await _addColumnIfMissing(db, 'purchases', 'change_amount', 'REAL');
       await _addColumnIfMissing(db, 'purchases', 'receipt_image_path', 'TEXT');
       await _addColumnIfMissing(db, 'purchases', 'comment', 'TEXT');
-      await _addColumnIfMissing(db, 'purchases', 'sms_enabled', 'INTEGER DEFAULT 0');
+      await _addColumnIfMissing(
+          db, 'purchases', 'sms_enabled', 'INTEGER DEFAULT 0');
       await _addColumnIfMissing(db, 'purchases', 'receipt_number', 'TEXT');
       await _addColumnIfMissing(db, 'purchases', 'subtotal', 'REAL DEFAULT 0');
-      await _addColumnIfMissing(db, 'purchases', 'delivery_charge', 'REAL DEFAULT 0');
+      await _addColumnIfMissing(
+          db, 'purchases', 'delivery_charge', 'REAL DEFAULT 0');
       await _addColumnIfMissing(db, 'purchases', 'discount', 'REAL DEFAULT 0');
       await _addColumnIfMissing(db, 'purchases', 'receipt_image_url', 'TEXT');
 
@@ -326,6 +332,11 @@ class DatabaseConfig {
 
       print(
           'Database migrated to version 12: Aligned purchases and purchase_items columns with Supabase schema');
+    }
+
+    if (oldVersion < 13) {
+      await _migrateSyncQueueToPerUser(db);
+      print('Database migrated to version 13: Scoped sync queue items by user');
     }
   }
 
@@ -340,6 +351,117 @@ class DatabaseConfig {
     if (!exists) {
       await db.execute(
           'ALTER TABLE $tableName ADD COLUMN $columnName $columnDefinition');
+    }
+  }
+
+  static Future<void> _migrateSyncQueueToPerUser(Database db) async {
+    await _addColumnIfMissing(db, 'sync_queue', 'user_id', 'TEXT');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sync_queue_user_id ON sync_queue(user_id)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sync_queue_user_status ON sync_queue(user_id, status)');
+
+    final queueRows = await db.query(
+      'sync_queue',
+      columns: ['id', 'table_name', 'record_id', 'data', 'user_id'],
+    );
+
+    for (final row in queueRows) {
+      final existingUserId = row['user_id'] as String?;
+      if (existingUserId != null && existingUserId.isNotEmpty) {
+        continue;
+      }
+
+      final resolvedUserId = await _resolveSyncQueueUserId(db, row);
+      if (resolvedUserId == null || resolvedUserId.isEmpty) {
+        continue;
+      }
+
+      await db.update(
+        'sync_queue',
+        {'user_id': resolvedUserId},
+        where: 'id = ?',
+        whereArgs: [row['id']],
+      );
+    }
+  }
+
+  static Future<String?> _resolveSyncQueueUserId(
+    Database db,
+    Map<String, dynamic> row,
+  ) async {
+    Map<String, dynamic>? data;
+    final rawData = row['data'] as String?;
+    if (rawData != null && rawData.isNotEmpty) {
+      try {
+        data = Map<String, dynamic>.from(jsonDecode(rawData) as Map);
+      } catch (_) {
+        data = null;
+      }
+    }
+
+    final dataUserId = data?['user_id'] as String?;
+    if (dataUserId != null && dataUserId.isNotEmpty) {
+      return dataUserId;
+    }
+
+    final tableName = row['table_name'] as String?;
+    final recordId = row['record_id'] as String?;
+    if (tableName == null || recordId == null) {
+      return null;
+    }
+
+    switch (tableName) {
+      case 'purchase_items':
+        return await _lookupUserId(
+          db,
+          tableName: 'purchases',
+          idColumn: 'id',
+          idValue: data?['purchase_id'] as String?,
+        );
+      case 'sale_items':
+        return await _lookupUserId(
+          db,
+          tableName: 'sales',
+          idColumn: 'id',
+          idValue: data?['sale_id'] as String?,
+        );
+      default:
+        return await _lookupUserId(
+          db,
+          tableName: tableName,
+          idColumn: 'id',
+          idValue: recordId,
+        );
+    }
+  }
+
+  static Future<String?> _lookupUserId(
+    Database db, {
+    required String tableName,
+    required String idColumn,
+    required String? idValue,
+  }) async {
+    if (idValue == null || idValue.isEmpty) {
+      return null;
+    }
+
+    try {
+      final rows = await db.query(
+        tableName,
+        columns: ['user_id'],
+        where: '$idColumn = ?',
+        whereArgs: [idValue],
+        limit: 1,
+      );
+
+      if (rows.isEmpty) {
+        return null;
+      }
+
+      return rows.first['user_id'] as String?;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -560,6 +682,7 @@ class DatabaseConfig {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS sync_queue (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT,
         operation TEXT NOT NULL,
         table_name TEXT NOT NULL,
         record_id TEXT NOT NULL,
@@ -572,11 +695,15 @@ class DatabaseConfig {
     ''');
 
     await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sync_queue_user_id ON sync_queue(user_id)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sync_queue_user_status ON sync_queue(user_id, status)');
+    await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_sync_queue_status ON sync_queue(status)');
     await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_sync_queue_table ON sync_queue(table_name)');
-    await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_sync_queue_created ON sync_queue(created_at)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sync_queue_table ON sync_queue(table_name)');
 
     // Sync Metadata Table
     await db.execute('''

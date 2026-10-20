@@ -5,6 +5,7 @@ import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:wavezly/config/database_config.dart';
 import 'package:wavezly/localization/app_locale_controller.dart';
 import 'package:wavezly/config/supabase_config.dart';
+import 'package:wavezly/services/billing_access_service.dart';
 import 'package:wavezly/services/notification_service.dart';
 import 'package:wavezly/sync/connectivity_service.dart';
 import 'package:wavezly/sync/sync_service.dart';
@@ -24,6 +25,9 @@ void main() async {
   // Initialize Supabase
   print('Initializing Supabase...');
   await SupabaseConfig.initialize();
+
+  print('Initializing billing access cache...');
+  await BillingAccessService.instance.initialize();
 
   // Initialize persisted app language
   await AppLocaleController.instance.initialize();

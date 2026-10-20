@@ -1,6 +1,7 @@
 import 'package:uuid/uuid.dart';
 import '../models/cashbox_transaction.dart';
 import '../database/dao/cashbox_transaction_dao.dart';
+import '../services/billing_access_service.dart';
 import '../sync/sync_service.dart';
 import '../sync/connectivity_service.dart';
 import '../config/supabase_config.dart';
@@ -30,6 +31,7 @@ class CashboxRepository {
   Future<CashboxTransaction> createTransaction(
       CashboxTransaction transaction) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       final userId = _userId;
 
       // Generate ID if not present
@@ -72,6 +74,7 @@ class CashboxRepository {
   Future<void> updateTransaction(
       String id, CashboxTransaction transaction) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       final userId = _userId;
 
       // Update local database
@@ -100,6 +103,7 @@ class CashboxRepository {
 
   Future<void> deleteTransaction(String id) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       final userId = _userId;
 
       // Delete from local database

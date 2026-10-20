@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/product.dart';
+import '../services/pdf_export_service.dart';
 import '../services/product_service.dart';
 import '../utils/color_palette.dart';
+import '../utils/number_formatter.dart';
 import 'product_details_screen.dart'; // Read-only details
-import 'edit_product_screen.dart';    // Edit screen
+import 'edit_product_screen.dart'; // Edit screen
 import 'add_product_screen.dart' show AddProductScreen, AddProductResult;
 import 'barcode_scanner_screen.dart';
 
@@ -19,6 +21,7 @@ class ProductListScreen extends StatefulWidget {
 
 class _ProductListScreenState extends State<ProductListScreen> {
   final ProductService _productService = ProductService();
+  final PdfExportService _pdfExportService = PdfExportService();
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounceTimer;
   String _searchQuery = '';
@@ -80,6 +83,34 @@ class _ProductListScreenState extends State<ProductListScreen> {
     }
   }
 
+  Future<void> _exportToPDF() async {
+    try {
+      await _pdfExportService.exportProductList(
+        products: List<Product>.from(_filteredProducts),
+        filterLabel:
+            _searchQuery.isEmpty ? 'All products' : 'Search: $_searchQuery',
+      );
+    } on Exception catch (error) {
+      _showStatusMessage(error.toString().replaceFirst('Exception: ', ''));
+    } catch (error) {
+      _showStatusMessage('Failed to export product PDF', isError: true);
+      debugPrint('Product PDF export failed: $error');
+    }
+  }
+
+  void _showStatusMessage(String message, {bool isError = false}) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: GoogleFonts.anekBangla()),
+        backgroundColor:
+            isError ? const Color(0xFFEF4444) : ColorPalette.tealAccent,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   void _showProductOptions(BuildContext context, Product product) {
     showModalBottomSheet(
       context: context,
@@ -130,8 +161,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: Text('নিশ্চিত করুন', style: GoogleFonts.anekBangla()),
-                    content: Text('এই পণ্যটি মুছে ফেলতে চান?', style: GoogleFonts.anekBangla()),
+                    title:
+                        Text('নিশ্চিত করুন', style: GoogleFonts.anekBangla()),
+                    content: Text('এই পণ্যটি মুছে ফেলতে চান?',
+                        style: GoogleFonts.anekBangla()),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context, false),
@@ -153,16 +186,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
         ),
       ),
     );
-  }
-
-  String _toBengaliNumber(double number) {
-    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-    return number.toString().split('').map((char) {
-      if (char.codeUnitAt(0) >= 48 && char.codeUnitAt(0) <= 57) {
-        return bengaliDigits[int.parse(char)];
-      }
-      return char;
-    }).join();
   }
 
   @override
@@ -219,9 +242,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.picture_as_pdf, color: Color(0xFF111827)),
-            onPressed: () {
-              print('TODO: Generate PDF');
-            },
+            onPressed: _exportToPDF,
           ),
           IconButton(
             icon: const Icon(Icons.help_outline, color: Color(0xFF111827)),
@@ -320,7 +341,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
+                  MaterialPageRoute(
+                      builder: (_) => const BarcodeScannerScreen()),
                 );
               },
             ),
@@ -337,7 +359,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
       child: Align(
         alignment: Alignment.centerLeft,
         child: Text(
-          'মোট পণ্য আছে: ${_toBengaliNumber(count.toDouble())}',
+          'মোট পণ্য আছে: ${NumberFormatter.formatIntToBengali(count)}',
           style: GoogleFonts.anekBangla(
             fontSize: 14,
             fontWeight: FontWeight.w600,
@@ -509,15 +531,18 @@ class _ProductListScreenState extends State<ProductListScreen> {
       final product = Product(
         name: result.name,
         cost: result.purchasePrice ?? 0,
+        salePrice: result.salePrice,
+        wholesalePrice: result.wholesalePrice,
         quantity: result.stockQty,
         group: result.categoryId,
         description: result.details,
+        barcode: result.barcode,
         stockAlertEnabled: result.stockAlertEnabled,
         minStockLevel: result.minStockLevel,
       );
 
-      // Persist to database
-      await _productService.addProduct(product);
+      // Persist to database with image file
+      await _productService.addProduct(product, imageFile: result.imageFile);
 
       // Show success message
       if (mounted) {
@@ -564,27 +589,19 @@ class _ProductTile extends StatelessWidget {
   bool _shouldPriceBeRed(Product product) {
     if ((product.quantity ?? 0) < 10) return true;
     if (product.expiryDate != null) {
-      final daysUntilExpiry = product.expiryDate!.difference(DateTime.now()).inDays;
+      final daysUntilExpiry =
+          product.expiryDate!.difference(DateTime.now()).inDays;
       if (daysUntilExpiry <= 7) return true;
     }
     return false;
-  }
-
-  String _toBengaliNumber(double number) {
-    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-    return number.toString().split('').map((char) {
-      if (char.codeUnitAt(0) >= 48 && char.codeUnitAt(0) <= 57) {
-        return bengaliDigits[int.parse(char)];
-      }
-      return char;
-    }).join();
   }
 
   @override
   Widget build(BuildContext context) {
     final displayName = product.name ?? '';
     final isPriceRed = _shouldPriceBeRed(product);
-    final priceColor = isPriceRed ? const Color(0xFFEF4444) : ColorPalette.tealAccent;
+    final priceColor =
+        isPriceRed ? const Color(0xFFEF4444) : ColorPalette.tealAccent;
 
     return InkWell(
       onTap: onTap,
@@ -650,7 +667,9 @@ class _ProductTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${_toBengaliNumber(product.cost ?? 0)} ৳',
+                    NumberFormatter.formatCurrencyInt(
+                      product.salePrice ?? product.cost ?? 0,
+                    ),
                     style: GoogleFonts.anekBangla(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,

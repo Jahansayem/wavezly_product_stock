@@ -4,17 +4,21 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:wavezly/config/database_config.dart';
 import 'package:wavezly/features/auth/screens/login_screen.dart';
 import 'package:wavezly/functions/confirm_dialog.dart';
 import 'package:wavezly/localization/app_locale_controller.dart';
 import 'package:wavezly/localization/app_strings.dart';
+import 'package:wavezly/models/billing_entitlement.dart';
 import 'package:wavezly/models/user_profile.dart';
 import 'package:wavezly/screens/app_training_screen.dart';
 import 'package:wavezly/screens/cash_counter_screen.dart';
 import 'package:wavezly/screens/help_support_screen.dart';
 import 'package:wavezly/screens/profile_edit_screen.dart';
+import 'package:wavezly/screens/subscription_screen.dart';
 import 'package:wavezly/services/auth_service.dart';
+import 'package:wavezly/services/billing_access_service.dart';
 import 'package:wavezly/services/dashboard_service.dart';
 import 'package:wavezly/services/user_service.dart';
 import 'package:wavezly/sync/sync_service.dart';
@@ -34,8 +38,11 @@ class _SettingsPageState extends State<SettingsPage> {
   final UserService _userService = UserService();
   final SyncService _syncService = SyncService();
   final DashboardService _dashboardService = DashboardService();
+  final BillingAccessService _billingAccessService =
+      BillingAccessService.instance;
 
   UserProfile? _currentUser;
+  BillingEntitlement? _entitlement;
   bool _isProfileLoading = true;
   bool _isLoggingOut = false;
   bool _isHalkhataSettingsExpanded = false;
@@ -181,7 +188,7 @@ class _SettingsPageState extends State<SettingsPage> {
           label: _strings.subscription,
           icon: Icons.workspace_premium_rounded,
           iconColor: ColorPalette.warningAmber,
-          onTap: () => _showComingSoon(_strings.subscription),
+          onTap: _openSubscription,
         ),
         _SettingsAction(
           label: _strings.webApp,
@@ -669,13 +676,24 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildLocalizedSubscriptionCard() {
+    final summary = _billingAccessService.buildSubscriptionSummary() ??
+        _strings.subscriptionPending;
+    final detail = _billingAccessService.buildStatusDetail() ??
+        _strings.subscriptionDetail;
+    final accentColor = _entitlement?.readOnly == true
+        ? ColorPalette.red500
+        : ColorPalette.warningAmber;
+    final borderColor = _entitlement?.readOnly == true
+        ? const Color(0xFFFECACA)
+        : const Color(0xFFFDE68A);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFFDE68A)),
+        border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -695,9 +713,9 @@ class _SettingsPageState extends State<SettingsPage> {
               color: Color(0xFFFFFBEB),
             ),
             alignment: Alignment.center,
-            child: const Icon(
+            child: Icon(
               Icons.workspace_premium_rounded,
-              color: ColorPalette.warningAmber,
+              color: accentColor,
               size: 22,
             ),
           ),
@@ -712,7 +730,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _strings.subscriptionPending,
+                  summary,
                   style: _headingStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -721,13 +739,27 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _strings.subscriptionDetail,
+                  detail,
                   style: _bodyStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: ColorPalette.gray600,
                   ),
                 ),
+                if ((_entitlement?.supportContact ?? '').trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: _openBillingSupport,
+                    child: Text(
+                      _entitlement!.supportContact!,
+                      style: _bodyStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: ColorPalette.blue600,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -761,11 +793,49 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Future<void> _openBillingSupport() async {
+    final raw = _entitlement?.supportContact?.trim();
+    if (raw == null || raw.isEmpty) return;
+
+    Uri uri;
+    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      uri = Uri.parse(raw);
+    } else if (raw.startsWith('+') || RegExp(r'^\d+$').hasMatch(raw)) {
+      uri = Uri.parse('tel:$raw');
+    } else if (raw.contains('@')) {
+      uri = Uri.parse('mailto:$raw');
+    } else {
+      final digitsOnly = raw.replaceAll(RegExp(r'[^0-9]'), '');
+      uri = Uri.parse('https://wa.me/$digitsOnly');
+    }
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    _entitlement = _billingAccessService.entitlement;
+    _billingAccessService.entitlementNotifier
+        .addListener(_handleEntitlementChange);
     _loadProfile();
     _loadAppPreferences();
+  }
+
+  @override
+  void dispose() {
+    _billingAccessService.entitlementNotifier
+        .removeListener(_handleEntitlementChange);
+    super.dispose();
+  }
+
+  void _handleEntitlementChange() {
+    if (!mounted) return;
+    setState(() {
+      _entitlement = _billingAccessService.entitlement;
+    });
   }
 
   Future<String?> _readAppSetting(String key) async {
@@ -968,6 +1038,14 @@ class _SettingsPageState extends State<SettingsPage> {
       context,
       MaterialPageRoute(builder: (_) => const AppTrainingScreen()),
     );
+  }
+
+  Future<void> _openSubscription() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+    );
+    await _billingAccessService.refresh();
   }
 
   Future<void> _openHelpSupport() async {

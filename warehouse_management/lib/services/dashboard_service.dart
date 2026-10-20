@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
-import 'package:wavezly/config/supabase_config.dart';
 import 'package:wavezly/config/database_config.dart';
-import 'package:wavezly/services/product_service.dart';
+import 'package:wavezly/config/supabase_config.dart';
 import 'package:wavezly/services/customer_service.dart';
 import 'package:wavezly/services/expense_service.dart';
+import 'package:wavezly/services/product_service.dart';
 
 class DashboardSummary {
   final double balance;
@@ -31,6 +31,10 @@ class DashboardSummary {
 }
 
 class DashboardService {
+  static const String _dashboardCacheKey = 'dashboard_cache';
+  static const String _shopNameKey = 'shop_name';
+  static const String _lastBackupTimeKey = 'last_successful_backup_at';
+
   final _supabase = SupabaseConfig.client;
   final _productService = ProductService();
   final _customerService = CustomerService();
@@ -79,6 +83,7 @@ class DashboardService {
       final now = DateTime.now();
       final startOfDay = DateTime(now.year, now.month, now.day);
       final startOfMonth = DateTime(now.year, now.month, 1);
+      final lastBackupTime = await getLastBackupTime();
 
       // Query 1: Today's sales (single aggregate query)
       final todaySalesResult = await db.rawQuery('''
@@ -107,7 +112,8 @@ class DashboardService {
         WHERE user_id = ?
       ''', [userId]);
 
-      final toReceive = (customerBalanceResult.first['to_receive'] as num).toDouble();
+      final toReceive =
+          (customerBalanceResult.first['to_receive'] as num).toDouble();
       final toGive = (customerBalanceResult.first['to_give'] as num).toDouble();
       final balance = toReceive - toGive;
 
@@ -124,7 +130,7 @@ class DashboardService {
         'app_settings',
         columns: ['value'],
         where: 'key = ?',
-        whereArgs: ['shop_name'],
+        whereArgs: [_shopNameKey],
         limit: 1,
       );
       final shopName = shopNameResult.isNotEmpty
@@ -146,7 +152,7 @@ class DashboardService {
         duesGiven: toGive,
         stockCount: stockCount,
         shopName: shopName,
-        lastBackupTime: null,
+        lastBackupTime: lastBackupTime,
       );
     } catch (e) {
       print('Error getting local summary: $e');
@@ -185,6 +191,7 @@ class DashboardService {
     final customerSummary = await _customerService.getSummary();
     final balance = customerSummary['netTotal'] ?? 0.0;
     final duesGiven = customerSummary['toGive'] ?? 0.0;
+    final lastBackupTime = await getLastBackupTime();
 
     // Get stock count
     final products = await _productService.getProducts();
@@ -210,7 +217,7 @@ class DashboardService {
       monthExpenses: monthExpenses,
       duesGiven: duesGiven,
       stockCount: stockCount,
-      lastBackupTime: null,
+      lastBackupTime: lastBackupTime,
       shopName: shopName,
     );
 
@@ -291,11 +298,64 @@ class DashboardService {
       final db = DatabaseConfig.database;
       await db.insert(
         'app_settings',
-        {'key': 'shop_name', 'value': shopName},
+        {'key': _shopNameKey, 'value': shopName},
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     } catch (e) {
       print('Failed to cache shop name: $e');
+    }
+  }
+
+  Future<String?> getLastBackupTime() async {
+    try {
+      final db = DatabaseConfig.database;
+      final result = await db.query(
+        'app_settings',
+        columns: ['value'],
+        where: 'key = ?',
+        whereArgs: [_lastBackupTimeKey],
+        limit: 1,
+      );
+
+      if (result.isEmpty) return null;
+      return result.first['value'] as String?;
+    } catch (e) {
+      print('Failed to get last backup time: $e');
+      return null;
+    }
+  }
+
+  Future<void> saveLastBackupTime(DateTime timestamp) async {
+    try {
+      final db = DatabaseConfig.database;
+      final isoTimestamp = timestamp.toIso8601String();
+      await db.insert(
+        'app_settings',
+        {
+          'key': _lastBackupTimeKey,
+          'value': isoTimestamp,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+      final cachedSummary = await getCachedSummary();
+      if (cachedSummary != null) {
+        await _saveCachedSummary(
+          DashboardSummary(
+            balance: cachedSummary.balance,
+            todaySales: cachedSummary.todaySales,
+            monthSales: cachedSummary.monthSales,
+            todayExpenses: cachedSummary.todayExpenses,
+            monthExpenses: cachedSummary.monthExpenses,
+            duesGiven: cachedSummary.duesGiven,
+            stockCount: cachedSummary.stockCount,
+            lastBackupTime: isoTimestamp,
+            shopName: cachedSummary.shopName,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Failed to save last backup time: $e');
     }
   }
 
@@ -307,7 +367,7 @@ class DashboardService {
       final result = await db.query(
         'app_settings',
         where: 'key = ?',
-        whereArgs: ['dashboard_cache'],
+        whereArgs: [_dashboardCacheKey],
         limit: 1,
       );
 
@@ -364,7 +424,7 @@ class DashboardService {
 
       await db.insert(
         'app_settings',
-        {'key': 'dashboard_cache', 'value': json.encode(cacheData)},
+        {'key': _dashboardCacheKey, 'value': json.encode(cacheData)},
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     } catch (e) {

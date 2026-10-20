@@ -1,7 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/models/product.dart';
+import 'package:wavezly/screens/barcode_scanner_screen.dart' show BarcodeScannerScreen, BarcodeScannerMode;
+import 'package:wavezly/widgets/product_image_picker.dart';
+import 'package:wavezly/services/product_service.dart';
 
 // ============================================================================
 // ENUMS
@@ -26,6 +30,7 @@ class ProductFormResult {
   final String? subCategoryId;
   final String unit;
   final String? details;
+  final String? barcode;
   final bool sellOnline;
   final bool wholesaleEnabled;
   final double? wholesalePrice;
@@ -41,6 +46,7 @@ class ProductFormResult {
   final double? discountValue;
   final DiscountType? discountType;
   final List<String> imagePaths;
+  final File? imageFile; // Newly selected image file (for add/edit)
 
   ProductFormResult({
     required this.name,
@@ -51,6 +57,7 @@ class ProductFormResult {
     this.subCategoryId,
     required this.unit,
     this.details,
+    this.barcode,
     required this.sellOnline,
     required this.wholesaleEnabled,
     this.wholesalePrice,
@@ -66,6 +73,7 @@ class ProductFormResult {
     this.discountValue,
     this.discountType,
     required this.imagePaths,
+    this.imageFile,
   });
 }
 
@@ -105,11 +113,15 @@ class _ProductFormBodyState extends State<ProductFormBody> {
   // Form key
   final _formKey = GlobalKey<FormState>();
 
+  // Services
+  final ProductService _productService = ProductService();
+
   // Controllers - Basic Info
   late final TextEditingController _nameController;
   late final TextEditingController _salePriceController;
   late final TextEditingController _stockQtyController;
   late final TextEditingController _purchasePriceController;
+  late final TextEditingController _barcodeController;
 
   // Controllers - Advanced Info
   late final TextEditingController _detailsController;
@@ -133,6 +145,7 @@ class _ProductFormBodyState extends State<ProductFormBody> {
   bool _vatEnabled = false;
   bool _warrantyEnabled = false;
   bool _discountEnabled = false;
+  bool _barcodeLinked = false;
 
   // Warranty & Discount dropdowns
   WarrantyUnit _warrantyUnit = WarrantyUnit.day;
@@ -140,6 +153,7 @@ class _ProductFormBodyState extends State<ProductFormBody> {
 
   // Images
   List<String> _imagePaths = [];
+  File? _selectedImageFile; // Newly selected image file
 
   @override
   void initState() {
@@ -150,6 +164,7 @@ class _ProductFormBodyState extends State<ProductFormBody> {
     _salePriceController = TextEditingController();
     _stockQtyController = TextEditingController();
     _purchasePriceController = TextEditingController();
+    _barcodeController = TextEditingController();
     _detailsController = TextEditingController();
     _wholesalePriceController = TextEditingController();
     _wholesaleMinQtyController = TextEditingController();
@@ -164,16 +179,31 @@ class _ProductFormBodyState extends State<ProductFormBody> {
     } else if (widget.preselectedGroup != null) {
       _selectedCategory = widget.preselectedGroup;
     }
+
+    // Listen to barcode field changes to reset linked state if cleared
+    _barcodeController.addListener(() {
+      if (_barcodeController.text.isEmpty && _barcodeLinked) {
+        setState(() {
+          _barcodeLinked = false;
+        });
+      }
+    });
   }
 
   void _prefillFormData(Product product) {
     _nameController.text = product.name ?? '';
-    _salePriceController.text = (product.cost ?? 0).toString();
+    _salePriceController.text = (product.salePrice ?? product.cost ?? 0).toString();
     _stockQtyController.text = (product.quantity ?? 0).toString();
     _purchasePriceController.text = (product.cost ?? 0).toString();
+    _barcodeController.text = product.barcode ?? '';
     _detailsController.text = product.description ?? '';
     _selectedCategory = product.group;
     _selectedUnit = 'ইউনিট';
+
+    // Set barcode linked state if product has barcode
+    if (product.barcode != null && product.barcode!.isNotEmpty) {
+      _barcodeLinked = true;
+    }
 
     // Stock alert
     if (product.stockAlertEnabled == true) {
@@ -187,12 +217,73 @@ class _ProductFormBodyState extends State<ProductFormBody> {
     }
   }
 
+  Future<void> _handleBarcodeScanner() async {
+    // If external callback is provided, use it
+    if (widget.onScanBarcode != null) {
+      widget.onScanBarcode!();
+      return;
+    }
+
+    // Otherwise, open barcode scanner in captureBarcode mode for new products
+    try {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const BarcodeScannerScreen(
+            mode: BarcodeScannerMode.captureBarcode,
+          ),
+        ),
+      );
+
+      if (result != null && result is String) {
+        // Check if barcode already exists
+        final existingProduct = await _productService.getProductByBarcode(result);
+        if (existingProduct != null) {
+          final currentProductId = widget.initialProduct?.id;
+          if (currentProductId == null || existingProduct.id != currentProductId) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'এই বারকোড ইতিমধ্যে "${existingProduct.name}" পণ্যে ব্যবহৃত হয়েছে',
+                    style: const TextStyle(fontFamily: 'Nunito'),
+                  ),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
+        }
+
+        // Fill barcode field with scanned value and set linked state
+        setState(() {
+          _barcodeController.text = result;
+          _barcodeLinked = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'বারকোড স্ক্যান করতে সমস্যা হয়েছে: $e',
+              style: const TextStyle(fontFamily: 'Nunito'),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
     _salePriceController.dispose();
     _stockQtyController.dispose();
     _purchasePriceController.dispose();
+    _barcodeController.dispose();
     _detailsController.dispose();
     _wholesalePriceController.dispose();
     _wholesaleMinQtyController.dispose();
@@ -203,8 +294,32 @@ class _ProductFormBodyState extends State<ProductFormBody> {
     super.dispose();
   }
 
-  void _handleSave() {
+  Future<void> _handleSave() async {
     if (_formKey.currentState?.validate() ?? false) {
+      // Check for duplicate barcode
+      final barcode = _barcodeController.text.trim();
+      if (barcode.isNotEmpty) {
+        final existingProduct = await _productService.getProductByBarcode(barcode);
+        if (existingProduct != null) {
+          // In edit mode, allow same barcode if it belongs to the current product
+          final currentProductId = widget.initialProduct?.id;
+          if (currentProductId == null || existingProduct.id != currentProductId) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'এই বারকোড ইতিমধ্যে "${existingProduct.name}" পণ্যে ব্যবহৃত হয়েছে',
+                    style: const TextStyle(fontFamily: 'Nunito'),
+                  ),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
+        }
+      }
+
       final result = ProductFormResult(
         name: _nameController.text.trim(),
         salePrice: double.tryParse(_salePriceController.text) ?? 0,
@@ -214,6 +329,7 @@ class _ProductFormBodyState extends State<ProductFormBody> {
         subCategoryId: _selectedSubCategory,
         unit: _selectedUnit,
         details: _detailsController.text.isEmpty ? null : _detailsController.text,
+        barcode: barcode.isEmpty ? null : barcode,
         sellOnline: _sellOnline,
         wholesaleEnabled: _wholesaleEnabled,
         wholesalePrice: _wholesaleEnabled
@@ -240,6 +356,7 @@ class _ProductFormBodyState extends State<ProductFormBody> {
             : null,
         discountType: _discountEnabled ? _discountType : null,
         imagePaths: _imagePaths,
+        imageFile: _selectedImageFile,
       );
       widget.onSubmit(result);
     }
@@ -351,6 +468,18 @@ class _ProductFormBodyState extends State<ProductFormBody> {
           _buildInfoBox(
             'পণ্যের ক্রয়মূল্য না দিলে ব্যবসার লাভ ক্ষতির হিসাব সঠিক ভাবে দেখা যাবে না',
           ),
+          const SizedBox(height: 16),
+          _buildLabeledTextField(
+            label: 'বারকোড',
+            required: false,
+            controller: _barcodeController,
+            placeholder: 'বারকোড নম্বর (ঐচ্ছিক)',
+            labelColor: textMuted,
+          ),
+          if (_barcodeLinked) ...[
+            const SizedBox(height: 12),
+            _buildBarcodeSuccessUI(),
+          ],
         ],
       ),
     );
@@ -412,13 +541,8 @@ class _ProductFormBodyState extends State<ProductFormBody> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildDropdownField(
-                          label: 'ক্যাটাগরি',
-                          value: _selectedCategory,
-                          items: const ['--ক্যাটাগরি--'],
-                          onChanged: (v) =>
-                              setState(() => _selectedCategory = v),
-                        ),
+                        // Category dropdown with dynamic loading and inline add
+                        _buildCategoryDropdown(),
                         const SizedBox(height: 16),
                         _buildDropdownField(
                           label: 'সাব ক্যাটাগরি',
@@ -628,33 +752,44 @@ class _ProductFormBodyState extends State<ProductFormBody> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Barcode Scan Button (only in create mode)
-              if (widget.mode == ProductFormMode.create) ...[
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: OutlinedButton.icon(
-                    onPressed: widget.onScanBarcode ?? () {},
-                    icon: const Icon(Icons.qr_code_scanner, color: primary),
-                    label: const Text(
-                      'বারকোড স্ক্যান',
-                      style: TextStyle(
-                        color: primary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        fontFamily: 'Nunito',
+              // Barcode Scan Button (available in both create and edit modes)
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton.icon(
+                  onPressed: _handleBarcodeScanner,
+                  icon: const Icon(Icons.qr_code_scanner, color: primary),
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'বারকোড স্ক্যান',
+                        style: TextStyle(
+                          color: primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          fontFamily: 'Nunito',
+                        ),
                       ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: primary, width: 2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      if (_barcodeLinked) ...[
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.check_circle,
+                          color: Colors.green,
+                          size: 20,
+                        ),
+                      ],
+                    ],
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: primary, width: 2),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
-              ],
+              ),
+              const SizedBox(height: 12),
               // Save Button
               SizedBox(
                 width: double.infinity,
@@ -803,6 +938,250 @@ class _ProductFormBodyState extends State<ProductFormBody> {
         ],
       ),
     );
+  }
+
+  Widget _buildBarcodeSuccessUI() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.green.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Colors.green.withOpacity(0.3),
+          width: 2,
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.check_circle,
+            color: Colors.green,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'এই প্রোডাক্টে বারকোড সফল ভাবে যুক্ত হয়েছে',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.green.shade700,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Nunito',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Build category dropdown with dynamic loading and inline add
+  Widget _buildCategoryDropdown() {
+    return StreamBuilder<List<String>>(
+      stream: _productService.getProductGroupsStream(),
+      builder: (context, snapshot) {
+        // Loading state
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildCategoryDropdownPlaceholder(isLoading: true);
+        }
+
+        // Error state
+        if (snapshot.hasError) {
+          return _buildCategoryDropdownPlaceholder(
+            isLoading: false,
+            error: 'Error loading categories',
+          );
+        }
+
+        // Get categories from stream
+        final categories = snapshot.data ?? [];
+
+        // Build dropdown items: [existing categories] + "+ Add Category"
+        final dropdownItems = [
+          if (categories.isNotEmpty) ...categories,
+          '+ নতুন ক্যাটাগরি',
+        ];
+
+        // Current value validation
+        String? displayValue = _selectedCategory;
+        if (displayValue != null && !categories.contains(displayValue)) {
+          // If selected category doesn't exist in list anymore, clear it
+          displayValue = null;
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'ক্যাটাগরি',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: textMuted,
+                fontFamily: 'Nunito',
+              ),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: borderColor),
+              ),
+              child: DropdownButtonFormField<String>(
+                value: displayValue,
+                decoration: const InputDecoration(
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  border: InputBorder.none,
+                ),
+                hint: const Text('ক্যাটাগরি নির্বাচন করুন'),
+                icon: const Icon(Icons.expand_more, color: textMuted),
+                dropdownColor: cardBg,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: textDark,
+                  fontFamily: 'Nunito',
+                ),
+                items: dropdownItems.map((item) {
+                  // Special styling for "+ Add Category" option
+                  if (item == '+ নতুন ক্যাটাগরি') {
+                    return DropdownMenuItem(
+                      value: item,
+                      child: Row(
+                        children: [
+                          Icon(Icons.add_circle_outline, color: primary, size: 20),
+                          const SizedBox(width: 8),
+                          Text(item, style: TextStyle(color: primary)),
+                        ],
+                      ),
+                    );
+                  }
+                  return DropdownMenuItem(
+                    value: item,
+                    child: Text(item),
+                  );
+                }).toList(),
+                onChanged: (value) async {
+                  if (value == '+ নতুন ক্যাটাগরি') {
+                    // Show add category dialog
+                    await _showAddCategoryDialog();
+                  } else {
+                    setState(() => _selectedCategory = value);
+                  }
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Placeholder widget for loading/error states
+  Widget _buildCategoryDropdownPlaceholder({
+    required bool isLoading,
+    String? error,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'ক্যাটাগরি',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: textMuted,
+            fontFamily: 'Nunito',
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          height: 50,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: borderColor),
+            color: isLoading ? toggleBg : cardBg,
+          ),
+          child: Center(
+            child: isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(
+                    error ?? 'No categories',
+                    style: TextStyle(color: textMuted, fontSize: 14),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Show dialog to add new category
+  Future<void> _showAddCategoryDialog() async {
+    final controller = TextEditingController();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('নতুন ক্যাটাগরি'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'ক্যাটাগরির নাম লিখুন',
+            border: OutlineInputBorder(),
+          ),
+          textCapitalization: TextCapitalization.words,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('বাতিল'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: primary),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('যুক্ত করুন'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && controller.text.trim().isNotEmpty) {
+      try {
+        // Add category via service
+        final categoryName = controller.text.trim();
+        await _productService.addProductGroup(categoryName);
+
+        // Set as selected category
+        setState(() => _selectedCategory = categoryName);
+
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('ক্যাটাগরি "$categoryName" যুক্ত হয়েছে'),
+              backgroundColor: primary,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        // Show error message (e.g., duplicate category)
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString().replaceAll('Exception: ', '')),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
   }
 
   Widget _buildDropdownField({
@@ -1056,6 +1435,9 @@ class _ProductFormBodyState extends State<ProductFormBody> {
   }
 
   Widget _buildImagePickerSection() {
+    // Get current image URL from imagePaths (for edit mode)
+    final currentImageUrl = _imagePaths.isNotEmpty ? _imagePaths.first : null;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1066,7 +1448,7 @@ class _ProductFormBodyState extends State<ProductFormBody> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'পণ্যের ছবি (সর্বোচ্চ ৫ টি)',
+            'পণ্যের ছবি',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
@@ -1075,59 +1457,25 @@ class _ProductFormBodyState extends State<ProductFormBody> {
             ),
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              ..._imagePaths.map((path) => _buildImageTile(path)),
-              if (_imagePaths.length < 5) _buildAddImageTile(),
-            ],
+          ProductImagePicker(
+            currentImageUrl: currentImageUrl,
+            onImageSelected: (File? imageFile) {
+              setState(() {
+                _selectedImageFile = imageFile;
+                // Clear old imagePaths when new image is selected
+                if (imageFile != null) {
+                  _imagePaths.clear();
+                }
+              });
+            },
+            onImageDeleted: () {
+              setState(() {
+                _selectedImageFile = null;
+                _imagePaths.clear();
+              });
+            },
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildImageTile(String path) {
-    return GestureDetector(
-      onLongPress: () {
-        setState(() => _imagePaths.remove(path));
-      },
-      child: Container(
-        width: 64,
-        height: 64,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: borderColor),
-          image: DecorationImage(
-            image: NetworkImage(path),
-            fit: BoxFit.cover,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAddImageTile() {
-    return GestureDetector(
-      onTap: () {
-        // TODO: Implement image picker
-      },
-      child: Container(
-        width: 64,
-        height: 64,
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: primary,
-            width: 2,
-            style: BorderStyle.solid,
-          ),
-        ),
-        child: const Center(
-          child: Icon(Icons.add, color: primary, size: 32),
-        ),
       ),
     );
   }

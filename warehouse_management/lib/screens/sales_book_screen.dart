@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wavezly/functions/toast.dart';
 import 'package:wavezly/models/sale.dart';
+import 'package:wavezly/services/pdf_export_service.dart';
 import 'package:wavezly/services/sales_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/utils/date_formatter.dart';
@@ -24,6 +25,7 @@ class SalesBookScreen extends StatefulWidget {
 class _SalesBookScreenState extends State<SalesBookScreen> {
   // Services
   final SalesService _salesService = SalesService();
+  final PdfExportService _pdfExportService = PdfExportService();
 
   // Data (3-tier filtering)
   List<Sale> _allSales = [];
@@ -137,7 +139,8 @@ class _SalesBookScreenState extends State<SalesBookScreen> {
         break;
       case 'week':
         _rangeStart = _rangeStart.add(Duration(days: 7 * direction));
-        _rangeEnd = _rangeStart.add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
+        _rangeEnd = _rangeStart
+            .add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
         break;
       case 'month':
         final newMonth = _rangeStart.month + direction;
@@ -146,11 +149,13 @@ class _SalesBookScreenState extends State<SalesBookScreen> {
             : newMonth > 12
                 ? _rangeStart.year + 1
                 : _rangeStart.year;
-        final adjustedMonth =
-            newMonth < 1 ? 12 : newMonth > 12 ? 1 : newMonth;
+        final adjustedMonth = newMonth < 1
+            ? 12
+            : newMonth > 12
+                ? 1
+                : newMonth;
         _rangeStart = DateTime(newYear, adjustedMonth, 1);
-        _rangeEnd =
-            DateTime(newYear, adjustedMonth + 1, 0, 23, 59, 59);
+        _rangeEnd = DateTime(newYear, adjustedMonth + 1, 0, 23, 59, 59);
         break;
       case 'year':
         _rangeStart = DateTime(_rangeStart.year + direction, 1, 1);
@@ -238,13 +243,29 @@ class _SalesBookScreenState extends State<SalesBookScreen> {
   String _getDateRangeText() {
     final startDay = DateFormatter.getBengaliDay(_rangeStart.day);
     final startMonth = DateFormatter.getBengaliMonth(_rangeStart.month);
-    final startYear = DateFormatter.getBengaliYear(_rangeStart.year).substring(2);
+    final startYear =
+        DateFormatter.getBengaliYear(_rangeStart.year).substring(2);
 
     final endDay = DateFormatter.getBengaliDay(_rangeEnd.day);
     final endMonth = DateFormatter.getBengaliMonth(_rangeEnd.month);
     final endYear = DateFormatter.getBengaliYear(_rangeEnd.year).substring(2);
 
     return '$startDay $startMonth, $startYear - $endDay $endMonth, $endYear';
+  }
+
+  Future<void> _handleExportToPDF() async {
+    try {
+      await _pdfExportService.exportSalesBook(
+        sales: List<Sale>.from(_displayedSales),
+        dateRangeLabel: _getDateRangeText(),
+        periodTotal: _periodTotal,
+      );
+    } on Exception catch (error) {
+      showTextToast(error.toString().replaceFirst('Exception: ', ''));
+    } catch (error) {
+      showTextToast('Failed to export sales PDF');
+      debugPrint('Sales PDF export failed: $error');
+    }
   }
 
   void _exportToPDF() {
@@ -321,8 +342,9 @@ class _SalesBookScreenState extends State<SalesBookScreen> {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.picture_as_pdf, color: ColorPalette.gray900),
-              onPressed: _exportToPDF,
+              icon:
+                  const Icon(Icons.picture_as_pdf, color: ColorPalette.gray900),
+              onPressed: _handleExportToPDF,
               tooltip: 'Export PDF',
             ),
             IconButton(
@@ -335,7 +357,8 @@ class _SalesBookScreenState extends State<SalesBookScreen> {
         body: _isLoading
             ? const Center(
                 child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(ColorPalette.tealAccent),
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(ColorPalette.tealAccent),
                 ),
               )
             : Column(
@@ -389,7 +412,8 @@ class _SalesBookScreenState extends State<SalesBookScreen> {
                                 color: ColorPalette.gray900,
                               ),
                               decoration: InputDecoration(
-                                hintText: 'অনুসন্ধান করুন (নাম, মোবাইল, রিসিপ্ট)',
+                                hintText:
+                                    'অনুসন্ধান করুন (নাম, মোবাইল, রিসিপ্ট)',
                                 hintStyle: GoogleFonts.anekBangla(
                                   fontSize: 14,
                                   color: ColorPalette.gray500,
@@ -441,7 +465,8 @@ class _SalesBookScreenState extends State<SalesBookScreen> {
                                             sale: sale,
                                             onTap: () {
                                               // TODO: Navigate to sale details screen if needed
-                                              showTextToast('বিক্রয় বিবরণ শীঘ্রই আসছে');
+                                              showTextToast(
+                                                  'বিক্রয় বিবরণ শীঘ্রই আসছে');
                                             },
                                           ))
                                       .toList(),

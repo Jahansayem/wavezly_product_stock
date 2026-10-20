@@ -48,6 +48,7 @@ flutter:
   assets:
     - assets/app_training/
     - assets/help_support/
+    - assets/subscription/
   fonts:
     - family: Nunito
       fonts:

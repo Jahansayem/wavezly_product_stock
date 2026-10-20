@@ -3,12 +3,14 @@ import 'package:intl/intl.dart';
 import 'package:wavezly/models/customer.dart';
 import 'package:wavezly/models/customer_transaction.dart';
 import 'package:wavezly/services/customer_service.dart';
+import 'package:wavezly/services/pdf_export_service.dart';
 import 'package:wavezly/services/sms_service.dart';
+import 'package:wavezly/services/user_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/functions/toast.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:wavezly/screens/give_due_screen.dart';
-import 'package:wavezly/screens/take_due_screen.dart' hide DueTransactionResult, DueTxnType;
+import 'package:wavezly/screens/take_due_screen.dart'
+    hide DueTransactionResult, DueTxnType;
 
 enum DueFilter { day, week, month, year, custom }
 
@@ -21,19 +23,22 @@ class DynamicDueDetailsScreen extends StatefulWidget {
   });
 
   @override
-  State<DynamicDueDetailsScreen> createState() => _DynamicDueDetailsScreenState();
+  State<DynamicDueDetailsScreen> createState() =>
+      _DynamicDueDetailsScreenState();
 }
 
 class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
   final CustomerService _customerService = CustomerService();
+  final PdfExportService _pdfExportService = PdfExportService();
   final SmsService _smsService = SmsService();
+  final UserService _userService = UserService();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
-  
+
   DueFilter _activeFilter = DueFilter.month;
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
   DateTime _endDate = DateTime.now();
-  
+
   // Primary color matching home screen tealAccent
   static const Color _primary = ColorPalette.tealAccent;
   static const Color _bgLight = ColorPalette.slate50;
@@ -89,7 +94,8 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
         break;
       case DueFilter.month:
         _startDate = DateTime(now.year, now.month, 1);
-        _endDate = DateTime(now.year, now.month + 1, 1).subtract(const Duration(days: 1));
+        _endDate = DateTime(now.year, now.month + 1, 1)
+            .subtract(const Duration(days: 1));
         break;
       case DueFilter.year:
         _startDate = DateTime(now.year, 1, 1);
@@ -117,12 +123,13 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
     }
   }
 
-  List<CustomerTransaction> _filterTransactions(List<CustomerTransaction> transactions) {
+  List<CustomerTransaction> _filterTransactions(
+      List<CustomerTransaction> transactions) {
     return transactions.where((transaction) {
       if (transaction.createdAt == null) return false;
       final date = transaction.createdAt!;
       return date.isAfter(_startDate.subtract(const Duration(days: 1))) &&
-             date.isBefore(_endDate.add(const Duration(days: 1)));
+          date.isBefore(_endDate.add(const Duration(days: 1)));
     }).toList();
   }
 
@@ -131,8 +138,12 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
       final transaction = CustomerTransaction(
         customerId: widget.customer.id,
         transactionType: type,
-        amount: type == 'debit' ? amount : -amount, // debit = customer owes more, credit = customer owes less
-        description: note.isEmpty ? '${type == 'debit' ? 'Given to' : 'Received from'} ${widget.customer.name}' : note,
+        amount: type == 'debit'
+            ? amount
+            : -amount, // debit = customer owes more, credit = customer owes less
+        description: note.isEmpty
+            ? '${type == 'debit' ? 'Given to' : 'Received from'} ${widget.customer.name}'
+            : note,
         createdAt: DateTime.now(),
       );
 
@@ -185,7 +196,8 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
       // Map UI type to database type
       // DueTxnType.give → 'GIVEN' (we give money to customer)
       // DueTxnType.take → 'RECEIVED' (we receive money from customer)
-      final transactionType = result.type == DueTxnType.give ? 'GIVEN' : 'RECEIVED';
+      final transactionType =
+          result.type == DueTxnType.give ? 'GIVEN' : 'RECEIVED';
 
       // CRITICAL: Amount must ALWAYS be positive
       // transaction_type determines if balance increases or decreases
@@ -194,25 +206,40 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
 
       final transaction = CustomerTransaction(
         customerId: widget.customer.id,
-        userId: null,  // Will be set by service
+        userId: null, // Will be set by service
         transactionType: transactionType,
-        amount: positiveAmount,  // Always positive!
+        amount: positiveAmount, // Always positive!
         description: result.note.isEmpty
             ? '${result.type == DueTxnType.give ? 'Given to' : 'Received from'} ${widget.customer.name}'
             : result.note,
         createdAt: result.date,
-        balance: null,  // Will be calculated by RPC - don't set manually
+        balance: null, // Will be calculated by RPC - don't set manually
       );
 
       await _customerService.addTransaction(transaction);
 
+      // Get updated customer balance for SMS
+      Customer? updatedCustomer;
+      try {
+        updatedCustomer =
+            await _customerService.getCustomerById(widget.customer.id ?? '');
+      } catch (e) {
+        debugPrint('Could not fetch updated customer: $e');
+      }
+
       // Send SMS if enabled
-      if (result.smsEnabled && widget.customer.phone != null && widget.customer.phone!.isNotEmpty) {
+      if (result.smsEnabled &&
+          widget.customer.phone != null &&
+          widget.customer.phone!.isNotEmpty) {
+        final currentBalance =
+            updatedCustomer?.totalDue ?? widget.customer.totalDue;
         await _sendDueNotificationSms(
           phone: widget.customer.phone!,
           customerName: widget.customer.name ?? 'Customer',
-          amount: positiveAmount,
-          transactionType: result.type == DueTxnType.give ? 'given' : 'received',
+          transactionAmount: positiveAmount,
+          currentBalance: currentBalance,
+          transactionType:
+              result.type == DueTxnType.give ? 'given' : 'received',
         );
       }
 
@@ -236,15 +263,37 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
   Future<void> _sendDueNotificationSms({
     required String phone,
     required String customerName,
-    required double amount,
+    required double transactionAmount,
+    required double currentBalance,
     required String transactionType,
   }) async {
     try {
+      // Get shop identity with proper fallback logic
+      String? shopName;
+      String? shopPhone;
+
+      try {
+        // Use helper method with fallback: shop_name → profile name → 'Halkhata'
+        shopName = await _userService.getShopNameWithFallback();
+
+        // Get shop phone from profile
+        final userProfile = await _userService.getCurrentUserProfile();
+        if (userProfile != null) {
+          shopPhone = userProfile.phone;
+        }
+      } catch (e) {
+        debugPrint('Could not fetch shop info for SMS: $e');
+        // shopName will be null, fallback to 'Halkhata' in SMS service
+      }
+
       final response = await _smsService.sendDueNotification(
         phone: phone,
         customerName: customerName,
-        amount: amount,
+        transactionAmount: transactionAmount,
+        currentBalance: currentBalance,
         transactionType: transactionType,
+        shopName: shopName,
+        shopPhone: shopPhone,
       );
 
       if (!response.success) {
@@ -262,10 +311,32 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
     }
   }
 
+  Future<void> _exportToPdf() async {
+    try {
+      final customerId = widget.customer.id ?? '';
+      final transactions =
+          await _customerService.getCustomerTransactions(customerId).first;
+      final filteredTransactions = _filterTransactions(transactions);
+      final customer =
+          await _customerService.getCustomerById(customerId) ?? widget.customer;
+
+      await _pdfExportService.exportDueDetails(
+        customer: customer,
+        transactions: filteredTransactions,
+        dateRangeLabel: _getDateRangeText(),
+      );
+    } on Exception catch (error) {
+      showTextToast(error.toString().replaceFirst('Exception: ', ''));
+    } catch (error) {
+      showTextToast('Failed to export due details PDF');
+      debugPrint('Due details PDF export failed: $error');
+    }
+  }
+
   void _showTransactionDialog(String type) {
     _amountController.clear();
     _noteController.clear();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -406,10 +477,7 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
           Row(
             children: [
               GestureDetector(
-                onTap: () {
-                  // TODO: Export PDF functionality
-                  showTextToast('PDF export coming soon!');
-                },
+                onTap: _exportToPdf,
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   child: const Icon(
@@ -572,18 +640,22 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
-                      color: widget.customer.totalDue > 0 ? _emerald600 : _rose500,
+                      color:
+                          widget.customer.totalDue > 0 ? _emerald600 : _rose500,
                     ),
                   ),
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   color: widget.customer.totalDue == 0
                       ? (isDark ? _slate700 : _slate100)
                       : widget.customer.totalDue > 0
-                          ? (isDark ? const Color(0x33064E3B) : const Color(0xFFF0FDF4))
+                          ? (isDark
+                              ? const Color(0x33064E3B)
+                              : const Color(0xFFF0FDF4))
                           : (isDark ? const Color(0x33881337) : _rose50),
                   border: Border.all(
                     color: widget.customer.totalDue == 0
@@ -629,11 +701,32 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
 
         // Send reminder about current due balance
         try {
+          // Get shop identity with proper fallback logic
+          String? shopName;
+          String? shopPhone;
+
+          try {
+            // Use helper method with fallback: shop_name → profile name → 'Halkhata'
+            shopName = await _userService.getShopNameWithFallback();
+
+            // Get shop phone from profile
+            final userProfile = await _userService.getCurrentUserProfile();
+            if (userProfile != null) {
+              shopPhone = userProfile.phone;
+            }
+          } catch (e) {
+            debugPrint('Could not fetch shop info for SMS: $e');
+          }
+
           final response = await _smsService.sendDueNotification(
             phone: widget.customer.phone!,
             customerName: widget.customer.name ?? 'Customer',
-            amount: widget.customer.totalDue.abs(),
-            transactionType: widget.customer.hasReceivable ? 'reminder' : 'paid',
+            transactionAmount: 0.0, // No transaction for reminder
+            currentBalance: widget.customer.totalDue,
+            transactionType:
+                widget.customer.hasReceivable ? 'reminder' : 'paid',
+            shopName: shopName,
+            shopPhone: shopPhone,
           );
 
           if (response.success) {
@@ -712,9 +805,11 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
                     _endDate = _endDate.subtract(const Duration(days: 7));
                     break;
                   case DueFilter.month:
-                    final prevMonth = DateTime(_startDate.year, _startDate.month - 1, 1);
+                    final prevMonth =
+                        DateTime(_startDate.year, _startDate.month - 1, 1);
                     _startDate = prevMonth;
-                    _endDate = DateTime(prevMonth.year, prevMonth.month + 1, 1).subtract(const Duration(days: 1));
+                    _endDate = DateTime(prevMonth.year, prevMonth.month + 1, 1)
+                        .subtract(const Duration(days: 1));
                     break;
                   case DueFilter.year:
                     _startDate = DateTime(_startDate.year - 1, 1, 1);
@@ -749,7 +844,7 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
               if (_activeFilter != DueFilter.custom) {
                 final now = DateTime.now();
                 DateTime futureEnd;
-                
+
                 switch (_activeFilter) {
                   case DueFilter.day:
                     futureEnd = _endDate.add(const Duration(days: 1));
@@ -766,10 +861,14 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
                     }
                     break;
                   case DueFilter.month:
-                    final nextMonth = DateTime(_startDate.year, _startDate.month + 1, 1);
-                    if (nextMonth.month <= now.month || nextMonth.year < now.year) {
+                    final nextMonth =
+                        DateTime(_startDate.year, _startDate.month + 1, 1);
+                    if (nextMonth.month <= now.month ||
+                        nextMonth.year < now.year) {
                       _startDate = nextMonth;
-                      _endDate = DateTime(nextMonth.year, nextMonth.month + 1, 1).subtract(const Duration(days: 1));
+                      _endDate =
+                          DateTime(nextMonth.year, nextMonth.month + 1, 1)
+                              .subtract(const Duration(days: 1));
                     }
                     break;
                   case DueFilter.year:
@@ -859,7 +958,8 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
                 context: context,
                 firstDate: DateTime(2020),
                 lastDate: DateTime.now(),
-                initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
+                initialDateRange:
+                    DateTimeRange(start: _startDate, end: _endDate),
               );
               if (picked != null) {
                 setState(() {
@@ -879,7 +979,8 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
 
   Widget _buildTransactionsTable(bool isDark) {
     return StreamBuilder<List<CustomerTransaction>>(
-      stream: _customerService.getCustomerTransactions(widget.customer.id ?? ''),
+      stream:
+          _customerService.getCustomerTransactions(widget.customer.id ?? ''),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Container(
@@ -934,7 +1035,7 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
         }
 
         final filteredTransactions = _filterTransactions(snapshot.data!);
-        
+
         if (filteredTransactions.isEmpty) {
           return Container(
             padding: const EdgeInsets.all(32),
@@ -958,20 +1059,22 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
           );
         }
 
-        // Calculate totals
-        double totalReceived = 0;
+        // Calculate totals based on transaction type (not amount sign)
         double totalGiven = 0;
-        double finalBalance = widget.customer.totalDue;
+        double totalReceived = 0;
 
         for (var txn in filteredTransactions) {
           if (txn.amount != null) {
-            if (txn.amount! > 0) {
+            if (txn.transactionType == 'GIVEN') {
               totalGiven += txn.amount!.abs();
-            } else {
+            } else if (txn.transactionType == 'RECEIVED') {
               totalReceived += txn.amount!.abs();
             }
           }
         }
+
+        // Net due = Given - Received (DIFFERENCE, not sum)
+        double finalBalance = totalGiven - totalReceived;
 
         return Container(
           decoration: BoxDecoration(
@@ -994,7 +1097,8 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
             children: [
               _buildTableHeader(isDark),
               ...filteredTransactions.map((txn) => _buildTableRow(txn, isDark)),
-              _buildTableFooter(totalReceived, totalGiven, finalBalance, isDark),
+              _buildTableFooter(
+                  totalReceived, totalGiven, finalBalance, isDark),
             ],
           ),
         );
@@ -1143,7 +1247,9 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    txn.createdAt != null ? dateFormat.format(txn.createdAt!) : 'Unknown',
+                    txn.createdAt != null
+                        ? dateFormat.format(txn.createdAt!)
+                        : 'Unknown',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
@@ -1152,7 +1258,9 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
                     ),
                   ),
                   Text(
-                    txn.createdAt != null ? timeFormat.format(txn.createdAt!) : 'Unknown',
+                    txn.createdAt != null
+                        ? timeFormat.format(txn.createdAt!)
+                        : 'Unknown',
                     style: TextStyle(
                       fontSize: 10,
                       color: _slate400,
@@ -1178,7 +1286,9 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: isReceived && txn.amount != null
-                    ? (isDark ? const Color(0x33064E3B) : const Color(0xCCF0FDF4))
+                    ? (isDark
+                        ? const Color(0x33064E3B)
+                        : const Color(0xCCF0FDF4))
                     : Colors.transparent,
                 border: Border(
                   right: BorderSide(
@@ -1188,12 +1298,18 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
                 ),
               ),
               child: Text(
-                isReceived && txn.amount != null ? '৳ ${_formatCurrency(txn.amount!.abs())}' : '--',
+                isReceived && txn.amount != null
+                    ? '৳ ${_formatCurrency(txn.amount!.abs())}'
+                    : '--',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: isReceived && txn.amount != null ? FontWeight.w600 : FontWeight.w400,
-                  color: isReceived && txn.amount != null ? _emerald700 : _slate300,
+                  fontWeight: isReceived && txn.amount != null
+                      ? FontWeight.w600
+                      : FontWeight.w400,
+                  color: isReceived && txn.amount != null
+                      ? _emerald700
+                      : _slate300,
                 ),
               ),
             ),
@@ -1204,7 +1320,9 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: isGiven && txn.amount != null
-                    ? (isDark ? const Color(0x33881337) : const Color(0xCCFFF1F2))
+                    ? (isDark
+                        ? const Color(0x33881337)
+                        : const Color(0xCCFFF1F2))
                     : Colors.transparent,
                 border: Border(
                   right: BorderSide(
@@ -1214,11 +1332,15 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
                 ),
               ),
               child: Text(
-                isGiven && txn.amount != null ? '৳ ${_formatCurrency(txn.amount!.abs())}' : '--',
+                isGiven && txn.amount != null
+                    ? '৳ ${_formatCurrency(txn.amount!.abs())}'
+                    : '--',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: isGiven && txn.amount != null ? FontWeight.w600 : FontWeight.w400,
+                  fontWeight: isGiven && txn.amount != null
+                      ? FontWeight.w600
+                      : FontWeight.w400,
                   color: isGiven && txn.amount != null ? _rose600 : _slate300,
                 ),
               ),
@@ -1244,7 +1366,8 @@ class _DynamicDueDetailsScreenState extends State<DynamicDueDetailsScreen> {
     );
   }
 
-  Widget _buildTableFooter(double totalReceived, double totalGiven, double finalBalance, bool isDark) {
+  Widget _buildTableFooter(double totalReceived, double totalGiven,
+      double finalBalance, bool isDark) {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? const Color(0x800F172A) : _slate50,

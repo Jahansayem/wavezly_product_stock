@@ -20,6 +20,10 @@ class ProductDao extends BaseDao<Product> {
   String? _currentUserId;
   bool _isRefreshing = false; // In-flight guard to prevent refresh storms
 
+  // Broadcast stream controller for reactive product_groups updates
+  StreamController<List<String>>? _groupsController;
+  String? _currentGroupsUserId;
+
   @override
   Product fromMap(Map<String, dynamic> map) {
     return Product.fromMap(map);
@@ -28,7 +32,7 @@ class ProductDao extends BaseDao<Product> {
   @override
   Map<String, dynamic> toMap(Product item) {
     final map = item.toMap();
-    map['user_id'] = map['user_id']; // Ensure user_id is included
+    // Note: user_id must be set explicitly by insert/update methods
     map['created_at'] = map['created_at'] ?? DateTime.now().toIso8601String();
     map['updated_at'] = DateTime.now().toIso8601String();
     return map;
@@ -61,16 +65,32 @@ class ProductDao extends BaseDao<Product> {
   // Update product
   Future<void> updateProduct(String id, Product product, String userId) async {
     final map = toMap(product);
+    map['user_id'] = userId; // Ensure user_id is set correctly (NOT NULL constraint)
     map['is_synced'] = 0;
     map['last_synced_at'] = null;
     map['updated_at'] = DateTime.now().toIso8601String();
 
-    await _db.update(
+    final affectedRows = await _db.update(
       tableName,
       map,
-      where: 'id = ?',
-      whereArgs: [id],
+      where: 'id = ? AND user_id = ?',
+      whereArgs: [id, userId],
     );
+
+    if (affectedRows == 0) {
+      final exists = await _db.query(
+        tableName,
+        columns: ['id'],
+        where: 'id = ? AND user_id = ?',
+        whereArgs: [id, userId],
+        limit: 1,
+      );
+      if (exists.isEmpty) {
+        throw Exception(
+          'Local product update failed: product not found for this user (id=$id, user_id=$userId)',
+        );
+      }
+    }
 
     // Notify stream listeners
     await notifyProductsChanged(userId);
@@ -78,7 +98,7 @@ class ProductDao extends BaseDao<Product> {
 
   // Update product quantity only (safer for partial stock edits)
   Future<void> updateProductQuantity(String id, int quantity, String userId) async {
-    await _db.update(
+    final affectedRows = await _db.update(
       tableName,
       {
         'quantity': quantity,
@@ -89,6 +109,21 @@ class ProductDao extends BaseDao<Product> {
       where: 'id = ? AND user_id = ?',
       whereArgs: [id, userId],
     );
+
+    if (affectedRows == 0) {
+      final exists = await _db.query(
+        tableName,
+        columns: ['id'],
+        where: 'id = ? AND user_id = ?',
+        whereArgs: [id, userId],
+        limit: 1,
+      );
+      if (exists.isEmpty) {
+        throw Exception(
+          'Local quantity update failed: product not found for this user (id=$id, user_id=$userId)',
+        );
+      }
+    }
 
     await notifyProductsChanged(userId);
   }
@@ -202,6 +237,9 @@ class ProductDao extends BaseDao<Product> {
     _productsController = null;
     _currentUserId = null;
     _isRefreshing = false;
+    _groupsController?.close();
+    _groupsController = null;
+    _currentGroupsUserId = null;
   }
 
   Future<List<Product>> _queryProducts(String userId) async {
@@ -254,17 +292,32 @@ class ProductDao extends BaseDao<Product> {
     return results.map((map) => fromMap(map)).toList();
   }
 
-  // Get product by ID
-  Future<Product?> getProductById(String id) async {
-    final results = await _db.query(
-      tableName,
-      where: 'id = ?',
-      whereArgs: [id],
-      limit: 1,
-    );
-
-    if (results.isEmpty) return null;
-    return fromMap(results.first);
+  // Get product by ID with user_id filtering for multi-tenant data isolation
+  Future<Product?> getProductById(String id, {String? userId}) async {
+    // If userId not provided, query without user_id filter (backward compatibility)
+    // Callers should always provide userId for proper multi-tenant isolation
+    if (userId != null) {
+      // Multi-tenant safe: filter by both id AND user_id
+      final results = await _db.query(
+        tableName,
+        where: 'id = ? AND user_id = ?',
+        whereArgs: [id, userId],
+        limit: 1,
+      );
+      if (results.isEmpty) return null;
+      return fromMap(results.first);
+    } else {
+      // Backward compatibility: query by id only (less safe in multi-tenant)
+      print('⚠️ [ProductDao] getProductById called without userId - multi-tenant isolation not enforced');
+      final results = await _db.query(
+        tableName,
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (results.isEmpty) return null;
+      return fromMap(results.first);
+    }
   }
 
   // Search products
@@ -343,32 +396,79 @@ class ProductDao extends BaseDao<Product> {
     return results.map((map) => map['name'] as String).toList();
   }
 
-  // Get product groups stream
+  // Get product groups stream (reactive broadcast stream)
   Stream<List<String>> getProductGroupsStream(String userId) {
-    final controller = StreamController<List<String>>();
+    // Initialize or reinitialize controller if user changes
+    if (_groupsController == null || _currentGroupsUserId != userId) {
+      _groupsController?.close();
+      _groupsController = StreamController<List<String>>.broadcast(
+        onListen: () async {
+          final groups = await getProductGroups(userId);
+          if (_groupsController != null && !_groupsController!.isClosed) {
+            _groupsController!.add(groups);
+          }
+        },
+      );
+      _currentGroupsUserId = userId;
+    } else {
+      // Push latest snapshot for new listeners on reused controller.
+      getProductGroups(userId).then((groups) {
+        if (_groupsController != null && !_groupsController!.isClosed) {
+          _groupsController!.add(groups);
+        }
+      });
+    }
 
-    getProductGroups(userId).then((groups) {
-      if (!controller.isClosed) {
-        controller.add(groups);
-      }
-    });
-
-    return controller.stream;
+    return _groupsController!.stream;
   }
 
-  // Add product group
+  // Notify groups stream listeners
+  Future<void> notifyGroupsChanged(String userId) async {
+    if (_groupsController != null && !_groupsController!.isClosed && _currentGroupsUserId == userId) {
+      final groups = await getProductGroups(userId);
+      _groupsController!.add(groups);
+    }
+  }
+
+  // Check if product group exists (case-insensitive)
+  Future<bool> productGroupExists(String userId, String groupName) async {
+    final results = await _db.query(
+      'product_groups',
+      columns: ['name'],
+      where: 'user_id = ? AND LOWER(TRIM(name)) = LOWER(TRIM(?))',
+      whereArgs: [userId, groupName],
+      limit: 1,
+    );
+    return results.isNotEmpty;
+  }
+
+  // Add product group with case-insensitive duplicate check
   Future<void> addProductGroup(String userId, String groupName, String id) async {
+    final trimmedName = groupName.trim();
+
+    if (trimmedName.isEmpty) {
+      throw Exception('Category name cannot be empty');
+    }
+
+    // Check for case-insensitive duplicate
+    if (await productGroupExists(userId, trimmedName)) {
+      throw Exception('Category "$trimmedName" already exists (case-insensitive)');
+    }
+
     await _db.insert(
       'product_groups',
       {
         'id': id,
-        'name': groupName,
+        'name': trimmedName,
         'user_id': userId,
         'created_at': DateTime.now().toIso8601String(),
         'is_synced': 0,
       },
-      conflictAlgorithm: ConflictAlgorithm.ignore,
+      conflictAlgorithm: ConflictAlgorithm.fail, // Changed to fail to catch duplicates
     );
+
+    // Notify stream listeners
+    await notifyGroupsChanged(userId);
   }
 
   // Delete product group
@@ -378,6 +478,9 @@ class ProductDao extends BaseDao<Product> {
       where: 'user_id = ? AND name = ?',
       whereArgs: [userId, groupName],
     );
+
+    // Notify stream listeners
+    await notifyGroupsChanged(userId);
   }
 
   // Get locations

@@ -6,6 +6,7 @@ import 'package:wavezly/models/customer.dart';
 import 'package:wavezly/models/customer_transaction.dart';
 import 'package:wavezly/services/customer_service.dart';
 import 'package:wavezly/services/sms_service.dart';
+import 'package:wavezly/services/user_service.dart';
 import 'package:wavezly/functions/toast.dart';
 
 enum DueTxnType { take, give }
@@ -44,6 +45,7 @@ class TakeDueScreen extends StatefulWidget {
 class _TakeDueScreenState extends State<TakeDueScreen> {
   final CustomerService _customerService = CustomerService();
   final SmsService _smsService = SmsService();
+  final UserService _userService = UserService();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
 
@@ -241,12 +243,16 @@ class _TakeDueScreenState extends State<TakeDueScreen> {
 
       await _customerService.addTransaction(transaction);
 
+      // Reload customer to get updated balance before sending SMS
+      await _loadCustomer();
+
       // Send SMS if enabled
       if (_smsEnabled && _customer!.phone != null && _customer!.phone!.isNotEmpty) {
         await _sendDueNotificationSms(
           phone: _customer!.phone!,
           customerName: _customer!.name ?? 'Customer',
-          amount: _enteredAmount.abs(),
+          transactionAmount: _enteredAmount.abs(),
+          currentBalance: _customer!.totalDue,
           transactionType: 'received',
         );
       }
@@ -260,9 +266,6 @@ class _TakeDueScreenState extends State<TakeDueScreen> {
         _smsEnabled = false;
         _attachmentPath = null;
       });
-
-      // Reload customer to get updated balance
-      await _loadCustomer();
 
       if (mounted) {
         showTextToast('Transaction added successfully');
@@ -282,15 +285,37 @@ class _TakeDueScreenState extends State<TakeDueScreen> {
   Future<void> _sendDueNotificationSms({
     required String phone,
     required String customerName,
-    required double amount,
+    required double transactionAmount,
+    required double currentBalance,
     required String transactionType,
   }) async {
     try {
+      // Get shop identity with proper fallback logic
+      String? shopName;
+      String? shopPhone;
+
+      try {
+        // Use helper method with fallback: shop_name → profile name → 'Halkhata'
+        shopName = await _userService.getShopNameWithFallback();
+
+        // Get shop phone from profile
+        final userProfile = await _userService.getCurrentUserProfile();
+        if (userProfile != null) {
+          shopPhone = userProfile.phone;
+        }
+      } catch (e) {
+        debugPrint('Could not fetch shop info for SMS: $e');
+        // shopName will be null, fallback to 'Halkhata' in SMS service
+      }
+
       final response = await _smsService.sendDueNotification(
         phone: phone,
         customerName: customerName,
-        amount: amount,
+        transactionAmount: transactionAmount,
+        currentBalance: currentBalance,
         transactionType: transactionType,
+        shopName: shopName,
+        shopPhone: shopPhone,
       );
 
       if (!response.success) {

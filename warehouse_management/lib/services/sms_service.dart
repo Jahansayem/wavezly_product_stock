@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'package:wavezly/utils/number_formatter.dart';
 
 /// SMS service for BulkSMS BD API integration
 /// Handles OTP generation, verification, and customer notifications
@@ -209,46 +210,168 @@ class SmsService {
     }
   }
 
-  /// Send due notification SMS
+  /// Send due notification SMS with Bengali format
+  /// Format: ({Brand}) {নিয়েছেন/দিয়েছেন} {TransactionAmount} টাকা।
+  ///         মোট {জমা আছে/পাবেন} {BalanceAmount} টাকা।
+  ///         - {ShopName} ({ShopNumber})
   Future<SmsResponse> sendDueNotification({
     required String phone,
     required String customerName,
-    required double amount,
+    required double transactionAmount,
+    required double currentBalance,
     required String transactionType,
+    String? shopName,
+    String? shopPhone,
   }) async {
     String message;
 
     switch (transactionType.toLowerCase()) {
       case 'received':
-        // Customer paid money
-        message =
-            'Dear $customerName, you paid ${amount.toStringAsFixed(0)} BDT to $_brandName. Thank you!';
+        // Customer paid money to shop
+        message = _buildDueTransactionMessage(
+          customerName: customerName,
+          transactionAmount: transactionAmount,
+          currentBalance: currentBalance,
+          verb: 'নিয়েছেন',
+          shopName: shopName,
+          shopPhone: shopPhone,
+        );
         break;
 
       case 'given':
-        // Shop gave credit
-        message =
-            'Dear $customerName, your due at $_brandName is now ${amount.toStringAsFixed(0)} BDT. Please pay soon.';
+        // Shop gave credit to customer
+        message = _buildDueTransactionMessage(
+          customerName: customerName,
+          transactionAmount: transactionAmount,
+          currentBalance: currentBalance,
+          verb: 'দিয়েছেন',
+          shopName: shopName,
+          shopPhone: shopPhone,
+        );
         break;
 
       case 'reminder':
         // Reminder for existing due
-        message =
-            'Dear $customerName, reminder: your due balance at $_brandName is ${amount.toStringAsFixed(0)} BDT.';
+        message = _buildDueReminderMessage(
+          customerName: customerName,
+          currentBalance: currentBalance,
+          shopName: shopName,
+          shopPhone: shopPhone,
+        );
         break;
 
       case 'paid':
-        // Due fully paid
-        message =
-            'Dear $customerName, your due at $_brandName has been cleared. Thank you!';
+        // Due fully paid (balance is zero)
+        message = _buildDuePaidMessage(
+          customerName: customerName,
+          shopName: shopName,
+          shopPhone: shopPhone,
+        );
         break;
 
       default:
-        message =
-            'Dear $customerName, transaction of ${amount.toStringAsFixed(0)} BDT at $_brandName.';
+        message = _buildDueTransactionMessage(
+          customerName: customerName,
+          transactionAmount: transactionAmount,
+          currentBalance: currentBalance,
+          verb: 'নিয়েছেন',
+          shopName: shopName,
+          shopPhone: shopPhone,
+        );
     }
 
     return await sendSms(phone, message);
+  }
+
+  /// Build Bengali SMS for due transaction (received/given)
+  String _buildDueTransactionMessage({
+    required String customerName,
+    required double transactionAmount,
+    required double currentBalance,
+    required String verb,
+    String? shopName,
+    String? shopPhone,
+  }) {
+    // Format transaction amount (no decimals for cleaner display)
+    final formattedTransaction = NumberFormatter.formatCurrencyInt(transactionAmount);
+
+    // Format current balance
+    final absBalance = currentBalance.abs();
+    final formattedBalance = NumberFormatter.formatCurrencyInt(absBalance);
+
+    // Determine balance label based on sign
+    final balanceLabel = currentBalance > 0
+        ? 'পাবেন'       // Shop will receive (receivable)
+        : currentBalance < 0
+            ? 'জমা আছে'  // Customer has credit (payable)
+            : 'ব্যালেন্স'; // Zero balance
+
+    // Build shop identity line
+    final shopIdentity = _buildShopIdentity(shopName, shopPhone);
+
+    // Construct message - fixed sender name to "Halkhata" instead of customerName
+    final messageParts = [
+      '($_brandName) $verb $formattedTransaction টাকা।',
+      'মোট $balanceLabel $formattedBalance টাকা।',
+      shopIdentity,
+    ];
+
+    return messageParts.join('\n');
+  }
+
+  /// Build Bengali SMS for due reminder
+  String _buildDueReminderMessage({
+    required String customerName,
+    required double currentBalance,
+    String? shopName,
+    String? shopPhone,
+  }) {
+    final absBalance = currentBalance.abs();
+    final formattedBalance = NumberFormatter.formatCurrencyInt(absBalance);
+
+    final balanceLabel = currentBalance > 0
+        ? 'পাবেন'
+        : 'জমা আছে';
+
+    final shopIdentity = _buildShopIdentity(shopName, shopPhone);
+
+    // Fixed sender name to "Halkhata"
+    final messageParts = [
+      '($_brandName) স্মরণঃ',
+      'মোট $balanceLabel $formattedBalance টাকা।',
+      shopIdentity,
+    ];
+
+    return messageParts.join('\n');
+  }
+
+  /// Build Bengali SMS for fully paid due
+  String _buildDuePaidMessage({
+    required String customerName,
+    String? shopName,
+    String? shopPhone,
+  }) {
+    final shopIdentity = _buildShopIdentity(shopName, shopPhone);
+
+    // Fixed sender name to "Halkhata"
+    final messageParts = [
+      '($_brandName) সম্পূর্ণ পরিশোধ হয়েছে।',
+      'ধন্যবাদ!',
+      shopIdentity,
+    ];
+
+    return messageParts.join('\n');
+  }
+
+  /// Build shop identity line for SMS footer
+  String _buildShopIdentity(String? shopName, String? shopPhone) {
+    final name = shopName?.isNotEmpty == true ? shopName! : _brandName;
+
+    if (shopPhone?.isNotEmpty == true) {
+      return '- $name ($shopPhone)';
+    } else {
+      return '- $name';
+    }
   }
 
   /// Validate Bangladesh phone number

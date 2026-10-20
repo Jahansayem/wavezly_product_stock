@@ -3,6 +3,7 @@ import '../models/expense.dart';
 import '../models/expense_category.dart';
 import '../database/dao/expense_dao.dart';
 import '../database/dao/expense_category_dao.dart';
+import '../services/billing_access_service.dart';
 import '../sync/sync_service.dart';
 import '../sync/connectivity_service.dart';
 import '../config/supabase_config.dart';
@@ -32,6 +33,7 @@ class ExpenseRepository {
 
   Future<ExpenseCategory> createCategory(ExpenseCategory category) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       final userId = _userId;
 
       // Generate ID if not present
@@ -75,6 +77,7 @@ class ExpenseRepository {
 
   Future<void> updateCategory(String id, ExpenseCategory category) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       final userId = _userId;
 
       // Update local database
@@ -103,6 +106,7 @@ class ExpenseRepository {
 
   Future<void> deleteCategory(String id) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       final userId = _userId;
 
       // Delete from local database
@@ -147,6 +151,7 @@ class ExpenseRepository {
 
   Future<Expense> createExpense(Expense expense) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       final userId = _userId;
 
       // Generate ID if not present
@@ -188,6 +193,7 @@ class ExpenseRepository {
 
   Future<void> updateExpense(String id, Expense expense) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       final userId = _userId;
 
       // Update local database
@@ -216,6 +222,7 @@ class ExpenseRepository {
 
   Future<void> deleteExpense(String id) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       final userId = _userId;
 
       // Delete from local database

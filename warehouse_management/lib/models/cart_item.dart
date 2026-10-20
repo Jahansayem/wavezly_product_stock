@@ -9,13 +9,13 @@ class CartItem {
     this.quantity = 1,
   });
 
-  double get subtotal => (product.cost ?? 0) * quantity;
+  double get subtotal => (product.salePrice ?? 0) * quantity;
 
   Map<String, dynamic> toSaleItemJson() => {
         'product_id': product.id,
         'product_name': product.name,
         'quantity': quantity,
-        'unit_price': product.cost,
+        'unit_price': product.salePrice,
         'subtotal': subtotal,
       };
 }

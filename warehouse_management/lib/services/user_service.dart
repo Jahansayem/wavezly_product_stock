@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../models/user_profile.dart';
+import 'billing_access_service.dart';
 
 /// UserService
 /// Handles all user management operations including CRUD for profiles
@@ -30,11 +31,8 @@ class UserService {
   /// Get user by ID
   Future<UserProfile?> getUserById(String id) async {
     try {
-      final response = await _supabase
-          .from('profiles')
-          .select()
-          .eq('id', id)
-          .maybeSingle();
+      final response =
+          await _supabase.from('profiles').select().eq('id', id).maybeSingle();
 
       return response != null ? UserProfile.fromJson(response) : null;
     } catch (e) {
@@ -66,6 +64,7 @@ class UserService {
     String? phone,
   }) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       final currentUserId = _supabase.auth.currentUser?.id;
       if (currentUserId == null) {
         throw Exception('Not authenticated');
@@ -101,13 +100,10 @@ class UserService {
   /// Update user name
   Future<void> updateUserName(String userId, String newName) async {
     try {
-      await _supabase
-          .from('profiles')
-          .update({
-            'name': newName,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', userId);
+      await _supabase.from('profiles').update({
+        'name': newName,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId);
     } catch (e) {
       print('Error updating user name: $e');
       rethrow;
@@ -117,13 +113,10 @@ class UserService {
   /// Update user phone
   Future<void> updateUserPhone(String userId, String? newPhone) async {
     try {
-      await _supabase
-          .from('profiles')
-          .update({
-            'phone': newPhone,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', userId);
+      await _supabase.from('profiles').update({
+        'phone': newPhone,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId);
     } catch (e) {
       print('Error updating user phone: $e');
       rethrow;
@@ -133,13 +126,11 @@ class UserService {
   /// Toggle user active status
   Future<void> toggleUserStatus(String userId, bool isActive) async {
     try {
-      await _supabase
-          .from('profiles')
-          .update({
-            'is_active': isActive,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', userId);
+      await BillingAccessService.instance.ensureCanWrite();
+      await _supabase.from('profiles').update({
+        'is_active': isActive,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId);
     } catch (e) {
       print('Error toggling user status: $e');
       rethrow;
@@ -151,10 +142,8 @@ class UserService {
   /// To fully delete a user, you need to delete from auth.users as well
   Future<void> deleteUser(String userId) async {
     try {
-      await _supabase
-          .from('profiles')
-          .delete()
-          .eq('id', userId);
+      await BillingAccessService.instance.ensureCanWrite();
+      await _supabase.from('profiles').delete().eq('id', userId);
     } catch (e) {
       print('Error deleting user: $e');
       rethrow;
@@ -190,6 +179,47 @@ class UserService {
     } catch (e) {
       print('Error getting active users count: $e');
       return 0;
+    }
+  }
+
+  /// Get shop name with fallback logic
+  /// Priority: user_business_profiles.shop_name → profiles.name → 'Halkhata'
+  Future<String> getShopNameWithFallback() async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) return 'Halkhata';
+
+      // Try shop_name from user_business_profiles first
+      try {
+        final businessProfile = await _supabase
+            .from('user_business_profiles')
+            .select('shop_name')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+        final shopName = businessProfile?['shop_name'];
+        if (shopName != null && shopName.toString().trim().isNotEmpty) {
+          return shopName.toString().trim();
+        }
+      } catch (e) {
+        print('Could not fetch shop_name from user_business_profiles: $e');
+      }
+
+      // Fallback to profiles.name
+      try {
+        final userProfile = await getCurrentUserProfile();
+        if (userProfile?.name != null && userProfile!.name!.trim().isNotEmpty) {
+          return userProfile.name!.trim();
+        }
+      } catch (e) {
+        print('Could not fetch name from profiles: $e');
+      }
+
+      // Final fallback
+      return 'Halkhata';
+    } catch (e) {
+      print('Error in getShopNameWithFallback: $e');
+      return 'Halkhata';
     }
   }
 

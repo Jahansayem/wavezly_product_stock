@@ -4,6 +4,7 @@ import '../models/sale_item.dart';
 import '../models/cart_item.dart';
 import '../database/dao/sale_dao.dart';
 import '../database/dao/sale_item_dao.dart';
+import '../services/billing_access_service.dart';
 import '../sync/sync_service.dart';
 import '../sync/connectivity_service.dart';
 import '../config/supabase_config.dart';
@@ -66,6 +67,7 @@ class SalesRepository {
   // WRITE: Process sale - save locally + queue sync
   Future<String> processSale(Sale sale, List<CartItem> cartItems) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       final userId = _userId;
 
       // Generate IDs if not present
@@ -165,6 +167,7 @@ class SalesRepository {
     String? photoUrl,
   }) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       final userId = _userId;
 
       // Create sale object
@@ -223,6 +226,7 @@ class SalesRepository {
   // Update sale
   Future<void> updateSale(String id, Sale sale) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       final userId = _userId;
 
       // Update local database
@@ -253,6 +257,7 @@ class SalesRepository {
   // Delete sale
   Future<void> deleteSale(String id) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       // Delete from local database (cascade will handle items)
       await _saleDao.deleteSale(id);
 

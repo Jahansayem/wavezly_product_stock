@@ -42,9 +42,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<bool> _checkUserExists(String phone) async {
-    try {
-      final phoneWithCountryCode = phone.startsWith('88') ? phone : '88$phone';
+    final phoneWithCountryCode = phone.startsWith('88') ? phone : '88$phone';
 
+    try {
       debugPrint('Checking if user exists: $phoneWithCountryCode');
 
       final response = await SupabaseConfig.client.rpc('check_phone_exists',
@@ -53,11 +53,44 @@ class _LoginScreenState extends State<LoginScreen> {
       final exists = response == true;
       debugPrint(exists ? 'User exists' : 'New user');
 
-      return exists;
+      if (exists) {
+        return true;
+      }
     } catch (e) {
       debugPrint('Error checking user existence: $e');
-      return true;
     }
+
+    return _checkUserExistsViaPinProbe(phoneWithCountryCode);
+  }
+
+  Future<bool> _checkUserExistsViaPinProbe(String phoneWithCountryCode) async {
+    try {
+      final response = await SupabaseConfig.client.rpc(
+        'verify_pin_by_phone',
+        params: {
+          'phone_number': phoneWithCountryCode,
+          'input_pin_hash': '__login_probe__',
+        },
+      );
+
+      if (response is Map<String, dynamic>) {
+        final error = response['error']?.toString().toLowerCase();
+        final exists = response['success'] == true || error != 'user not found';
+
+        debugPrint(
+          exists
+              ? 'User exists via PIN probe'
+              : 'User not found via PIN probe',
+        );
+
+        return exists;
+      }
+    } catch (e) {
+      debugPrint('Error probing user existence via PIN RPC: $e');
+    }
+
+    // If the fallback probe is unavailable, prefer the login path over OTP.
+    return true;
   }
 
   bool _validatePhoneFormat(String phone) {

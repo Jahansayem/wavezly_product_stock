@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import '../config/supabase_config.dart';
+import 'realtime_service.dart';
 
 class ConnectivityService {
   static final ConnectivityService _instance = ConnectivityService._internal();
@@ -28,10 +30,15 @@ class ConnectivityService {
         _onlineController.add(_isOnline);
         print('Connectivity changed: ${_isOnline ? 'ONLINE' : 'OFFLINE'}');
 
-        // Trigger sync when coming back online
+        // Trigger sync and re-subscribe to realtime when coming back online
         if (!wasOnline && _isOnline) {
-          print('Device back online - triggering sync');
+          print('Device back online - triggering sync and realtime re-subscribe');
           // Sync will be triggered by listeners
+          // Re-subscribe to realtime (WebSocket may have dropped)
+          final userId = SupabaseConfig.client.auth.currentUser?.id;
+          if (userId != null) {
+            RealtimeService().subscribe(userId);
+          }
         }
       }
     });

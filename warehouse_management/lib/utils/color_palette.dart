@@ -116,6 +116,22 @@ mixin ColorPalette {
   static const Color navOrange = Color(0xFFF97316);
   static const Color navBlue = Color(0xFF3B82F6);
 
+  // Bakir Khata Screen Colors (Stitch Design)
+  static const Color bakirHeaderStart = Color(0xFFFACC15);        // Yellow-400
+  static const Color bakirHeaderEnd = Color(0xFFEAB308);          // Yellow-500
+  static const Color bakirReceiveRed = Color(0xFFFEE2E2);         // Red-100
+  static const Color bakirReceiveRedBorder = Color(0xFFFECACA);   // Red-200
+  static const Color bakirReceiveRedText = Color(0xFFDC2626);     // Red-600
+  static const Color bakirReceiveRedDark = Color(0xFF7F1D1D);     // Dark mode
+  static const Color bakirGiveGreen = Color(0xFFDCFCE7);          // Green-100
+  static const Color bakirGiveGreenBorder = Color(0xFFBBF7D0);    // Green-200
+  static const Color bakirGiveGreenText = Color(0xFF16A34A);      // Green-600
+  static const Color bakirGiveGreenDark = Color(0xFF14532D);      // Dark mode
+  static const Color bakirHelpBlue = Color(0xFF3B82F6);           // Blue-500
+  static const Color bakirHeaderStartDark = Color(0xFFEAB308);    // Dark variant
+  static const Color bakirHeaderEndDark = Color(0xFFCA8A04);      // Dark variant
+  static const Color bakirButtonBlue = Color(0xFF2563EB);         // CTA button
+
   // Expense Screen Colors (Stitch Design - Material 3)
   static const Color expensePrimary = Color(0xFF009688);      // #009688
   static const Color expensePrimaryDark = Color(0xFF00796B);  // #00796B

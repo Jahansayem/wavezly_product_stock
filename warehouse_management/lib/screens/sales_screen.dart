@@ -1,21 +1,25 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:math_expressions/math_expressions.dart';
 import 'package:wavezly/functions/toast.dart';
+import 'package:wavezly/models/buying_cart_item.dart';
 import 'package:wavezly/models/cart_item.dart';
 import 'package:wavezly/models/customer.dart';
+import 'package:wavezly/models/fast_sale_scan_result.dart';
 import 'package:wavezly/models/product.dart';
 import 'package:wavezly/models/sale.dart';
 import 'package:wavezly/models/selling_cart_item.dart';
 import 'package:wavezly/screens/barcode_scanner_screen.dart';
-import 'package:wavezly/screens/selling_checkout_screen.dart';
+import 'package:wavezly/screens/purchase_cart_screen.dart';
 import 'package:wavezly/services/auth_service.dart';
 import 'package:wavezly/services/customer_service.dart';
 import 'package:wavezly/services/product_service.dart';
 import 'package:wavezly/services/sales_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
 import 'package:wavezly/utils/date_formatter.dart';
+import 'package:wavezly/utils/number_formatter.dart';
 
 /// Unified Sales Screen with tab-based view switching
 /// Contains Quick Sell and Product List views with state preservation
@@ -64,31 +68,41 @@ class _SalesScreenState extends State<SalesScreen> {
           Theme.of(context).textTheme,
         ),
       ),
-      child: Scaffold(
-        backgroundColor: background,
-        body: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              _buildTabButtons(),
-              Expanded(
-                child: IndexedStack(
-                  index: _selectedTab,
-                  children: [
-                    _QuickSellView(
-                      onTabChange: (index) => setState(() => _selectedTab = index),
-                      onSaleCompleted: widget.onSaleCompleted,
-                      salesSessionToken: widget.salesSessionToken,
-                    ),
-                    _ProductListView(
-                      onTabChange: (index) => setState(() => _selectedTab = index),
-                      onSaleCompleted: widget.onSaleCompleted,
-                      salesSessionToken: widget.salesSessionToken,
-                    ),
-                  ],
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light,
+        ),
+        child: Scaffold(
+          backgroundColor: background,
+          body: SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                _buildHeader(),
+                _buildTabButtons(),
+                Expanded(
+                  child: IndexedStack(
+                    index: _selectedTab,
+                    children: [
+                      _QuickSellView(
+                        onTabChange: (index) =>
+                            setState(() => _selectedTab = index),
+                        onSaleCompleted: widget.onSaleCompleted,
+                        salesSessionToken: widget.salesSessionToken,
+                      ),
+                      _ProductListView(
+                        onTabChange: (index) =>
+                            setState(() => _selectedTab = index),
+                        onSaleCompleted: widget.onSaleCompleted,
+                        salesSessionToken: widget.salesSessionToken,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -99,8 +113,10 @@ class _SalesScreenState extends State<SalesScreen> {
   // HEADER (Shared between both tabs)
   // =======================================================================
   Widget _buildHeader() {
+    final topPadding = MediaQuery.of(context).padding.top;
+
     return Container(
-      height: 64,
+      height: 64 + topPadding,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
@@ -118,14 +134,15 @@ class _SalesScreenState extends State<SalesScreen> {
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.fromLTRB(16, topPadding + 12, 16, 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back, color: ColorPalette.gray900, size: 24),
+                icon: const Icon(Icons.arrow_back,
+                    color: ColorPalette.gray900, size: 24),
                 onPressed: _handleBack,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -142,7 +159,8 @@ class _SalesScreenState extends State<SalesScreen> {
             ],
           ),
           IconButton(
-            icon: const Icon(Icons.help_outline, color: ColorPalette.gray900, size: 24),
+            icon: const Icon(Icons.help_outline,
+                color: ColorPalette.gray900, size: 24),
             onPressed: () {
               showTextToast('Help feature coming soon');
             },
@@ -303,6 +321,7 @@ class _QuickSellViewState extends State<_QuickSellView> {
   final SalesService _salesService = SalesService();
   final CustomerService _customerService = CustomerService();
   final AuthService _authService = AuthService();
+  final ProductService _productService = ProductService();
 
   // Cash calculator state
   String _cashAmount = ''; // Start empty instead of hardcoded "50"
@@ -320,6 +339,8 @@ class _QuickSellViewState extends State<_QuickSellView> {
   bool _isSubmitting = false;
   String? _customerName;
   String? _customerId;
+  final Map<String, FastSaleScanItem> _scannedItems =
+      {}; // Scanned items from multi-scan session
 
   // Colors
   static const Color primary = ColorPalette.tealAccent;
@@ -346,6 +367,7 @@ class _QuickSellViewState extends State<_QuickSellView> {
         _selectedDate = DateTime.now();
         _customerName = null;
         _customerId = null;
+        _scannedItems.clear();
       });
     }
   }
@@ -384,9 +406,8 @@ class _QuickSellViewState extends State<_QuickSellView> {
 
     try {
       // Replace display operators with math operators
-      String englishExpression = expression
-          .replaceAll('×', '*')
-          .replaceAll('÷', '/');
+      String englishExpression =
+          expression.replaceAll('×', '*').replaceAll('÷', '/');
 
       // Parse and evaluate
       Parser parser = Parser();
@@ -441,10 +462,36 @@ class _QuickSellViewState extends State<_QuickSellView> {
       }
 
       // Parse profit margin (optional)
-      final double profit = double.tryParse(_profitController.text.trim()) ?? 0.0;
+      final double profit =
+          double.tryParse(_profitController.text.trim()) ?? 0.0;
 
       // Get product details (optional)
-      final String details = _detailsController.text.trim();
+      String? productDetailsText;
+      final List<String> detailParts = [];
+
+      // Include selected fast-sale items if any
+      if (_scannedItems.isNotEmpty) {
+        detailParts.add('যোগ করা পণ্য:');
+        for (final item in _scannedItems.values) {
+          final productName = item.product.name ?? 'পণ্য';
+          final productId = item.product.id ?? '';
+          final qty = NumberFormatter.formatIntToBengali(item.quantity);
+          final price =
+              NumberFormatter.formatCurrency(item.product.salePrice ?? 0.0);
+          final subtotal = NumberFormatter.formatCurrency(item.subtotal);
+          detailParts.add(
+              '  - $productName (ID: $productId) x$qty @ $price = $subtotal');
+        }
+      }
+
+      // Include manual details
+      final manualDetails = _detailsController.text.trim();
+      if (manualDetails.isNotEmpty) {
+        detailParts.add(manualDetails);
+      }
+
+      productDetailsText =
+          detailParts.isNotEmpty ? detailParts.join('\n') : null;
 
       // Process quick cash sale using new service method
       await _salesService.processQuickCashSale(
@@ -452,7 +499,7 @@ class _QuickSellViewState extends State<_QuickSellView> {
         cashReceived: amount,
         customerMobile: mobile.isNotEmpty ? mobile : null,
         profitMargin: profit,
-        productDetails: details.isNotEmpty ? details : null,
+        productDetails: productDetailsText,
         receiptSmsEnabled: _receiptSmsEnabled,
         saleDate: _selectedDate,
         photoUrl: null,
@@ -476,6 +523,7 @@ class _QuickSellViewState extends State<_QuickSellView> {
           _selectedDate = DateTime.now();
           _customerName = null;
           _customerId = null;
+          _scannedItems.clear();
         });
       }
     } catch (e) {
@@ -544,6 +592,60 @@ class _QuickSellViewState extends State<_QuickSellView> {
     );
   }
 
+  void _mergeFastSaleItems(Map<String, FastSaleScanItem> items) {
+    for (final entry in items.entries) {
+      final productId = entry.key;
+      final item = entry.value;
+
+      if (_scannedItems.containsKey(productId)) {
+        _scannedItems[productId]!.quantity += item.quantity;
+      } else {
+        _scannedItems[productId] = FastSaleScanItem(
+          product: item.product,
+          quantity: item.quantity,
+        );
+      }
+    }
+  }
+
+  Future<void> _handleProductPicker() async {
+    final result = await showDialog<FastSaleScanResult>(
+      context: context,
+      builder: (context) =>
+          _ProductPickerDialog(productService: _productService),
+    );
+
+    if (result != null && result.hasItems) {
+      setState(() {
+        _mergeFastSaleItems(result.items);
+      });
+
+      showTextToast(
+          '${NumberFormatter.formatIntToBengali(result.totalItems)} টি পণ্য যোগ করা হয়েছে');
+    }
+  }
+
+  Future<void> _handleProductBarcodeScanner() async {
+    final result = await Navigator.push<FastSaleScanResult>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const BarcodeScannerScreen(
+          mode: BarcodeScannerMode.fastSaleSession,
+        ),
+      ),
+    );
+
+    if (result != null && result.hasItems) {
+      setState(() {
+        _mergeFastSaleItems(result.items);
+      });
+
+      final itemCount = result.totalItems;
+      showTextToast(
+          '${NumberFormatter.formatIntToBengali(itemCount)} টি পণ্য স্ক্যান সম্পন্ন');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -554,6 +656,12 @@ class _QuickSellViewState extends State<_QuickSellView> {
             child: Column(
               children: [
                 _buildActionRow(),
+                const SizedBox(height: 8),
+                _buildProductSelectionRow(),
+                if (_scannedItems.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _buildScannedItemsList(),
+                ],
                 _buildCashDisplay(),
                 _buildCalculatorKeypad(),
                 _buildMobileInput(),
@@ -662,7 +770,8 @@ class _QuickSellViewState extends State<_QuickSellView> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.photo_camera, color: ColorPalette.gray600, size: 18),
+                    const Icon(Icons.photo_camera,
+                        color: ColorPalette.gray600, size: 18),
                     const SizedBox(width: 8),
                     Text(
                       'ছবি',
@@ -706,6 +815,246 @@ class _QuickSellViewState extends State<_QuickSellView> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductSelectionRow() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+      child: Row(
+        children: [
+          // Product selector button (left/middle)
+          Expanded(
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              child: InkWell(
+                onTap: _handleProductPicker,
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  height: 40,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _scannedItems.isNotEmpty
+                          ? primary
+                          : ColorPalette.gray300,
+                      width: _scannedItems.isNotEmpty ? 2 : 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        offset: const Offset(0, 1),
+                        blurRadius: 2,
+                        color: Colors.black.withOpacity(0.05),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _scannedItems.isEmpty
+                            ? Icons.add_circle_outline
+                            : Icons.playlist_add,
+                        color: _scannedItems.isEmpty
+                            ? ColorPalette.gray600
+                            : primary,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _scannedItems.isEmpty
+                              ? 'পণ্য যোগ করুন'
+                              : 'আরও পণ্য যোগ করুন',
+                          style: GoogleFonts.notoSansBengali(
+                            fontSize: 14,
+                            fontWeight: _scannedItems.isEmpty
+                                ? FontWeight.w500
+                                : FontWeight.w600,
+                            color: _scannedItems.isEmpty
+                                ? ColorPalette.gray700
+                                : ColorPalette.gray900,
+                          ),
+                        ),
+                      ),
+                      if (_scannedItems.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: primary.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '${NumberFormatter.formatIntToBengali(_scannedItems.length)} পণ্য',
+                            style: GoogleFonts.notoSansBengali(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Barcode scanner icon (right)
+          Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            child: InkWell(
+              onTap: _handleProductBarcodeScanner,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                height: 40,
+                width: 40,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: ColorPalette.gray300),
+                  boxShadow: [
+                    BoxShadow(
+                      offset: const Offset(0, 1),
+                      blurRadius: 2,
+                      color: Colors.black.withOpacity(0.05),
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.qr_code_scanner,
+                    color: primary,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScannedItemsList() {
+    final totalItems = _scannedItems.values.fold<int>(
+      0,
+      (sum, item) => sum + item.quantity,
+    );
+    final totalAmount = _scannedItems.values.fold<double>(
+      0.0,
+      (sum, item) => sum + item.subtotal,
+    );
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: primary, width: 2),
+        boxShadow: [
+          BoxShadow(
+            offset: const Offset(0, 2),
+            blurRadius: 4,
+            color: Colors.black.withOpacity(0.05),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'যোগ করা পণ্য',
+                style: GoogleFonts.notoSansBengali(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: ColorPalette.gray900,
+                ),
+              ),
+              Text(
+                '${NumberFormatter.formatIntToBengali(totalItems)} টি পণ্য • ${NumberFormatter.formatCurrency(totalAmount)}',
+                style: GoogleFonts.notoSansBengali(
+                  fontSize: 12,
+                  color: ColorPalette.gray600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 1, color: ColorPalette.gray200),
+          const SizedBox(height: 8),
+
+          // Items list
+          ...List.generate(_scannedItems.length, (index) {
+            final item = _scannedItems.values.elementAt(index);
+            final productId = _scannedItems.keys.elementAt(index);
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.product.name ?? 'পণ্য',
+                          style: GoogleFonts.notoSansBengali(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: ColorPalette.gray900,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '${NumberFormatter.formatCurrency(item.product.salePrice ?? 0.0)} × ${NumberFormatter.formatIntToBengali(item.quantity)}',
+                          style: GoogleFonts.notoSansBengali(
+                            fontSize: 11,
+                            color: ColorPalette.gray600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    NumberFormatter.formatCurrency(item.subtotal),
+                    style: GoogleFonts.notoSansBengali(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: primary,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _scannedItems.remove(productId);
+                      });
+                    },
+                    child: const Icon(
+                      Icons.remove_circle_outline,
+                      size: 18,
+                      color: ColorPalette.mandy,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -833,8 +1182,9 @@ class _QuickSellViewState extends State<_QuickSellView> {
                     key,
                     style: GoogleFonts.manrope(
                       fontSize: isEquals ? 20 : 18,
-                      fontWeight:
-                          isOperator || isEquals ? FontWeight.bold : FontWeight.w500,
+                      fontWeight: isOperator || isEquals
+                          ? FontWeight.bold
+                          : FontWeight.w500,
                       color: textColor,
                     ),
                   ),
@@ -875,7 +1225,8 @@ class _QuickSellViewState extends State<_QuickSellView> {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
                     color: ColorPalette.gray50,
                     border: Border(
@@ -912,7 +1263,8 @@ class _QuickSellViewState extends State<_QuickSellView> {
                         ),
                       ),
                       const SizedBox(width: 2),
-                      Icon(Icons.expand_more, size: 16, color: ColorPalette.gray400),
+                      Icon(Icons.expand_more,
+                          size: 16, color: ColorPalette.gray400),
                     ],
                   ),
                 ),
@@ -957,7 +1309,8 @@ class _QuickSellViewState extends State<_QuickSellView> {
                     if (name != null && name.isNotEmpty) {
                       try {
                         final customer = Customer(name: name, phone: phone);
-                        final createdCustomer = await _customerService.createCustomer(customer);
+                        final createdCustomer =
+                            await _customerService.createCustomer(customer);
                         setState(() {
                           _customerName = createdCustomer.name;
                           _customerId = createdCustomer.id;
@@ -1231,7 +1584,8 @@ class _ProductListView extends StatefulWidget {
   _ProductListViewState createState() => _ProductListViewState();
 }
 
-class _ProductListViewState extends State<_ProductListView> with TickerProviderStateMixin {
+class _ProductListViewState extends State<_ProductListView>
+    with TickerProviderStateMixin {
   // Services
   final ProductService _productService = ProductService();
   final SalesService _salesService = SalesService();
@@ -1366,7 +1720,7 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
       // Trigger rebuild to apply filter on live stream data
-      setState(() {});
+      if (mounted) setState(() {});
     });
   }
 
@@ -1435,7 +1789,7 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
         _cartItems[product.id!] = SellingCartItem(
           productId: product.id!,
           productName: product.name ?? '',
-          salePrice: product.cost ?? 0.0,
+          salePrice: product.salePrice ?? 0.0,
           quantity: 1,
           stockAvailable: product.quantity ?? 0,
           imageUrl: product.image,
@@ -1453,15 +1807,18 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
   void _triggerFlyingAnimation(GlobalKey productIconKey) {
     try {
       // Get Stack's render box for coordinate conversion
-      final RenderBox? stackBox = _stackKey.currentContext?.findRenderObject() as RenderBox?;
+      final RenderBox? stackBox =
+          _stackKey.currentContext?.findRenderObject() as RenderBox?;
       if (stackBox == null) return;
 
       // Get product icon position
-      final RenderBox? productBox = productIconKey.currentContext?.findRenderObject() as RenderBox?;
+      final RenderBox? productBox =
+          productIconKey.currentContext?.findRenderObject() as RenderBox?;
       if (productBox == null) return;
 
       // Get cart button position
-      final RenderBox? cartButtonBox = _cartButtonKey.currentContext?.findRenderObject() as RenderBox?;
+      final RenderBox? cartButtonBox =
+          _cartButtonKey.currentContext?.findRenderObject() as RenderBox?;
       if (cartButtonBox == null) return;
 
       // Get global positions (screen coordinates)
@@ -1484,8 +1841,10 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
       );
 
       print('🎯 Animation Debug (Stack-local):');
-      print('   Product: global=$productGlobal, local=$productLocal, center=$productCenter');
-      print('   Cart: global=$cartButtonGlobal, local=$cartButtonLocal, target=$cartBadgeCenter');
+      print(
+          '   Product: global=$productGlobal, local=$productLocal, center=$productCenter');
+      print(
+          '   Cart: global=$cartButtonGlobal, local=$cartButtonLocal, target=$cartBadgeCenter');
 
       setState(() {
         _flyingIconStart = productCenter;
@@ -1523,7 +1882,15 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
     );
 
     if (product != null && product.id != null) {
+      // Add product to cart
       _toggleProductSelection(product);
+
+      // Set search field to scanned barcode to filter list
+      if (product.barcode != null && product.barcode!.isNotEmpty) {
+        _searchController.text = product.barcode!;
+        // _onSearchChanged will trigger automatically via listener
+      }
+
       showTextToast('${product.name} যোগ করা হয়েছে!');
     }
   }
@@ -1536,13 +1903,23 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
 
     if (_isProcessing) return;
 
-    // Navigate to checkout screen
-    final result = await Navigator.push<SellingCheckoutResult>(
+    // Map SellingCartItem to BuyingCartItem for PurchaseCartScreen
+    final buyingItems = _cartItems.values.map((sellingItem) {
+      return BuyingCartItem(
+        productId: sellingItem.productId,
+        productName: sellingItem.productName,
+        costPrice: sellingItem.salePrice,
+        quantity: sellingItem.quantity,
+        imageUrl: sellingItem.imageUrl,
+      );
+    }).toList();
+
+    // Navigate to PurchaseCartScreen first
+    final result = await Navigator.push<PurchaseCartCheckoutResult>(
       context,
       MaterialPageRoute(
-        builder: (_) => SellingCheckoutScreen(
-          cartItems: _cartItems.values.toList(),
-          totalAmount: _cartTotal,
+        builder: (_) => PurchaseCartScreen(
+          initialItems: buyingItems,
         ),
       ),
     );
@@ -1552,38 +1929,45 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
     setState(() => _isProcessing = true);
 
     try {
-      // Get sale items from cart (already has toSaleItemJson)
-      final saleItems = _cartItems.values
-          .map((item) => item.toSaleItemJson())
-          .toList();
+      // Use returned items and checkout data from PurchaseCartScreen
+      final checkoutData = result.checkout;
+      final finalItems = result.items;
+      final finalTotal = result.totalAmount;
 
-      // Create Sale object
+      // Get sale items from returned cart items
+      final saleItems =
+          finalItems.map((item) => item.toSaleItemJson()).toList();
+
+      // Create Sale object with final total from cart screen
       final sale = Sale(
-        totalAmount: _cartTotal,
-        subtotal: _cartTotal,
+        totalAmount: finalTotal,
+        subtotal: finalTotal,
         taxAmount: 0.0,
-        customerName: result.customerName,
-        paymentMethod: result.paymentMethod,
-        createdAt: result.saleDate,
+        customerName: checkoutData.customerName,
+        paymentMethod: checkoutData.paymentMethod,
+        createdAt: checkoutData.saleDate,
       );
 
-      // Process sale
-      final saleId = await _salesService.processSale(sale, _cartItems.values.map((item) {
-        return CartItem(
-          product: Product(
-            id: item.productId,
-            name: item.productName,
-            cost: item.salePrice,
-          ),
-          quantity: item.quantity,
-        );
-      }).toList());
+      // Process sale with final items
+      final saleId = await _salesService.processSale(
+          sale,
+          finalItems.map((item) {
+            return CartItem(
+              product: Product(
+                id: item.productId,
+                name: item.productName,
+                salePrice: item.salePrice,
+              ),
+              quantity: item.quantity,
+            );
+          }).toList());
 
-      // Apply local stock deductions immediately
+      // Apply local stock deductions immediately using final items
       // Build deduction map: productId -> total quantity sold
       final Map<String, int> deductions = {};
-      for (final item in _cartItems.values) {
-        deductions[item.productId] = (deductions[item.productId] ?? 0) + item.quantity;
+      for (final item in finalItems) {
+        deductions[item.productId] =
+            (deductions[item.productId] ?? 0) + item.quantity;
       }
 
       try {
@@ -1619,7 +2003,8 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
           errorMsg.contains('foreign key') ||
           errorMsg.contains('uuid') ||
           errorMsg.contains('product_id')) {
-        showTextToast('কিছু পণ্য সার্ভারে sync হয়নি। Sync করে আবার চেষ্টা করুন।');
+        showTextToast(
+            'কিছু পণ্য সার্ভারে sync হয়নি। Sync করে আবার চেষ্টা করুন।');
       } else {
         showTextToast('ত্রুটি: ${e.toString()}');
       }
@@ -1748,8 +2133,8 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
                         color: slate400,
                       ),
                       border: InputBorder.none,
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 0, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 0, vertical: 10),
                     ),
                     style: GoogleFonts.anekBangla(
                       fontSize: 14,
@@ -1757,6 +2142,24 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
                     ),
                   ),
                 ),
+                // Clear button (X) - only visible when search text is not empty
+                if (_searchController.text.isNotEmpty)
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _searchController.clear();
+                      });
+                      FocusScope.of(context).unfocus();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Icon(
+                        Icons.clear,
+                        color: slate500,
+                        size: 18,
+                      ),
+                    ),
+                  ),
                 Container(
                   width: 1,
                   height: 20,
@@ -1862,8 +2265,8 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
                 final barcode = (product.barcode ?? '').toLowerCase();
                 final description = (product.description ?? '').toLowerCase();
                 return name.contains(query) ||
-                       barcode.contains(query) ||
-                       description.contains(query);
+                    barcode.contains(query) ||
+                    description.contains(query);
               }).toList();
 
         // Apply sorting by recent usage
@@ -1911,7 +2314,8 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
     return Opacity(
       opacity: opacity,
       child: InkWell(
-        onTap: () => _toggleProductSelection(product, productIconKey: productIconKey),
+        onTap: () =>
+            _toggleProductSelection(product, productIconKey: productIconKey),
         child: Container(
           margin: const EdgeInsets.only(bottom: 6),
           padding: const EdgeInsets.all(8),
@@ -1981,7 +2385,8 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${product.cost?.toStringAsFixed(0) ?? '0'} ৳',
+                              NumberFormatter.formatCurrencyInt(
+                                  product.salePrice ?? 0.0),
                               style: GoogleFonts.anekBangla(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -2008,7 +2413,8 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${product.quantity ?? 0}',
+                              NumberFormatter.formatIntToBengali(
+                                  product.quantity ?? 0),
                               style: GoogleFonts.anekBangla(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -2058,7 +2464,7 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
               ),
               const SizedBox(width: 8),
               Text(
-                '৳ ${_cartTotal.toStringAsFixed(0)}',
+                NumberFormatter.formatCurrencyInt(_cartTotal),
                 style: GoogleFonts.anekBangla(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -2102,7 +2508,7 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
                             );
                           },
                           child: Text(
-                            '$_cartItemCount',
+                            NumberFormatter.formatIntToBengali(_cartItemCount),
                             style: GoogleFonts.anekBangla(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -2116,6 +2522,413 @@ class _ProductListViewState extends State<_ProductListView> with TickerProviderS
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// PRODUCT PICKER DIALOG (for Fast Sale)
+// ===========================================================================
+class _ProductPickerDialog extends StatefulWidget {
+  final ProductService productService;
+
+  const _ProductPickerDialog({
+    Key? key,
+    required this.productService,
+  }) : super(key: key);
+
+  @override
+  _ProductPickerDialogState createState() => _ProductPickerDialogState();
+}
+
+class _ProductPickerDialogState extends State<_ProductPickerDialog> {
+  final TextEditingController _searchController = TextEditingController();
+  late Stream<List<Product>> _productsStream;
+  final Map<String, FastSaleScanItem> _selectedItems = {};
+  static const Color primary = ColorPalette.tealAccent;
+
+  @override
+  void initState() {
+    super.initState();
+    // Use local-only stream to avoid triggering sync
+    _productsStream = widget.productService.getAllProductsLocalOnly();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _addProduct(Product product) {
+    final productId = product.id;
+    if (productId == null || productId.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      if (_selectedItems.containsKey(productId)) {
+        _selectedItems[productId]!.increment();
+      } else {
+        _selectedItems[productId] = FastSaleScanItem(product: product);
+      }
+    });
+  }
+
+  void _changeQuantity(Product product, int delta) {
+    final productId = product.id;
+    if (productId == null || productId.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      final selected = _selectedItems[productId];
+      if (selected == null) {
+        if (delta > 0) {
+          _selectedItems[productId] = FastSaleScanItem(product: product);
+        }
+        return;
+      }
+
+      selected.quantity += delta;
+      if (selected.quantity <= 0) {
+        _selectedItems.remove(productId);
+      }
+    });
+  }
+
+  FastSaleScanResult _buildResult() {
+    final items = <String, FastSaleScanItem>{};
+    for (final entry in _selectedItems.entries) {
+      items[entry.key] = FastSaleScanItem(
+        product: entry.value.product,
+        quantity: entry.value.quantity,
+      );
+    }
+    return FastSaleScanResult(items: items);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedCount = _selectedItems.values.fold<int>(
+      0,
+      (sum, item) => sum + item.quantity,
+    );
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.7,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'পণ্য নির্বাচন করুন',
+                  style: GoogleFonts.notoSansBengali(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: ColorPalette.gray900,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: ColorPalette.gray700),
+                  onPressed: () => Navigator.pop(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Search bar
+            Container(
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: ColorPalette.gray300),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(left: 12, right: 8),
+                    child: Icon(Icons.search,
+                        color: ColorPalette.gray400, size: 20),
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'পণ্য খুঁজুন',
+                        hintStyle: GoogleFonts.notoSansBengali(
+                          fontSize: 14,
+                          color: ColorPalette.gray400,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      style: GoogleFonts.notoSansBengali(
+                        fontSize: 14,
+                        color: ColorPalette.gray900,
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Product list
+            Expanded(
+              child: StreamBuilder<List<Product>>(
+                stream: _productsStream,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          ColorPalette.tealAccent,
+                        ),
+                      ),
+                    );
+                  }
+
+                  if (snapshot.hasError || !snapshot.hasData) {
+                    return Center(
+                      child: Text(
+                        'পণ্য লোড করতে সমস্যা হয়েছে',
+                        style: GoogleFonts.notoSansBengali(
+                          fontSize: 14,
+                          color: ColorPalette.gray500,
+                        ),
+                      ),
+                    );
+                  }
+
+                  final allProducts = snapshot.data!;
+                  final query = _searchController.text.trim().toLowerCase();
+
+                  final filteredProducts = query.isEmpty
+                      ? allProducts
+                      : allProducts.where((product) {
+                          final name = (product.name ?? '').toLowerCase();
+                          final barcode = (product.barcode ?? '').toLowerCase();
+                          return name.contains(query) ||
+                              barcode.contains(query);
+                        }).toList();
+
+                  if (filteredProducts.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'কোনো পণ্য পাওয়া যায়নি',
+                        style: GoogleFonts.notoSansBengali(
+                          fontSize: 14,
+                          color: ColorPalette.gray500,
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    itemCount: filteredProducts.length,
+                    itemBuilder: (context, index) {
+                      final product = filteredProducts[index];
+                      final selectedQty =
+                          _selectedItems[product.id]?.quantity ?? 0;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(
+                            color: selectedQty > 0
+                                ? primary
+                                : ColorPalette.gray200,
+                            width: selectedQty > 0 ? 1.5 : 1,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            InkWell(
+                              onTap: () => _addProduct(product),
+                              borderRadius: BorderRadius.circular(18),
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color:
+                                      ColorPalette.tealAccent.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.inventory_2,
+                                    color: ColorPalette.tealAccent,
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => _addProduct(product),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      product.name ?? '',
+                                      style: GoogleFonts.notoSansBengali(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: ColorPalette.gray900,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'স্টক: ${NumberFormatter.formatIntToBengali(product.quantity ?? 0)}',
+                                          style: GoogleFonts.notoSansBengali(
+                                            fontSize: 12,
+                                            color: ColorPalette.gray600,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          NumberFormatter.formatCurrencyInt(
+                                              product.salePrice ?? 0.0),
+                                          style: GoogleFonts.notoSansBengali(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: ColorPalette.gray700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            selectedQty == 0
+                                ? OutlinedButton(
+                                    onPressed: () => _addProduct(product),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: primary,
+                                      side: const BorderSide(color: primary),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 8,
+                                      ),
+                                      minimumSize: Size.zero,
+                                    ),
+                                    child: Text(
+                                      'যোগ',
+                                      style: GoogleFonts.notoSansBengali(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  )
+                                : Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: primary),
+                                      borderRadius: BorderRadius.circular(999),
+                                      color: ColorPalette.teal50,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          onPressed: () =>
+                                              _changeQuantity(product, -1),
+                                          icon: const Icon(
+                                            Icons.remove,
+                                            size: 16,
+                                          ),
+                                          color: primary,
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                        Text(
+                                          NumberFormatter.formatIntToBengali(
+                                              selectedQty),
+                                          style: GoogleFonts.manrope(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: primary,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          onPressed: () =>
+                                              _changeQuantity(product, 1),
+                                          icon: const Icon(
+                                            Icons.add,
+                                            size: 16,
+                                          ),
+                                          color: primary,
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    selectedCount == 0
+                        ? 'একাধিক পণ্য যোগ করতে তালিকা থেকে বেছে নিন'
+                        : '${NumberFormatter.formatIntToBengali(selectedCount)} টি পণ্য প্রস্তুত',
+                    style: GoogleFonts.notoSansBengali(
+                      fontSize: 12,
+                      color: ColorPalette.gray600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: selectedCount == 0
+                      ? null
+                      : () => Navigator.pop(context, _buildResult()),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                  ),
+                  child: Text(
+                    'যোগ করুন',
+                    style: GoogleFonts.notoSansBengali(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

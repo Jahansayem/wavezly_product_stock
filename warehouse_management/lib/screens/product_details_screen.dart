@@ -52,9 +52,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     }).join();
   }
 
-  void _handleEdit() {
-    // Navigate to edit screen
-    Navigator.push(
+  Future<void> _handleEdit() async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => EditProductScreen(
@@ -63,6 +62,38 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         ),
       ),
     );
+
+    if (result == true && mounted) {
+      // Small delay to ensure local DB transaction is fully committed
+      await Future.delayed(const Duration(milliseconds: 100));
+      await _reloadProduct();
+    }
+  }
+
+  Future<void> _reloadProduct() async {
+    try {
+      final latest = await _productService.getProductById(widget.docID);
+      if (latest == null || !mounted) return;
+
+      setState(() {
+        widget.product.name = latest.name;
+        widget.product.cost = latest.cost;
+        widget.product.salePrice = latest.salePrice;
+        widget.product.wholesalePrice = latest.wholesalePrice;
+        widget.product.group = latest.group;
+        widget.product.location = latest.location;
+        widget.product.company = latest.company;
+        widget.product.quantity = latest.quantity;
+        widget.product.image = latest.image;
+        widget.product.description = latest.description;
+        widget.product.barcode = latest.barcode;
+        widget.product.expiryDate = latest.expiryDate;
+        widget.product.stockAlertEnabled = latest.stockAlertEnabled;
+        widget.product.minStockLevel = latest.minStockLevel;
+      });
+    } catch (e) {
+      debugPrint('Failed to reload updated product: $e');
+    }
   }
 
   Future<void> _handleDelete() async {
@@ -157,7 +188,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final productName = widget.product.name ?? 'Unknown Product';
-    final salePriceText = '${_toBengaliNumber(widget.product.cost ?? 0)} ৳';
+    final salePriceText =
+        '${_toBengaliNumber(widget.product.salePrice ?? widget.product.cost ?? 0)} ৳';
     final costPriceText = '${_toBengaliNumber(widget.product.cost ?? 0)} ৳';
     final profitText = '${_toBengaliNumber(0)} ৳';
     final stockText = _toBengaliNumber((widget.product.quantity ?? 0).toDouble());

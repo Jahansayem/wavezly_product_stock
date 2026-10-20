@@ -3,9 +3,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wavezly/config/supabase_config.dart';
 import 'package:wavezly/screens/main_navigation.dart';
 import 'package:wavezly/features/auth/screens/login_screen.dart';
+import 'package:wavezly/services/billing_access_service.dart';
 import 'package:wavezly/services/notification_service.dart';
 import 'package:wavezly/services/bootstrap_cache.dart';
 import 'package:wavezly/sync/sync_service.dart';
+import 'package:wavezly/sync/realtime_service.dart';
 import 'package:wavezly/utils/color_palette.dart';
 
 /// Handles authentication state and routes to appropriate screen.
@@ -54,7 +56,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
     // One-time side effects
     SyncService().syncNow();
     NotificationService.loginUser(user.id);
-    debugPrint('🔐 [AuthWrapper] Sync and notifications triggered');
+    RealtimeService().subscribe(user.id);
+    BillingAccessService.instance.refresh();
+    debugPrint('🔐 [AuthWrapper] Sync, notifications, and realtime triggered');
 
     // Local-first route resolution
     final bootstrapSummary = BootstrapCache().peekPreloadedSummary();

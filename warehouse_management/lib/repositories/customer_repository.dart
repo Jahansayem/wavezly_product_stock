@@ -3,6 +3,7 @@ import '../models/customer.dart';
 import '../models/customer_transaction.dart';
 import '../database/dao/customer_dao.dart';
 import '../database/dao/customer_transaction_dao.dart';
+import '../services/billing_access_service.dart';
 import '../sync/sync_service.dart';
 import '../sync/connectivity_service.dart';
 import '../config/supabase_config.dart';
@@ -79,6 +80,7 @@ class CustomerRepository {
   // WRITE: Save locally + queue for sync
   Future<Customer> createCustomer(Customer customer) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       final userId = _userId;
 
       // Generate ID if not present
@@ -130,6 +132,7 @@ class CustomerRepository {
 
   Future<void> updateCustomer(String id, Customer customer) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       final userId = _userId;
 
       // Update local database
@@ -159,6 +162,7 @@ class CustomerRepository {
 
   Future<void> deleteCustomer(String id) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       // Delete from local database
       await _customerDao.deleteCustomer(id);
 
@@ -217,6 +221,7 @@ class CustomerRepository {
   /// RECEIVED = customer paid us (decreases their balance/our receivable)
   Future<void> addTransaction(CustomerTransaction transaction) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       // Validate required fields
       if (transaction.customerId == null || transaction.customerId!.isEmpty) {
         throw Exception('Customer ID is required');

@@ -130,11 +130,13 @@ class _ProductImagePickerState extends State<ProductImagePicker> {
     try {
       setState(() => _isLoading = true);
 
+      // Aggressive compression for small file size
+      // Priority: minimal file size > high quality
       final XFile? pickedFile = await _picker.pickImage(
         source: source,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 85,
+        maxWidth: 800,  // Small max width for minimal file size
+        maxHeight: 800, // Small max height for minimal file size
+        imageQuality: 40, // Low quality (40) for aggressive compression
       );
 
       if (pickedFile == null) {

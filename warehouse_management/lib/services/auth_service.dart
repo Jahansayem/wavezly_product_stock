@@ -1,7 +1,9 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../sync/sync_service.dart';
+import '../sync/realtime_service.dart';
 import '../database/dao/product_dao.dart';
+import 'billing_access_service.dart';
 import 'notification_service.dart';
 
 class AuthService {
@@ -42,8 +44,10 @@ class AuthService {
   Future<void> signOut() async {
     // Cleanup phase (fire-and-forget for optional services)
     try {
+      RealtimeService().unsubscribe(); // Unsubscribe from realtime
       SyncService().dispose();  // Stop periodic timer
       ProductDao().dispose();   // Close stream controllers
+      BillingAccessService.instance.clear();
 
       // OneSignal logout (non-blocking, ignore failures)
       NotificationService.logoutUser().catchError((e) {

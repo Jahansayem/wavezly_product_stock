@@ -34,6 +34,9 @@ class ProductService {
 
   Future<Product?> getProductById(String id) => _repository.getProductById(id);
 
+  Future<Product?> getProductByBarcode(String barcode) =>
+      _repository.getProductByBarcode(barcode);
+
   Future<List<Product>> searchProducts(String query) =>
       _repository.searchProducts(query);
 

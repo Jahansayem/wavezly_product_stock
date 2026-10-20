@@ -12,7 +12,7 @@
    </queries>
 
    <application
-        android:label="Halkhata Business Manager"
+        android:label="হালখাতা"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

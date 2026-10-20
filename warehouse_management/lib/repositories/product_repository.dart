@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:uuid/uuid.dart';
 import '../models/product.dart';
 import '../database/dao/product_dao.dart';
+import '../services/billing_access_service.dart';
 import '../sync/sync_service.dart';
 import '../sync/connectivity_service.dart';
 import '../services/image_storage_service.dart';
@@ -62,6 +63,7 @@ class ProductRepository {
   // WRITE: Save locally + queue for sync
   Future<void> addProduct(Product product, {File? imageFile}) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       final userId = _userId;
       // Generate ID if not present
       product.id ??= const Uuid().v4();
@@ -126,32 +128,61 @@ class ProductRepository {
   }
 
   Future<void> updateProduct(String id, Product product, {File? newImageFile}) async {
-    try {
-      final userId = _userId;
-      // Handle image replacement
-      if (newImageFile != null && await _connectivity.checkOnline()) {
-        try {
-          final currentProduct = await _productDao.getProductById(id);
-          final oldImageUrl = currentProduct?.image;
+    await BillingAccessService.instance.ensureCanWrite();
+    final userId = _userId;
 
-          final newImageUrl = await _imageService.replaceProductImage(
-            newImageFile: newImageFile,
-            oldImageUrl: oldImageUrl,
-          );
-          product.image = newImageUrl;
-        } catch (e) {
-          print('Image replacement failed: $e');
-          // Continue with update
-        }
+    // Handle image replacement (best-effort, non-blocking)
+    if (newImageFile != null && await _connectivity.checkOnline()) {
+      try {
+        final currentProduct = await _productDao.getProductById(id, userId: userId);
+        final oldImageUrl = currentProduct?.image;
+
+        final newImageUrl = await _imageService.replaceProductImage(
+          newImageFile: newImageFile,
+          oldImageUrl: oldImageUrl,
+        );
+        product.image = newImageUrl;
+      } catch (e) {
+        print('⚠️ Image replacement failed, continuing with update: $e');
+      }
+    }
+
+    // PRIMARY SUCCESS PATH: Update local database
+    // If this fails, it's a real error - rethrow
+    try {
+      await _productDao.updateProduct(id, product, userId);
+      print('✅ [ProductRepository] Local product update successful for id: $id');
+    } catch (e) {
+      print('❌ [ProductRepository] Local product update FAILED: $e');
+      rethrow; // Real failure - local DB update failed
+    }
+
+    // SECONDARY: Queue for sync (best-effort, offline-first)
+    // If sync fails, log warning but do NOT throw - local update already succeeded
+    try {
+      // Skip remote sync for non-UUID ids to prevent Supabase SQL/UUID errors
+      if (!_uuidV4Like.hasMatch(id)) {
+        print('⚠️ [ProductRepository] Skipping remote sync for non-UUID product id: $id');
+        return; // Local update succeeded, skip sync
       }
 
-      // Update local database
-      await _productDao.updateProduct(id, product, userId);
-
-      // Queue for sync
-      final data = product.toMap();
-      data['user_id'] = userId;
-      data['id'] = id;
+      // Build minimal update payload - only necessary fields
+      final data = {
+        'id': id,
+        'user_id': userId,
+        'name': product.name,
+        'cost': product.cost,
+        'sale_price': product.salePrice,
+        'wholesale_price': product.wholesalePrice,
+        'quantity': product.quantity,
+        'product_group': product.group ?? '',
+        'description': product.description,
+        'barcode': product.barcode,
+        'stock_alert_enabled': product.stockAlertEnabled,
+        'min_stock_level': product.minStockLevel,
+        'image_url': product.image,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
 
       await _syncService.queueOperation(
         operation: SyncConfig.operationUpdate,
@@ -159,14 +190,21 @@ class ProductRepository {
         recordId: id,
         data: data,
       );
+      print('✅ [ProductRepository] Sync operation queued for product: $id');
 
-      // Trigger immediate sync if online
+      // Trigger immediate sync if online (best-effort)
       if (await _connectivity.checkOnline()) {
-        _syncService.syncNow();
+        try {
+          _syncService.syncNow();
+          print('✅ [ProductRepository] Immediate sync triggered');
+        } catch (e) {
+          print('⚠️ [ProductRepository] Immediate sync failed (will retry later): $e');
+          // Don't rethrow - sync queue will handle retry
+        }
       }
     } catch (e) {
-      print('Error updating product: $e');
-      rethrow;
+      print('⚠️ [ProductRepository] Sync queue/trigger failed (non-fatal): $e');
+      // Don't rethrow - local update succeeded, sync can retry later
     }
   }
 
@@ -175,6 +213,7 @@ class ProductRepository {
   /// OVERSELL SUPPORT: Allows negative quantities for overselling scenarios.
   Future<void> updateProductQuantity(String id, int newQuantity) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
       final userId = _userId;
 
       // Update local first (allow negative quantities)
@@ -209,8 +248,11 @@ class ProductRepository {
 
   Future<void> deleteProduct(String id) async {
     try {
+      await BillingAccessService.instance.ensureCanWrite();
+      final userId = _userId;
+
       // Get product image URL before deletion (for cleanup)
-      final product = await _productDao.getProductById(id);
+      final product = await _productDao.getProductById(id, userId: userId);
       final imageUrl = product?.image;
 
       // Delete from local database
@@ -248,7 +290,7 @@ class ProductRepository {
 
       // Update product locally
       final userId = _userId;
-      final product = await _productDao.getProductById(productId);
+      final product = await _productDao.getProductById(productId, userId: userId);
       if (product != null) {
         product.image = null;
         await _productDao.updateProduct(productId, product, userId);
@@ -277,7 +319,13 @@ class ProductRepository {
   }
 
   Future<Product?> getProductById(String id) async {
-    return await _productDao.getProductById(id);
+    final userId = _userId;
+    return await _productDao.getProductById(id, userId: userId);
+  }
+
+  Future<Product?> getProductByBarcode(String barcode) async {
+    final userId = _userId;
+    return await _productDao.getProductByBarcode(userId, barcode);
   }
 
   Future<List<Product>> searchProducts(String query) async {
@@ -305,8 +353,10 @@ class ProductRepository {
     try {
       final userId = _userId;
       final id = const Uuid().v4();
+      final trimmedName = groupName.trim();
 
-      await _productDao.addProductGroup(userId, groupName, id);
+      // Add to local DB (includes case-insensitive duplicate check)
+      await _productDao.addProductGroup(userId, trimmedName, id);
 
       // Queue for sync
       await _syncService.queueOperation(
@@ -315,7 +365,7 @@ class ProductRepository {
         recordId: id,
         data: {
           'id': id,
-          'name': groupName,
+          'name': trimmedName,
           'user_id': userId,
           'created_at': DateTime.now().toIso8601String(),
         },
@@ -402,6 +452,8 @@ class ProductRepository {
       'id': product.id,
       'name': product.name,
       'cost': product.cost,
+      'sale_price': product.salePrice,
+      'wholesale_price': product.wholesalePrice,
       'product_group': product.group ?? '',
       'location': product.location,
       'company': product.company,

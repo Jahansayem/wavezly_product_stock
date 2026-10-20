@@ -83,16 +83,19 @@ class InventoryScreenWrapper extends StatelessWidget {
       final product = Product(
         name: result.name,
         cost: result.purchasePrice ?? 0,
+        salePrice: result.salePrice,
+        wholesalePrice: result.wholesalePrice,
         quantity: result.stockQty,
         group: result.categoryId,
         description: result.details,
+        barcode: result.barcode,
         stockAlertEnabled: result.stockAlertEnabled,
         minStockLevel: result.minStockLevel,
       );
 
-      // Persist to database
+      // Persist to database with image file
       final productService = ProductService();
-      await productService.addProduct(product);
+      await productService.addProduct(product, imageFile: result.imageFile);
 
       // Show success message
       if (context.mounted) {

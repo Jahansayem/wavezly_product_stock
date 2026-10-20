@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:wavezly/models/product.dart';
 import 'package:wavezly/utils/color_palette.dart';
+import 'package:wavezly/utils/number_formatter.dart';
 import 'package:wavezly/models/buying_cart_item.dart';
 import 'package:wavezly/models/purchase.dart';
 import 'package:wavezly/models/customer.dart';
@@ -381,7 +382,7 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
                         children: [
                           _buildStatColumn(
                             'স্টক',
-                            '${product.quantity ?? 0} টি',
+                            '${NumberFormatter.formatIntToBengali(product.quantity ?? 0)} টি',
                             stockColor,
                           ),
                           Container(
@@ -567,7 +568,7 @@ class _SelectProductBuyingScreenState extends State<SelectProductBuyingScreen> {
   }
 
   String _formatPrice(double price) {
-    return NumberFormat('#,##0').format(price);
+    return NumberFormatter.formatToBengali(price, decimals: 0);
   }
 
   List<Product> _applyFilter(List<Product> products) {
