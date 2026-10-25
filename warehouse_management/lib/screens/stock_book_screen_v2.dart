@@ -262,7 +262,12 @@ class _StockBookScreenV2State extends State<StockBookScreenV2> {
                       return ScrollConfiguration(
                         behavior: _NoGlowScrollBehavior(),
                         child: ListView(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                          padding: EdgeInsets.fromLTRB(
+                            16,
+                            16,
+                            16,
+                            120 + MediaQuery.paddingOf(context).bottom,
+                          ),
                           children: [
                             // Summary cards
                             Row(
@@ -589,68 +594,74 @@ class BottomActionBar extends StatelessWidget {
         ),
       ),
       padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          // Update button (outline)
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const UpdateProductQuantityScreen(),
+      // Keep the Container (background + border) outside the SafeArea so the
+      // card colour extends behind the system navigation bar, while the
+      // buttons themselves are lifted above it on edge-to-edge devices.
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            // Update button (outline)
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const UpdateProductQuantityScreen(),
+                    ),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: primaryColor,
+                  side: BorderSide(color: primaryColor, width: 2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                );
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: primaryColor,
-                side: BorderSide(color: primaryColor, width: 2),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              child: Text(
-                'পণ্য সংখ্যা আপডেট করুন',
-                style: GoogleFonts.anekBangla(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
+                child: Text(
+                  'পণ্য সংখ্যা আপডেট করুন',
+                  style: GoogleFonts.anekBangla(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          // Add product button (filled)
-          Expanded(
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const AddProductScreen(),
+            const SizedBox(width: 16),
+            // Add product button (filled)
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AddProductScreen(),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  elevation: 4,
+                  shadowColor: primaryColor.withOpacity(0.3),
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                elevation: 4,
-                shadowColor: primaryColor.withOpacity(0.3),
-              ),
-              child: Text(
-                'প্রোডাক্ট যুক্ত করুন',
-                style: GoogleFonts.anekBangla(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
+                child: Text(
+                  'প্রোডাক্ট যুক্ত করুন',
+                  style: GoogleFonts.anekBangla(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
