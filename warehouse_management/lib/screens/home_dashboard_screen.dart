@@ -492,10 +492,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                     label: 'যোগাযোগ',
                     bgColor: ColorPalette.indigo100,
                     iconColor: ColorPalette.indigo600,
-                    onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const CustomersPage())),
+                    comingSoon: true,
                   ),
                   _GridItemData(
                     icon: Icons.inventory_2,
@@ -1065,12 +1062,17 @@ class _GridItemData {
   final Color iconColor;
   final VoidCallback? onTap;
 
+  /// Marks a feature that is not available yet: the tile is dimmed,
+  /// shows a small clock badge and ignores taps.
+  final bool comingSoon;
+
   _GridItemData({
     required this.icon,
     required this.label,
     required this.bgColor,
     required this.iconColor,
     this.onTap,
+    this.comingSoon = false,
   });
 }
 
@@ -1151,6 +1153,7 @@ class _SectionCard extends StatelessWidget {
                   bgColor: item.bgColor,
                   iconColor: item.iconColor,
                   onTap: item.onTap,
+                  comingSoon: item.comingSoon,
                 );
               },
             ),
@@ -1167,6 +1170,7 @@ class _GridItem extends StatelessWidget {
   final Color bgColor;
   final Color iconColor;
   final VoidCallback? onTap;
+  final bool comingSoon;
 
   const _GridItem({
     required this.icon,
@@ -1174,38 +1178,71 @@ class _GridItem extends StatelessWidget {
     required this.bgColor,
     required this.iconColor,
     this.onTap,
+    this.comingSoon = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      // A coming-soon tile never navigates, even if an onTap is supplied.
+      onTap: comingSoon ? null : onTap,
       borderRadius: BorderRadius.circular(8),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(10),
+      child: Opacity(
+        opacity: comingSoon ? 0.5 : 1.0,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(icon, color: iconColor, size: 20),
+                  ),
+                  if (comingSoon)
+                    Positioned(
+                      top: -4,
+                      right: -4,
+                      child: Container(
+                        width: 16,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: ColorPalette.gray100),
+                        ),
+                        child: const Icon(
+                          Icons.schedule,
+                          size: 10,
+                          color: ColorPalette.gray500,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.anekBangla(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: ColorPalette.gray600,
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.anekBangla(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: ColorPalette.gray600,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
