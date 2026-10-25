@@ -6,6 +6,7 @@ import 'package:wavezly/screens/bakirkhata.dart';
 import 'package:wavezly/screens/cashbox_screen_v2.dart';
 import 'package:wavezly/screens/expiry_handling_screen.dart';
 import 'package:wavezly/screens/expense_management_screen_v3.dart';
+import 'package:wavezly/screens/help_support_screen.dart';
 import 'package:wavezly/screens/notifications_screen.dart';
 import 'package:wavezly/screens/product_list_screen.dart';
 import 'package:wavezly/screens/purchase_book_screen.dart';
@@ -492,7 +493,10 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                     label: 'যোগাযোগ',
                     bgColor: ColorPalette.indigo100,
                     iconColor: ColorPalette.indigo600,
-                    comingSoon: true,
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const HelpSupportScreen())),
                   ),
                   _GridItemData(
                     icon: Icons.inventory_2,
